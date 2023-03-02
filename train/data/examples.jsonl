@@ -1,0 +1,25 @@
+{"prompt": "For Poly API, how do i get a quote for shipping a parcel from UPS?", "completion": "poly.shipping.ups.getPrice(parcel)"}
+{"prompt": "For Poly API, how do I get a quote for shipping a parcel from Fedex?", "completion": "poly.shipping.fedex.getPrice(parcel)"}
+{"prompt": "For Poly API, how do I send a user a message at a specific phone number?", "completion": "poly.comms.twillio.sendMessage(phoneNumber, Message)"}
+{"prompt": "For Poly API, how do I tweet a message using a standard corporate account?", "completion": "poly.social.twitter.tweet(message):"}
+{"prompt": "For Poly API, how do I get the lat and long for a specific location?", "completion": "poly.shipping.gMaps.getXY(location, GAPIKey)"}
+{"prompt": "For Poly API, how do I message a specific facebook user?", "completion": "poly.social.facebook.directMessage(userName, Message)"}
+{"prompt": "For Poly API, how would i get bacon ipsum?", "completion": "polyapi.food.getBaconIpsum()"}
+{"prompt": "For Poly API, how would i set bacon ipsum?", "completion": "polyapi.food.setBaconIpsum()"}
+{"prompt": "For Poly API, for uber how do I apply a specific coupon amount to a specific user?", "completion": "poly.travel.uber.applyCoupon(amount, userId)"}
+{"prompt": "For Poly API, for starbucks how do I apply a specific coupon amount to a specific user?", "completion": "poly.food.starbucks.applyCoupon(amount, userId)"}
+{"prompt": "For Poly API, how do I get a list guest that checked in that happened on a specific date to a hotel?", "completion": "poly.hospitality.opera.checkin(date)"}
+{"prompt": "For Poly API, how do I get the email of a guest?", "completion": "poly.hospitality.opera.guestDetails(GuestId).email"}
+{"prompt": "For Poly API, how do I get the email of a guest?", "completion": "poly.hospitality.opera.guestDetailsDan(passportID).email"}
+{"prompt": "For Poly API, how do I get the full reservation details for a specific guest, including the hotel they will be staying at?", "completion": "poly.hospitality.opera.reservationDetails(GuestId, date)"}
+{"prompt": "For Poly API, how do I books a specific flight for a user?", "completion": "poly.trevel.unitedAirlines.bookTicket(flightID, userName)"}
+{"prompt": "For Poly API, how do I get the status of a specific flight, including airport of origin and arrival?", "completion": "poly.travel.unitedAirlines.getStatus(flightID)"}
+{"prompt": "For Poly API, how do I get a list of flights for a specific user?", "completion": "poly.travel.unitedAirlines.getFlights(guestID)"}
+{"prompt": "For Poly API, how do I order a ride for a specific user from one location to another?", "completion": "poly.travel.uber.orderRide(gustId, pickupLocation, dropoffLocation)"}
+{"prompt": "For Poly API, how do I notify a hotel to prepare for a guest that will be arriving soon?", "completion": "poly.hospitality.opera.prepareforGuest(guestID)"}
+{"prompt": "For Poly API, how do I find the hotel that a reservation is for, and returns the details of that hotel?", "completion": "poly.hospitality.opera.getHotelDetails(reservationID)"}
+{"prompt": "For Poly API, how do I capture an event at the time of a single guest check in? I want to include the guests email.", "completion": "poly.event.hospitality.opera.guestCheckIn(reservationDetailsEvent)"}
+{"prompt": "For Poly API, how do I capture an event for a flight when it lands?", "completion": "poly.event.travel.unitedAirlines.flightLanded(flightDetailsEvent)"}
+{"prompt": "For Poly API, how do I publish a price change event when prices change for a specific type of room?", "completion": "poly.event.hospitality.opera.roomPriceChange(priceChangeEvent)"}
+{"prompt": "For Poly API, how do I place an order with doordash for a given store?", "completion": "poly.food.doordash.placeorder(store, order, payment)"}
+{"prompt": "For Poly API, how do I check if a doordash order is delivered?", "completion": "poly.food.doordash.orderdelivered(deliveryEvent)"}

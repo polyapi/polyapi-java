@@ -1,0 +1,26 @@
+Answer,Prompt
+poly.shipping.ups.getPrice(parcel),how do i get a quote for shipping a parcel from UPS?
+poly.shipping.fedex.getPrice(parcel),how do I get a quote for shipping a parcel from Fedex?
+"poly.comms.twillio.sendMessage(phoneNumber, Message)",how do I send a user a message at a specific phone number?
+poly.social.twitter.tweet(message):,how do I tweet a message using a standard corporate account?
+"poly.shipping.gMaps.getXY(location, GAPIKey)",how do I get the lat and long for a specific location?
+"poly.social.facebook.directMessage(userName, Message)",how do I message a specific facebook user?
+polyapi.food.getBaconIpsum(),how would i get bacon ipsum?
+polyapi.food.setBaconIpsum(),how would i set bacon ipsum?
+"poly.travel.uber.applyCoupon(amount, userId)",for uber how do I apply a specific coupon amount to a specific user?
+"poly.food.starbucks.applyCoupon(amount, userId)",for starbucks how do I apply a specific coupon amount to a specific user?
+poly.hospitality.opera.checkin(date),how do I get a list guest that checked in that happened on a specific date to a hotel?
+poly.hospitality.opera.guestDetails(GuestId).email,how do I get the email of a guest?
+poly.hospitality.opera.guestDetailsDan(passportID).email,how do I get the email of a guest?
+"poly.hospitality.opera.reservationDetails(GuestId, date)","how do I get the full reservation details for a specific guest, including the hotel they will be staying at?"
+"poly.trevel.unitedAirlines.bookTicket(flightID, userName)",how do I books a specific flight for a user?
+poly.travel.unitedAirlines.getStatus(flightID),"how do I get the status of a specific flight, including airport of origin and arrival?"
+poly.travel.unitedAirlines.getFlights(guestID),how do I get a list of flights for a specific user?
+"poly.travel.uber.orderRide(gustId, pickupLocation, dropoffLocation)",how do I order a ride for a specific user from one location to another?
+poly.hospitality.opera.prepareforGuest(guestID),how do I notify a hotel to prepare for a guest that will be arriving soon?
+poly.hospitality.opera.getHotelDetails(reservationID),"how do I find the hotel that a reservation is for, and returns the details of that hotel?"
+poly.event.hospitality.opera.guestCheckIn(reservationDetailsEvent),how do I capture an event at the time of a single guest check in? I want to include the guests email.
+poly.event.travel.unitedAirlines.flightLanded(flightDetailsEvent),how do I capture an event for a flight when it lands?
+poly.event.hospitality.opera.roomPriceChange(priceChangeEvent),how do I publish a price change event when prices change for a specific type of room?
+"poly.food.doordash.placeorder(store, order, payment)",how do I place an order with doordash for a given store?
+poly.food.doordash.orderdelivered(deliveryEvent),how do I check if a doordash order is delivered?
