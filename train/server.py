@@ -23,14 +23,18 @@ def get_function_prompt() -> str:
     return "\n\n".join(parts)
 
 
-
 def main() -> None:
     prompt = get_function_prompt()
-    print(prompt)
+    question = "how do I get a list of flights for a specific user?"
 
-    import ipdb; ipdb.set_trace()
-
-    # resp = openai.FineTune.create(training_file=upload.id, model="davinci")
+    resp = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "assistant", "content": prompt},
+            {"role": "user", "content": question},
+        ],
+    )
+    return resp['choices'][0]["message"]["content"]
 
 
 if __name__ == "__main__":
