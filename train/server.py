@@ -2,7 +2,7 @@
 import csv
 from typing import List
 import openai
-from flask import Flask
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -13,10 +13,11 @@ def home():
     return f"<h1>Hello, World!</h1>\n<div>You probably want `POST /function_completions/`! See the {readme_link} for details"
 
 
-@app.route("/function_completion", methods=['POST'])  # type: ignore
-def function_completion() -> None:
+@app.route("/function-completion", methods=['POST'])  # type: ignore
+def function_completion():
+    # question = "how do I get a list of flights for a specific user?"
+    question = request.get_json(force=True)['question']
     functions = get_functions()
-    question = "how do I get a list of flights for a specific user?"
 
     resp = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
