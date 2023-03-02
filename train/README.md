@@ -1,4 +1,31 @@
-# Poly Training
+# Poly Data Science
+
+This Python library contains the code for:
+
+1. Hosting the Python Demo Server - the middleman between the client and OpenAI
+2. Training new models on OpenAI
+
+## Server
+
+To start the server, run the following:
+
+```
+> cd train
+> ./server.py
+< serving on localhost:9000
+```
+
+Then to hit the server, request the following:
+
+```
+POST /function_completion/
+{"question": "how do I get united flight information for a user?"}
+```
+
+The server will build a query based on your question, send it to OpenAI, and return the response.
+
+
+## Training
 
 This python library will train a new model, upload it to OpenAI, and validate it!
 
