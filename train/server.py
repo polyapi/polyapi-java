@@ -2,9 +2,33 @@
 import csv
 from typing import List
 import openai
+from flask import Flask
+
+app = Flask(__name__)
 
 
-def get_function_prompt() -> str:
+@app.route("/")
+def home():
+    readme_link = "<a href='https://github.com/polyapi/poly-alpha/blob/main/train/README.md'>README</a>"
+    return f"<h1>Hello, World!</h1>\n<div>You probably want `POST /function_completions/`! See the {readme_link} for details"
+
+
+@app.route("/function_completion", methods=['POST'])  # type: ignore
+def function_completion() -> None:
+    functions = get_functions()
+    question = "how do I get a list of flights for a specific user?"
+
+    resp = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "assistant", "content": functions},
+            {"role": "user", "content": question},
+        ],
+    )
+    return resp['choices'][0]["message"]["content"]
+
+
+def get_functions() -> str:
     preface = "Given the following functions,"
     parts: List[str] = [preface]
 
@@ -21,21 +45,3 @@ def get_function_prompt() -> str:
             parts.append(f"// {comment}\n{code}")
 
     return "\n\n".join(parts)
-
-
-def main() -> None:
-    prompt = get_function_prompt()
-    question = "how do I get a list of flights for a specific user?"
-
-    resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "assistant", "content": prompt},
-            {"role": "user", "content": question},
-        ],
-    )
-    return resp['choices'][0]["message"]["content"]
-
-
-if __name__ == "__main__":
-    main()

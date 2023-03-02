@@ -11,8 +11,8 @@ To start the server, run the following:
 
 ```
 > cd train
-> ./server.py
-< serving on localhost:9000
+> flask --app server run
+< * Running on http://127.0.0.1:5000
 ```
 
 Then to hit the server, request the following:
