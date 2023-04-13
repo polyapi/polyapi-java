@@ -3,7 +3,7 @@ from mock import Mock, patch
 from load_fixtures import test_user_get_or_create
 from app.completion import (
     get_conversations_for_user,
-    get_function_options_prompt,
+    get_function_matches_prompt,
     get_completion_prompt_messages,
 )
 from app.typedefs import ExtractKeywordDto
@@ -113,7 +113,7 @@ class T(DbTestCase):
     def test_library_message_no_keywords(self, requests_get: Mock) -> None:
         requests_get.return_value = Mock(status_code=200, json=lambda: get_functions())
 
-        d, stats = get_function_options_prompt(None)
+        d, stats = get_function_matches_prompt(None)
         self.assertEqual(requests_get.call_count, 0)
         self.assertIsNone(d)
 
@@ -127,7 +127,7 @@ class T(DbTestCase):
 
         keywords = "how do I find the x and y coordinates of a Google Map?".lower()
         keyword_data = ExtractKeywordDto(keywords=keywords, semantically_similar_keywords="", http_methods="")
-        d, stats = get_function_options_prompt(keyword_data)
+        d, stats = get_function_matches_prompt(keyword_data)
         assert d
         self.assertEqual(requests_get.call_count, 2)
         self.assertEqual(stats["match_count"], 3)
@@ -141,7 +141,7 @@ class T(DbTestCase):
             Mock(status_code=200, json=lambda: get_webhooks()),
         ]
 
-        d, stats = get_function_options_prompt({"keywords": "foo bar"})  # type: ignore
+        d, stats = get_function_matches_prompt({"keywords": "foo bar"})  # type: ignore
         assert d
         self.assertEqual(requests_get.call_count, 2)
         self.assertEqual(stats["match_count"], 1)

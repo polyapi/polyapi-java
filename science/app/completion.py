@@ -96,7 +96,7 @@ def get_question_message_dict(question, match_count) -> MessageDict:
     return question_msg
 
 
-def get_function_options_prompt(
+def get_function_matches_prompt(
     keywords: Optional[ExtractKeywordDto],
 ) -> Tuple[Optional[MessageDict], StatsDict]:
     """get all matching functions that need to be injected into the prompt"""
@@ -210,11 +210,11 @@ def get_new_conversation_messages(
 
     keywords = extract_keywords(question)
 
-    functions, stats = get_function_options_prompt(keywords)
+    matches, stats = get_function_matches_prompt(keywords)
     stats["prompt"] = question
 
-    if functions:
-        rv.append(functions)
+    if matches:
+        rv.append(matches)
 
     question_msg = get_question_message_dict(question, stats["match_count"])
     rv.append(question_msg)
@@ -240,12 +240,12 @@ def get_completion_prompt_messages(
     question: str,
 ) -> Tuple[List[MessageDict], StatsDict]:
     keywords = extract_keywords(question)
-    library, stats = get_function_options_prompt(keywords)
+    matches, stats = get_function_matches_prompt(keywords)
     stats["prompt"] = question
 
     rv = []
 
-    if library:
+    if matches:
         # from the OpenAI docs:
         # gpt-3.5-turbo-0301 does not always pay strong attention to system messages. Future models will be trained to pay stronger attention to system messages.
         # let's try user!
@@ -259,9 +259,9 @@ def get_completion_prompt_messages(
         #         content="To import the Poly API library, use `import poly from 'polyapi';`",
         #     )
         # )
-        rv.append(library)
+        rv.append(matches)
 
-    question_msg = get_question_message_dict(question, bool(library))
+    question_msg = get_question_message_dict(question, bool(matches))
     rv.append(question_msg)
 
     system_prompt = get_system_prompt()
