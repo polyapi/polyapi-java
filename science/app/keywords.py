@@ -127,8 +127,15 @@ def _filter_items_by_method(items: List[Union[FunctionDto, WebhookDto]], methods
     if method_list:
         rv = []
         for item in items:
-            if item.get("method"):
+            method = item.get("method")
+            if method and method in VALID_HTTP_METHODS:
+                # add it! method exists and is
+                rv.append(item)
+            elif method:
+                # dont add it! method exists and doesn't match
                 pass
+            else:
+                rv.append(item)
         return rv
     else:
         # just return all items if we could not detect any methods
