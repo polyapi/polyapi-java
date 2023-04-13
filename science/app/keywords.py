@@ -118,12 +118,31 @@ def keywords_similar(
     return similarity_score > get_similarity_threshold(), similarity_score
 
 
+VALID_HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
+
+
+def _filter_items_by_method(items: List[Union[FunctionDto, WebhookDto]], methods: str) -> List[Union[FunctionDto, WebhookDto]]:
+    method_list = [m.strip() for m in methods.split(",").lower()]
+    method_list = [m for m in method_list if m in VALID_HTTP_METHODS]
+    if method_list:
+        rv = []
+        for item in items:
+            if item.get("method"):
+                pass
+        return rv
+    else:
+        # just return all items if we could not detect any methods
+        return items
+
+
 def get_top_function_matches(
     items: List[Union[FunctionDto, WebhookDto]], keyword_data: ExtractKeywordDto
 ) -> Tuple[List[Union[FunctionDto, WebhookDto]], StatsDict]:
     """get top function matches based on keywords"""
     # for now ignore http_methods
     match_limit = get_function_match_limit()
+
+    item = _filter_items_by_method(items, keyword_data["http_methods"])
 
     keyword_matches, keyword_stats = _get_top(
         match_limit, items, keyword_data["keywords"]
