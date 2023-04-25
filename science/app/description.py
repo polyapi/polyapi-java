@@ -83,7 +83,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         short_description=short,
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
-        call_type="Api calls",
+        call_type="API calls",
         # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
@@ -122,7 +122,7 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
       short_description=short,
       payload=data.get("payload", "None"),
       response=data.get("response", "None"),
-      call_type="Webhook"
+      call_type="Event handler"
       # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}

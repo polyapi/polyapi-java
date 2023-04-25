@@ -80,7 +80,7 @@ class T(DbTestCase):
     def test_webhook_description(self, chat_create: Mock) -> None:
       # setup
       mock_output = json.dumps(
-        {"context": "booking.reservations", "name": "createReservation", "description": "This Webhook..."})
+        {"context": "booking.reservations", "name": "createReservation", "description": "This Event handler..."})
       chat_create.return_value = {
         "choices": [{"message": {"content": mock_output}}]
       }
@@ -100,7 +100,7 @@ class T(DbTestCase):
       output = resp.get_json()
       self.assertEqual(output["context"], "booking.reservations")
       self.assertEqual(output["name"], "createReservation")
-      self.assertEqual(output["description"], "This Webhook...")
+      self.assertEqual(output["description"], "This Event handler...")
 
     def test_configure(self):
         data = {"name": "function_match_limit", "value": "4"}
