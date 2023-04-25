@@ -83,7 +83,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         short_description=short,
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
-        call_type="API calls",
+        call_type="API call",
         # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
