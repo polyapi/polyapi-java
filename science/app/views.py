@@ -3,7 +3,7 @@ from typing import Dict, Optional, Tuple
 from flask import Blueprint, Response, request, jsonify
 from openai import OpenAIError
 from .completion import get_completion_or_conversation_answer
-from app.description import get_function_description
+from app.description import get_function_description, get_webhook_description
 from app.typedefs import DescInputDto
 from app.utils import clear_conversation, is_vip_user, log, set_config_variable
 
@@ -33,6 +33,12 @@ def function_completion() -> Dict:
 def function_description() -> Response:
     data: DescInputDto = request.get_json(force=True)
     return jsonify(get_function_description(data))
+
+
+@bp.route("/webhook-description", methods=["POST"])
+def webhook_description() -> Response:
+    data: DescInputDto = request.get_json(force=True)
+    return jsonify(get_webhook_description(data))
 
 
 @bp.route("/clear-conversation", methods=["POST"])

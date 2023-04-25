@@ -76,6 +76,32 @@ class T(DbTestCase):
         self.assertEqual(output["name"], "createReservation")
         self.assertEqual(output["description"], "This API call...")
 
+    @patch("app.description.openai.ChatCompletion.create")
+    def test_webhook_description(self, chat_create: Mock) -> None:
+      # setup
+      mock_output = json.dumps(
+        {"context": "booking.reservations", "name": "createReservation", "description": "This API call..."})
+      chat_create.return_value = {
+        "choices": [{"message": {"content": mock_output}}]
+      }
+      mock_input: DescInputDto = {
+        "url": "http://example.com",
+        "method": "GET",
+        "short_description": "I am the description",
+        "payload": "I am the payload",
+        "response": "I am the response",
+      }
+
+      # execute
+      resp = self.client.post("/webhook-description", json=mock_input)
+
+      # test
+      self.assertEqual(chat_create.call_count, 1)
+      output = resp.get_json()
+      self.assertEqual(output["context"], "booking.reservations")
+      self.assertEqual(output["name"], "createReservation")
+      self.assertEqual(output["description"], "This API call...")
+
     def test_configure(self):
         data = {"name": "function_match_limit", "value": "4"}
         resp = self.client.post("/configure", json=data)

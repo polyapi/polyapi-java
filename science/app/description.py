@@ -17,11 +17,11 @@ from thefuzz import fuzz
 
 
 NAME_CONTEXT_DESCRIPTION_PROMPT = """
-I will provide you information about an API call.
+I will provide you information about an {call_type}.
 
-Please give me a context, name and description for the API call.
+Please give me a context, name and description for the {call_type}.
 
-The context is a way of grouping similar API calls.
+The context is a way of grouping similar {call_type}s.
 
 The context and name can use '.' notation but cannot have any spaces or dashes.
 
@@ -39,7 +39,7 @@ Resources should be plural. For example, shopify.products, shopify.orders, shopi
 
 The description should use keywords that makes search efficient. It can be a little redundant if that adds keywords but needs to remain human readable. It should be three to five sentences long.
 
-Here is the API call:
+Here is the {call_type}:
 
 {short_description}
 {method} {url}
@@ -83,11 +83,51 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         short_description=short,
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
+        call_type="Api calls",
         # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
     resp = openai.ChatCompletion.create(
         model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
+    )
+    completion = resp["choices"][0]["message"]["content"].strip()
+    try:
+        rv = _parse_openai_response(completion)
+    except json.JSONDecodeError:
+        log_error(data, completion, prompt)
+        return {"error": "Error parsing JSON from OpenAI: " + completion}
+
+    if not rv["context"] or not rv["name"] or not rv["description"]:
+        log_error(data, completion, prompt)
+    else:
+        # for now log EVERYTHING
+        log("input:", str(data), "output:", completion, "prompt:", prompt, sep="\n")
+
+    # if rv["context"] and rv['name']:
+    #     revision = _revise_to_match_existing_context_and_patterns(rv['context'], rv['name'])
+    #     if revision:
+    #         rv['context'] = revision['context']
+    #         rv['name'] = revision['name']
+
+    return rv
+
+
+def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto]:
+    # contexts = _get_context_and_names()
+    short = data.get("short_description", "")
+    short = f"User given name: {short}" if short else ""
+    prompt = NAME_CONTEXT_DESCRIPTION_PROMPT.format(
+      url=data.get("url", ""),
+      method=data.get("method", ""),
+      short_description=short,
+      payload=data.get("payload", "None"),
+      response=data.get("response", "None"),
+      call_type="Webhook"
+      # contexts="\n".join(contexts),
+    )
+    prompt_msg = {"role": "user", "content": prompt}
+    resp = openai.ChatCompletion.create(
+      model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:
