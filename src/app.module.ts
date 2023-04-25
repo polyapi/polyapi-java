@@ -15,6 +15,9 @@ import { AiModule } from 'ai/ai.module';
 import { AuthProviderModule } from 'auth-provider/auth-provider.module';
 import { SpecsModule } from 'specs/specs.module';
 import { GptPluginModule } from 'gptplugin/gptplugin.module';
+import { TenantModule } from 'tenant/tenant.module';
+import { TeamModule } from 'team/team.module';
+import { EnvironmentModule } from 'environment/environment.module';
 
 @Module({
   imports: [
@@ -22,21 +25,23 @@ import { GptPluginModule } from 'gptplugin/gptplugin.module';
       rootPath: join(__dirname, '..', '..', 'public'),
       renderPath: '/'
     }),
-    AuthModule,
-    UserModule,
-
-    FunctionModule,
-    TeachModule,
     PrismaModule,
-    ChatModule,
-    EventModule,
-    WebhookModule,
-    CommonModule,
     ConfigModule,
-    AiModule,
-    GptPluginModule,
+    CommonModule,
+    TenantModule,
+    EnvironmentModule,
+    TeamModule,
+    UserModule,
+    AuthModule,
+    TeachModule,
+    FunctionModule,
+    WebhookModule,
     AuthProviderModule,
+    EventModule,
     SpecsModule,
+    AiModule,
+    ChatModule,
+    GptPluginModule,
   ],
   exports: [
     ConfigModule,

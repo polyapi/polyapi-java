@@ -39,7 +39,7 @@ export class ConfigService {
   get env(): string {
     const host = this.get('HOST_URL');
     if (!host) {
-      return "local"
+      return 'local';
     }
     // HACK todo add production?
     if (host.includes('develop')) {
@@ -47,7 +47,7 @@ export class ConfigService {
     } else if (host.includes('staging')) {
       return 'staging';
     } else {
-      return 'local'
+      return 'local';
     }
   }
 
@@ -67,8 +67,24 @@ export class ConfigService {
     return this.get('SCIENCE_SERVER_BASE_URL');
   }
 
-  get adminApiKey(): string {
-    return this.get('ADMIN_API_KEY');
+  get polyTenantAppKey(): string {
+    return this.get('POLY_TENANT_APP_KEY');
+  }
+
+  get polyTenantName(): string {
+    return this.get('POLY_TENANT_NAME') || 'poly';
+  }
+
+  get polySuperAdminUserKey(): string {
+    return this.get('POLY_SUPER_ADMIN_USER_KEY');
+  }
+
+  get polyAdminsTeamName(): string {
+    return this.get('POLY_ADMINS_TEAM_NAME') || 'Admins';
+  }
+
+  get polyAdminUserName(): string {
+    return this.get('POLY_ADMIN_USER_NAME') || 'poly';
   }
 
   get functionArgsParameterLimit(): number {

@@ -28,11 +28,11 @@ export class AiService {
     );
   }
 
-  async clearConversation(userId: string) {
-    this.logger.debug(`Clearing conversation for user: ${userId}`);
+  async clearConversation(environmentId: string) {
+    this.logger.debug(`Clearing conversation for environment: ${environmentId}`);
     await lastValueFrom(
       this.httpService.post(`${this.config.scienceServerBaseUrl}/clear-conversation`, {
-        user_id: userId,
+        user_id: environmentId,
       }).pipe(
         catchError(this.processScienceServerError()),
       ),

@@ -26,14 +26,14 @@ export class KNativeFaasService implements FaasService {
   constructor(private readonly config: ConfigService, private readonly http: HttpService) {
   }
 
-  async createFunction(id: string, name: string, code: string, apiKey: string): Promise<void> {
+  async createFunction(id: string, name: string, code: string, appKey: string): Promise<void> {
     const functionPath = this.getFunctionPath(id);
     if (fs.existsSync(functionPath)) {
       await this.cleanUpFunction(id, functionPath);
     }
     await exec(`${KNATIVE_EXEC_FILE} create ${functionPath} -l node`);
 
-    await this.preparePolyLib(functionPath, apiKey);
+    await this.preparePolyLib(functionPath, appKey);
 
     const template = fs.readFileSync(`${process.cwd()}/dist/function/faas/knative/templates/index.js.hbs`, 'utf8');
     const indexFileContent = handlebars.compile(template)({

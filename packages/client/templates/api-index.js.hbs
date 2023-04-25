@@ -19,7 +19,8 @@ module.exports = (clientID) => merge(
         {
           clientID,
           args: argKeys.reduce((acc, key, index) => ({ ...acc, [key]: args[index] }), {})
-        }
+        },
+        { headers: { 'X-PolyApiKey': '{{apiKey}}' }}
       ).then(({ data }) => data)),
     {}
   )

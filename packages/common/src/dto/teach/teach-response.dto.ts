@@ -1,5 +1,5 @@
 export interface TeachResponseDto {
-  functionId: number;
+  functionId: string;
   variables?: {
     [key: string]: string;
   };

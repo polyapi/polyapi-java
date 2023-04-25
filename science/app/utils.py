@@ -74,11 +74,11 @@ def store_message(
 
     if data.get("function_ids"):
         create_input["functions"] = {
-            "create": [{"functionPublicId": fid} for fid in data["function_ids"]]
+            "create": [{"functionId": fid} for fid in data["function_ids"]]
         }
     if data.get("webhook_ids"):
         create_input["webhooks"] = {
-            "create": [{"webhookPublicId": wid} for wid in data["webhook_ids"]]
+            "create": [{"webhookId": wid} for wid in data["webhook_ids"]]
         }
 
     rv = db.conversationmessage.create(data=create_input)  # type: ignore

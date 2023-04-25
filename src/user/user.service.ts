@@ -1,111 +1,74 @@
 import crypto from 'crypto';
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConfigService } from 'config/config.service';
-import { Role } from '@poly/common';
-
-const PUBLIC_USER_NAME = 'publicUser';
+import { Role, UserDto, UserKeyDto } from '@poly/common';
+import { User, UserKey } from '@prisma/client';
 
 @Injectable()
-export class UserService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {
+export class UserService {
+  constructor(private readonly prisma: PrismaService) {
   }
 
-  async onModuleInit() {
-    await this.checkAdmin();
+  toDto(user: User): UserDto {
+    return {
+      id: user.id,
+      name: user.name,
+      role: user.role as Role,
+    };
   }
 
-  private async checkAdmin() {
-    const admin = await this.prisma.user.findFirst({
-      where: {
-        role: 'ADMIN',
-      },
-    });
-
-    if (!admin) {
-      await this.prisma.user.create({
-        data: {
-          name: 'admin',
-          role: Role.Admin,
-          apiKey: this.config.adminApiKey,
-        },
-      });
-    } else if (admin.apiKey !== this.config.adminApiKey) {
-      await this.prisma.user.update({
-        where: {
-          id: admin.id,
-        },
-        data: {
-          apiKey: this.config.adminApiKey,
-        },
-      });
-    }
+  toUserKeyDto(userKey: UserKey): UserKeyDto {
+    return {
+      id: userKey.id,
+      environmentId: userKey.environmentId,
+      key: userKey.key,
+    };
   }
 
-  async createUser(name: string) {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        name,
-      },
-    });
-    if (existingUser) {
-      throw new BadRequestException('User with such name already exists.');
-    }
-
+  async createUser(teamId: any, name: string, role: Role) {
     return this.prisma.user.create({
       data: {
+        team: {
+          connect: {
+            id: teamId,
+          },
+        },
         name,
-        role: Role.User,
-        apiKey: crypto.randomBytes(16).toString('hex'),
+        role,
       },
     });
   }
 
-  public async findByApiKey(apiKey: string): Promise<User | null> {
-    if (!apiKey) {
-      return null;
-    }
+  async createUserKey(environmentId: string, userId: string, key?: string) {
+    return this.prisma.userKey.create({
+      data: {
+        key: key || crypto.randomUUID(),
+        environment: {
+          connect: {
+            id: environmentId,
+          },
+        },
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+      },
+    });
+  }
 
+  async findUserKey(userKey: string) {
+    return this.prisma.userKey.findFirst({
+      where: {
+        key: userKey,
+      },
+    });
+  }
+
+  async findById(id: string) {
     return this.prisma.user.findFirst({
       where: {
-        apiKey,
-      },
-    });
-  }
-
-  async deleteUserByApiKey(apiKey: string) {
-    await this.prisma.user.delete({
-      where: {
-        apiKey,
-      },
-    });
-  }
-
-  public async getPublicUser(): Promise<User> {
-    const publicUser = await this.prisma.user.findFirst({
-      where: {
-        apiKey: '',
-      },
-    });
-    if (publicUser) {
-      return publicUser;
-    }
-
-    return this.prisma.user.create({
-      data: {
-        apiKey: '',
-        name: PUBLIC_USER_NAME,
-      },
-    });
-  }
-
-  async getUsers() {
-    return this.prisma.user.findMany({
-      where: {
-        name: {
-          not: PUBLIC_USER_NAME,
-        },
+        id,
       },
     });
   }

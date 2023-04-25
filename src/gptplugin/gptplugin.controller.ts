@@ -1,8 +1,9 @@
 import { Controller, Logger, Get, Post, UseGuards, Req, Body, Param } from '@nestjs/common';
 import { Request } from 'express';
 import { CreatePluginDto } from '@poly/common';
-import { ApiKeyGuard } from 'auth/api-key-auth-guard.service';
+import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
 import { GptPluginService } from 'gptplugin/gptplugin.service';
+import { AuthRequest } from 'common/types';
 
 
 @Controller()
@@ -21,9 +22,9 @@ export class GptPluginController {
     return spec;
   }
 
-  @UseGuards(ApiKeyGuard)
+  @UseGuards(PolyKeyGuard)
   @Get('plugins/:slug')
-  public async pluginGet(@Req() req: Request, @Param('slug') slug): Promise<unknown> {
+  public async pluginGet(@Req() req: AuthRequest, @Param('slug') slug): Promise<unknown> {
     // HACK this is actually get or create based on slug!
     const plugin = await this.service.getPlugin(slug);
     return {
@@ -32,11 +33,11 @@ export class GptPluginController {
     };
   }
 
-  @UseGuards(ApiKeyGuard)
+  @UseGuards(PolyKeyGuard)
   @Post('plugins')
-  public async pluginCreate(@Req() req: Request, @Body() body: CreatePluginDto): Promise<unknown> {
+  public async pluginCreate(@Req() req: AuthRequest, @Body() body: CreatePluginDto): Promise<unknown> {
     // HACK this is actually get or create based on slug!
-    const plugin = await this.service.createPlugin(body);
+    const plugin = await this.service.createOrUpdatePlugin(body);
     return {
       plugin: plugin,
       plugin_url: `https://${plugin.slug}.${req.hostname}`,

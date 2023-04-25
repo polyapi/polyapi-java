@@ -1,9 +1,9 @@
 import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { AuthFunctionEventHandlerDto, ErrorHandlerDto, WebhookEventHandlerDto } from '@poly/common';
-import { Socket, Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { EventService } from 'event/event.service';
-import { UserService } from 'user/user.service';
+import { AuthService } from 'auth/auth.service';
 
 @WebSocketGateway({ namespace: 'events' })
 export class EventGateway {
@@ -12,7 +12,7 @@ export class EventGateway {
 
   private logger: Logger = new Logger(EventGateway.name);
 
-  constructor(private readonly eventService: EventService, private readonly userService: UserService) {
+  constructor(private readonly eventService: EventService, private readonly authService: AuthService) {
   }
 
   private async checkErrorHandler({ clientID, apiKey }: ErrorHandlerDto) {
@@ -24,8 +24,8 @@ export class EventGateway {
       this.logger.debug(`Missing API key.`);
       return false;
     }
-    const user = await this.userService.findByApiKey(apiKey);
-    if (!user) {
+    const authData = await this.authService.getAuthData(apiKey);
+    if (!authData) {
       this.logger.debug(`Invalid API key: ${apiKey}`);
       return false;
     }
@@ -62,8 +62,8 @@ export class EventGateway {
       this.logger.debug(`Missing API key.`);
       return false;
     }
-    const user = await this.userService.findByApiKey(apiKey);
-    if (!user) {
+    const authData = await this.authService.getAuthData(apiKey);
+    if (!authData) {
       this.logger.debug(`Invalid API key: ${apiKey}`);
       return false;
     }
@@ -100,8 +100,8 @@ export class EventGateway {
       this.logger.debug(`Missing API key.`);
       return false;
     }
-    const user = await this.userService.findByApiKey(apiKey);
-    if (!user) {
+    const authData = await this.authService.getAuthData(apiKey);
+    if (!authData) {
       this.logger.debug(`Invalid API key: ${apiKey}`);
       return false;
     }

@@ -137,7 +137,7 @@ async function _apiFunctionMap(f: ApiFunction, functionService: FunctionService)
 
   return new Promise((resolve) => {
     resolve({
-      executePath: `/functions/${executeType}/${f.publicId}/execute`,
+      executePath: `/functions/${executeType}/${f.id}/execute`,
       operationId: _getOperationId(f),
       ...details,
     });
@@ -153,10 +153,11 @@ export class GptPluginService {
     // TODO use with updatePlugin endpoint?
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) {
+  }
 
-  async _getAllFunctions(publicIds: string[]): Promise<PluginFunction[]> {
-    const apiFunctions = await this.prisma.apiFunction.findMany({ where: { publicId: { in: publicIds } } });
+  async _getAllFunctions(ids: string[]): Promise<PluginFunction[]> {
+    const apiFunctions = await this.prisma.apiFunction.findMany({ where: { id: { in: ids } } });
     // const customFunctions = await this.prisma.customFunction.findMany({ where: { publicId: { in: publicIds } } });
     // const authFunctions = await this.prisma.authFunction.findMany({ where: { publicId: { in: publicIds } } });
 
@@ -199,7 +200,7 @@ export class GptPluginService {
     });
   }
 
-  async createPlugin(body: CreatePluginDto): Promise<GptPlugin> {
+  async createOrUpdatePlugin(body: CreatePluginDto): Promise<GptPlugin> {
     // slugs must be lowercase!
     body.slug = body.slug.toLowerCase();
 

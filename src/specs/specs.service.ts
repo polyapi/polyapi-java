@@ -2,7 +2,7 @@ import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { FunctionService } from 'function/function.service';
 import { WebhookService } from 'webhook/webhook.service';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
-import { User } from '@prisma/client';
+import { Environment, User } from '@prisma/client';
 import { Specification, SpecificationPath } from '@poly/common';
 import { toCamelCase } from '@guanghechen/helper-string';
 
@@ -20,21 +20,21 @@ export class SpecsService {
   ) {
   }
 
-  async getSpecificationPaths(user: User): Promise<SpecificationPath[]> {
-    const specifications = await this.getSpecifications(user);
+  async getSpecificationPaths(environmentId: string): Promise<SpecificationPath[]> {
+    const specifications = await this.getSpecifications(environmentId);
     return specifications.map(spec => ({
       id: spec.id,
       path: `${spec.context ? `${spec.context}.` : ''}${toCamelCase(spec.name.split('.').map(toCamelCase).join('.'))}`,
     }));
   }
 
-  async getSpecifications(user: User, contexts?: string[], names?: string[], ids?: string[]): Promise<Specification[]> {
-    this.logger.debug(`Getting specifications for user ${user.id} with contexts ${contexts}, names ${names}, and ids ${ids}`);
+  async getSpecifications(environmentId: string, contexts?: string[], names?: string[], ids?: string[]): Promise<Specification[]> {
+    this.logger.debug(`Getting specifications for environment ${environmentId} with contexts ${contexts}, names ${names}, and ids ${ids}`);
 
-    const apiFunctions = await this.functionService.getApiFunctions(user, contexts, names, ids);
-    const customFunctions = await this.functionService.getCustomFunctions(user, contexts, names, ids);
-    const webhookHandles = await this.webhookService.getWebhookHandles(user, contexts, names, ids);
-    const authProviders = await this.authProviderService.getAuthProviders(user, contexts);
+    const apiFunctions = await this.functionService.getApiFunctions(environmentId, contexts, names, ids);
+    const customFunctions = await this.functionService.getCustomFunctions(environmentId, contexts, names, ids);
+    const webhookHandles = await this.webhookService.getWebhookHandles(environmentId, contexts, names, ids);
+    const authProviders = await this.authProviderService.getAuthProviders(environmentId, contexts);
 
     return [
       ...(await Promise.all(apiFunctions.map(apiFunction => this.functionService.toApiFunctionSpecification(apiFunction)))),

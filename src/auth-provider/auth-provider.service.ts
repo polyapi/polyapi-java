@@ -37,7 +37,7 @@ export class AuthProviderService {
   ) {
   }
 
-  async getAuthProviders(user: User, contexts?: string[]): Promise<AuthProvider[]> {
+  async getAuthProviders(environmentId: string, contexts?: string[]): Promise<AuthProvider[]> {
     const contextConditions = contexts?.length
       ? contexts.filter(Boolean).map((context) => {
         return {
@@ -55,7 +55,7 @@ export class AuthProviderService {
 
     return this.prisma.authProvider.findMany({
       where: {
-        userId: user.id,
+        environmentId,
         ...contextConditions.length && {
           OR: contextConditions,
         },
@@ -63,17 +63,16 @@ export class AuthProviderService {
     });
   }
 
-  async getAuthProvider(user: User, id: string): Promise<AuthProvider | null> {
+  async getAuthProvider(id: string): Promise<AuthProvider | null> {
     return this.prisma.authProvider.findFirst({
       where: {
         id,
-        userId: user.id,
       },
     });
   }
 
   async createAuthProvider(
-    user: User,
+    environmentId: string,
     name: string,
     context: string,
     authorizeUrl: string,
@@ -83,11 +82,11 @@ export class AuthProviderService {
     audienceRequired: boolean,
     refreshEnabled: boolean,
   ) {
-    if (!await this.checkContextDuplicates(user, context, !!revokeUrl, !!introspectUrl)) {
+    if (!await this.checkContextDuplicates(environmentId, context, !!revokeUrl, !!introspectUrl)) {
       throw new ConflictException(`Auth functions within context ${context} already exist`);
     }
 
-    this.logger.debug(`Creating auth provider for user ${user.id} with context ${context} and authorizeUrl ${authorizeUrl}`);
+    this.logger.debug(`Creating auth provider in environment ${environmentId} with context ${context} and authorizeUrl ${authorizeUrl}`);
     return this.prisma.authProvider.create({
       data: {
         name,
@@ -98,9 +97,9 @@ export class AuthProviderService {
         introspectUrl,
         audienceRequired,
         refreshEnabled,
-        user: {
+        environment: {
           connect: {
-            id: user.id,
+            id: environmentId,
           },
         },
       },
@@ -108,7 +107,6 @@ export class AuthProviderService {
   }
 
   async updateAuthProvider(
-    user: User,
     authProvider: AuthProvider,
     name: string | undefined | null,
     context: string | undefined,
@@ -127,11 +125,11 @@ export class AuthProviderService {
     audienceRequired = audienceRequired === undefined ? authProvider.audienceRequired : audienceRequired;
     refreshEnabled = refreshEnabled === undefined ? authProvider.refreshEnabled : refreshEnabled;
 
-    if (!await this.checkContextDuplicates(user, context, !!revokeUrl, !!introspectUrl, [authProvider.id])) {
+    if (!await this.checkContextDuplicates(authProvider.environmentId, context, !!revokeUrl, !!introspectUrl, [authProvider.id])) {
       throw new ConflictException(`Auth functions within context ${context} already exist`);
     }
 
-    this.logger.debug(`Updating auth provider ${authProvider.id} for user ${user.id}`);
+    this.logger.debug(`Updating auth provider ${authProvider.id}`);
     return this.prisma.authProvider.update({
       where: {
         id: authProvider.id,
@@ -149,8 +147,8 @@ export class AuthProviderService {
     });
   }
 
-  async deleteAuthProvider(user, authProvider: AuthProvider) {
-    this.logger.debug(`Deleting auth provider ${authProvider.id} for user ${user.id}`);
+  async deleteAuthProvider(authProvider: AuthProvider) {
+    this.logger.debug(`Deleting auth provider ${authProvider.id}`);
     return this.prisma.authProvider.delete({
       where: {
         id: authProvider.id,
@@ -173,14 +171,11 @@ export class AuthProviderService {
     };
   }
 
-  public async executeAuthProvider(user: User, authProvider: AuthProvider, eventsClientId: string, clientId: string, clientSecret: string, audience: string | null, scopes: string[], callbackUrl: string | null): Promise<ExecuteAuthProviderResponseDto> {
+  public async executeAuthProvider(authProvider: AuthProvider, eventsClientId: string, clientId: string, clientSecret: string, audience: string | null, scopes: string[], callbackUrl: string | null): Promise<ExecuteAuthProviderResponseDto> {
     await this.prisma.authToken.deleteMany({
       where: {
         authProvider: {
           id: authProvider.id,
-        },
-        user: {
-          id: user.id,
         },
         clientId,
         clientSecret,
@@ -191,11 +186,6 @@ export class AuthProviderService {
     const state = crypto.randomBytes(20).toString('hex');
     const authToken = await this.prisma.authToken.create({
       data: {
-        user: {
-          connect: {
-            id: user.id,
-          },
-        },
         authProvider: {
           connect: {
             id: authProvider.id,
@@ -216,10 +206,10 @@ export class AuthProviderService {
     };
   }
 
-  private getAuthProviderAuthorizationUrl(authFunction: AuthProvider, authToken: AuthToken) {
+  private getAuthProviderAuthorizationUrl(authProvider: AuthProvider, authToken: AuthToken) {
     const params = new URLSearchParams({
       client_id: authToken.clientId,
-      redirect_uri: this.getAuthProviderCallbackUrl(authFunction),
+      redirect_uri: this.getAuthProviderCallbackUrl(authProvider),
       response_type: 'code',
     });
 
@@ -233,7 +223,7 @@ export class AuthProviderService {
       params.append('audience', authToken.audience);
     }
 
-    return `${authFunction.authorizeUrl}?${params.toString()}`;
+    return `${authProvider.authorizeUrl}?${params.toString()}`;
   }
 
   private getAuthProviderCallbackUrl(authProvider: AuthProvider) {
@@ -339,7 +329,7 @@ export class AuthProviderService {
     return updatedAuthToken.callbackUrl;
   }
 
-  async revokeAuthToken(user: User, authProvider: AuthProvider, token: string) {
+  async revokeAuthToken(authProvider: AuthProvider, token: string) {
     if (!authProvider.revokeUrl) {
       return;
     }
@@ -349,9 +339,6 @@ export class AuthProviderService {
       where: {
         authProvider: {
           id: authProvider.id,
-        },
-        user: {
-          id: user.id,
         },
         OR: [
           {
@@ -396,7 +383,7 @@ export class AuthProviderService {
       );
   }
 
-  async introspectAuthToken(user: User, authProvider: AuthProvider, token: string): Promise<any> {
+  async introspectAuthToken(authProvider: AuthProvider, token: string): Promise<any> {
     if (!authProvider.introspectUrl) {
       return;
     }
@@ -429,7 +416,7 @@ export class AuthProviderService {
     );
   }
 
-  async refreshAuthToken(user: User, authProvider: AuthProvider, token: string): Promise<string> {
+  async refreshAuthToken(authProvider: AuthProvider, token: string): Promise<string> {
     if (!authProvider.refreshEnabled) {
       throw new BadRequestException('Refresh not enabled');
     }
@@ -439,9 +426,6 @@ export class AuthProviderService {
       where: {
         authProvider: {
           id: authProvider.id,
-        },
-        user: {
-          id: user.id,
         },
         accessToken: token,
       },
@@ -727,8 +711,8 @@ export class AuthProviderService {
     ].filter(Boolean) as PropertySpecification[];
   }
 
-  private async checkContextDuplicates(user: User, context: string, revokeFunction: boolean, introspectFunction: boolean, excludedIds?: string[]): Promise<boolean> {
-    const paths = (await this.specsService.getSpecificationPaths(user))
+  private async checkContextDuplicates(environmentId: string, context: string, revokeFunction: boolean, introspectFunction: boolean, excludedIds?: string[]): Promise<boolean> {
+    const paths = (await this.specsService.getSpecificationPaths(environmentId))
       .filter(path => excludedIds == null || !excludedIds.includes(path.id))
       .map(path => path.path);
 

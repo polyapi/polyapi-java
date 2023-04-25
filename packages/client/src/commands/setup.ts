@@ -24,7 +24,7 @@ const setup = async () => {
     {
       type: 'input',
       name: 'polyApiKey',
-      message: 'Poly API Key:',
+      message: 'Poly App Key or User Key:',
       filter: (value) => value.trim(),
     },
   ]);

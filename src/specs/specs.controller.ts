@@ -1,7 +1,8 @@
 import { Controller, Get, Logger, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { SpecsService } from 'specs/specs.service';
-import { ApiKeyGuard } from 'auth/api-key-auth-guard.service';
+import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
 import { GetSpecsDto } from '@poly/common';
+import { AuthRequest } from 'common/types';
 
 @Controller('specs')
 export class SpecsController {
@@ -10,12 +11,15 @@ export class SpecsController {
   constructor(private readonly service: SpecsService) {
   }
 
+  @UseGuards(PolyKeyGuard)
   @Get()
-  @UseGuards(ApiKeyGuard)
   @UsePipes(new ValidationPipe({ transform: true }))
-  async getSpecifications(@Req() req, @Query() { contexts, names, ids }: GetSpecsDto) {
-    this.logger.debug(`Getting all specs for user ${req.user.id} with contexts ${JSON.stringify(contexts)}, names ${JSON.stringify(names)}, ids ${JSON.stringify(ids)}`);
-    return this.service.getSpecifications(req.user, contexts, names, ids);
+  async getSpecifications(@Req() req: AuthRequest, @Query() { contexts, names, ids }: GetSpecsDto) {
+    const environmentId = req.user.environment.id;
+
+    this.logger.debug(`Getting all specs for environment ${environmentId} with contexts ${JSON.stringify(contexts)}, names ${JSON.stringify(names)}, ids ${JSON.stringify(ids)}`);
+
+    return this.service.getSpecifications(environmentId, contexts, names, ids);
   }
 
   @Get('/versions')

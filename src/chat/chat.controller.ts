@@ -1,7 +1,7 @@
 import { Req, Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { SendQuestionDto, SendQuestionResponseDto, SendCommandDto, SendConfigureDto, Role } from '@poly/common';
 import { ChatService } from 'chat/chat.service';
-import { ApiKeyGuard } from 'auth/api-key-auth-guard.service';
+import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
 import { AiService } from 'ai/ai.service';
 
 @Controller('chat')
@@ -11,7 +11,7 @@ export class ChatController {
   constructor(private readonly service: ChatService, private readonly aiService: AiService) {}
 
   @Post('/question')
-  @UseGuards(ApiKeyGuard)
+  @UseGuards(PolyKeyGuard)
   public async sendQuestion(@Req() req, @Body() body: SendQuestionDto): Promise<SendQuestionResponseDto> {
     const responseTexts = await this.service.getMessageResponseTexts(req.user.id, body.message);
     return {
@@ -20,12 +20,12 @@ export class ChatController {
   }
 
   @Post('/command')
-  @UseGuards(ApiKeyGuard)
+  @UseGuards(PolyKeyGuard)
   public async sendCommand(@Req() req, @Body() body: SendCommandDto) {
     await this.service.processCommand(req.user.id, body.command);
   }
 
-  @UseGuards(new ApiKeyGuard([Role.Admin]))
+  @UseGuards(new PolyKeyGuard([Role.Admin]))
   @Post('/ai-configuration')
   async aiConfiguration(@Req() req, @Body() body: SendConfigureDto): Promise<string> {
     await this.aiService.configure(body.name, body.value);
