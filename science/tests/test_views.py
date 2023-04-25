@@ -100,7 +100,7 @@ class T(DbTestCase):
       output = resp.get_json()
       self.assertEqual(output["context"], "booking.reservations")
       self.assertEqual(output["name"], "createReservation")
-      self.assertEqual(output["description"], "This API call...")
+      self.assertEqual(output["description"], "This Webhook...")
 
     def test_configure(self):
         data = {"name": "function_match_limit", "value": "4"}
