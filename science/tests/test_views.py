@@ -80,7 +80,7 @@ class T(DbTestCase):
     def test_webhook_description(self, chat_create: Mock) -> None:
       # setup
       mock_output = json.dumps(
-        {"context": "booking.reservations", "name": "createReservation", "description": "This API call..."})
+        {"context": "booking.reservations", "name": "createReservation", "description": "This Webhook..."})
       chat_create.return_value = {
         "choices": [{"message": {"content": mock_output}}]
       }
