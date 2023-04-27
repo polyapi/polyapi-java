@@ -200,7 +200,13 @@ export class FunctionService {
         method,
       },
     });
-    if (apiFunction) {
+
+    var sameGraphQLQuery= false; 
+    if(body.mode === 'graphql' && apiFunction?.body && (body.graphql.query === JSON.parse(apiFunction?.body).graphql.query)) {
+      sameGraphQLQuery = true;
+    }
+
+    if (apiFunction && sameGraphQLQuery) {
       this.logger.debug(`Found existing URL function ${apiFunction.id}. Updating...`);
       return this.prisma.apiFunction.update({
         where: {
@@ -596,6 +602,11 @@ export class FunctionService {
         return body.formdata.reduce((data, item) => Object.assign(data, { [item.key]: item.value }), {});
       case 'urlencoded':
         return body.urlencoded.reduce((data, item) => Object.assign(data, { [item.key]: item.value }), {});
+      case 'graphql':
+        return {
+          query: body.graphql.query,
+          ...(body.graphql.variables && { variables: JSON.parse(body.graphql.variables) }),
+        };
       default:
         return undefined;
     }

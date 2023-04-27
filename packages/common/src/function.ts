@@ -5,6 +5,14 @@ export type RawBody = {
   raw: string;
 };
 
+export type GraphQLBody = {
+  mode: 'graphql';
+  graphql: {
+    query: string;
+    variables?: string;
+  }
+};
+
 export type UrlencodedBody = {
   mode: 'urlencoded';
   urlencoded: {
@@ -27,7 +35,7 @@ export type EmptyBody = {
   mode: 'empty';
 };
 
-export type Body = RawBody | UrlencodedBody | FormDataBody | EmptyBody;
+export type Body = RawBody | UrlencodedBody | FormDataBody | EmptyBody | GraphQLBody;
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
 
 export type ArgumentType = string;
