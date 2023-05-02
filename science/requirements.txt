@@ -1,4 +1,4 @@
-flask==2.2.3
+flask==2.3.2
 prisma==0.8.2
 # pydantic >= 1.10 not compatible with prisma right now:
 # https://github.com/pyinstaller/pyinstaller/issues/5432
