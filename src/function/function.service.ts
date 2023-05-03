@@ -13,7 +13,9 @@ import { toCamelCase, toPascalCase } from '@guanghechen/helper-string';
 import { HttpService } from '@nestjs/axios';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import mustache from 'mustache';
-import mergeWith from 'lodash/mergeWith';
+
+import { mergeWith, differenceBy, uniqBy } from 'lodash'
+
 import { CustomFunction, Prisma, SystemPrompt, ApiFunction, User } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
@@ -21,7 +23,10 @@ import {
   ArgumentType,
   Auth,
   Body,
+  PostmanEntryList,
   CustomFunctionSpecification,
+  EmptyBody,
+  FormDataBody,
   FunctionArgument,
   FunctionBasicDto,
   FunctionDetailsDto,
@@ -29,9 +34,11 @@ import {
   Method,
   PropertySpecification,
   PropertyType,
+  RawBody,
   Role,
   ServerFunctionSpecification,
   Specification,
+  UrlencodedBody,
   Variables,
 } from '@poly/common';
 import { EventService } from 'event/event.service';
@@ -160,6 +167,23 @@ export class FunctionService {
     return name;
   }
 
+  private pickAndGetBodyData(body: RawBody): RawBody['raw']
+  private pickAndGetBodyData(body: EmptyBody): null
+  private pickAndGetBodyData(body: FormDataBody | UrlencodedBody): PostmanEntryList
+  private pickAndGetBodyData(body: Body): PostmanEntryList | null | RawBody['raw']
+   {
+    switch (body.mode) {
+      case 'formdata':
+        return body.formdata;
+      case 'urlencoded':
+        return body.urlencoded;
+      case 'raw':
+        return body.raw;
+      default:
+        return null;
+    }
+  }
+
   private filterDisabledValues<T extends { [k: string]: string | boolean }>(values: T[]) {
     return values.filter(({ disabled }) => !disabled);
   }
@@ -181,7 +205,12 @@ export class FunctionService {
     }
   }
 
+  public extractPostmanArguments(list: Omit<PostmanEntryList, 'disabled'>) {
+    return list.filter(entry => typeof entry.value === 'string' && entry.value.match(ARGUMENT_PATTERN));
+  }
+
   async createOrUpdateApiFunction(
+    this: FunctionService,
     user: User,
     url: string,
     method: Method,
@@ -200,6 +229,71 @@ export class FunctionService {
         method,
       },
     });
+
+    let shouldRetrain = !!apiFunction;
+
+    const filteredDisabledHeaders = this.filterDisabledValues(headers);
+
+    let  localArguments: PostmanEntryList = [];
+    let  newArguments: PostmanEntryList = [];
+
+
+    if(apiFunction) {
+
+      const apiFunctionBody = JSON.parse(apiFunction.body || '{}') as (Body);
+
+      const localHeaderArguments = this.extractPostmanArguments(JSON.parse(apiFunction.headers || '[]') as Header[]);
+      const newHeaderArguments = this.extractPostmanArguments(filteredDisabledHeaders);
+      
+      localArguments.push(...localHeaderArguments);
+      newArguments.push(...newHeaderArguments);
+
+
+      if(apiFunctionBody.mode === 'formdata' || apiFunctionBody.mode === 'urlencoded') {
+        localArguments.push(...this.extractPostmanArguments(this.pickAndGetBodyData(apiFunctionBody)));
+      } else if(apiFunctionBody.mode === 'raw' && this.getContentTypeHeaders(apiFunctionBody)['Content-Type'] === 'application/json') {
+
+        const jsonPayload: Parameters<typeof this.extractPostmanArguments>[0] = Object.entries<any>(
+          JSON.parse(apiFunctionBody.raw)
+        ).map(([key, value]) => ({ key, value }));
+
+        localArguments.push(...this.extractPostmanArguments(jsonPayload));
+      }
+
+
+      if(body.mode === 'formdata' || body.mode === 'urlencoded') {
+        newArguments.push(...this.extractPostmanArguments(
+          this.filterDisabledValues(
+            this.pickAndGetBodyData(body)
+          )
+        ));
+      } else if(body.mode === 'raw' && this.getContentTypeHeaders(body)['Content-Type'] === 'application/json') {
+
+        const jsonPayload: Parameters<typeof this.extractPostmanArguments>[0] = Object.entries<any>(
+          JSON.parse(body.raw)
+        ).map(([key, value]) => ({ key, value }));
+
+        newArguments.push(...this.extractPostmanArguments(jsonPayload));
+      }
+
+      // Delete duplicated arguments.
+      localArguments = uniqBy(localArguments, 'value');
+      newArguments = uniqBy(newArguments, 'value');
+
+      console.log('localArguemnts: ', localArguments);
+      console.log('newArguemnts: ', newArguments);
+
+      const argumentsQuantityIsDifferent = localArguments.length !== newArguments.length;
+      const argumentsAreDifferent = !!differenceBy(localArguments, newArguments , 'value').length;
+      
+      if(argumentsQuantityIsDifferent || argumentsAreDifferent) {
+        shouldRetrain = false;
+      }
+      
+    }
+
+    console.log('shouldRetrain: ', shouldRetrain);
+    
     if (apiFunction) {
       this.logger.debug(`Found existing URL function ${apiFunction.id}. Updating...`);
       return this.prisma.apiFunction.update({
@@ -207,7 +301,7 @@ export class FunctionService {
           id: apiFunction.id,
         },
         data: {
-          headers: JSON.stringify(this.filterDisabledValues(headers)),
+          headers: JSON.stringify(filteredDisabledHeaders),
           body: JSON.stringify(this.getBodyWithContentFiltered(body)),
           auth: auth ? JSON.stringify(auth) : null,
         },
@@ -226,7 +320,7 @@ export class FunctionService {
       name: await this.resolveFunctionName(user, name, '', true, true),
       description,
       context: '',
-      headers: JSON.stringify(this.filterDisabledValues(headers)),
+      headers: JSON.stringify(filteredDisabledHeaders),
       body: JSON.stringify(this.getBodyWithContentFiltered(body)),
       auth: auth ? JSON.stringify(auth) : null,
     });
