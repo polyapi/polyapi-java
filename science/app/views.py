@@ -28,6 +28,16 @@ def function_completion() -> Dict:
 
     return resp
 
+    # TODO: keep in case we need it to send as mimetype text/event-stream and also other methods needs to be changed,
+    #  otherwise remove it
+    # def generate():
+    #     for chunk in resp:
+    #         content = chunk["choices"][0].get("delta", {}).get("content")
+    #         if content is not None:
+    #             yield 'data: {}\n\n'.format(content)
+    #
+    # return Response(generate(), mimetype='text/event-stream')
+
 
 @bp.route("/function-description", methods=["POST"])
 def function_description() -> Response:

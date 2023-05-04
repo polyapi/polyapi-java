@@ -78,6 +78,12 @@ class ChatGptChoice(TypedDict):
     index: int
 
 
+class ChatGptStreamChoice(TypedDict):
+    delta: MessageDict  # no function_ids or webhook_ids
+    finish_reason: Literal['stop', 'length', 'content_filter', None]
+    index: int
+
+
 class StatsDict(TypedDict, total=False):
     prompt: str
     total: int
