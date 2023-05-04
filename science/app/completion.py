@@ -22,7 +22,7 @@ from app.utils import (
     store_message,
 )
 
-
+# TODO: for now, it can be in separate method for dev purposes then needs to be cleaned up and original method modified
 def answer_processing(choice: ChatGptChoice, match_count: int) -> Tuple[str, bool]:
     content = choice["message"]["content"]
 
