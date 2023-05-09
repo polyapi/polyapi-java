@@ -5,8 +5,7 @@ from typing import Optional, Tuple, List
 from app.constants import VarName
 from app.typedefs import StatsDict, ExtractKeywordDto, SpecificationDto
 from app.utils import func_path, get_config_variable, log, remove_punctuation
-from prisma import Prisma, get_client, register
-from prisma.models import ApiFunction
+from prisma import get_client
 
 
 KEYWORD_PROMPT = """For the following prompt, give me back both the keywords from my prompt and semantically similar keywords.
