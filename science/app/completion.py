@@ -113,8 +113,9 @@ def get_function_options_prompt(
         if match['type'] == "webhookHandle":
             webhook_parts.append(webhook_prompt(match))
         else:
+            desc = match.get('description', "")
             function_parts.append(
-                f"// {match['description']}\ntype of function: {match['type']}\n{func_path_with_args(match)}"
+                f"// {desc}\n{match['type']}\n{func_path_with_args(match)}"
             )
 
     content = _join_content(function_parts, webhook_parts)
@@ -245,9 +246,6 @@ def get_completion_prompt_messages(
     rv = []
 
     if library:
-        # from the OpenAI docs:
-        # gpt-3.5-turbo-0301 does not always pay strong attention to system messages. Future models will be trained to pay stronger attention to system messages.
-        # let's try user!
         MessageDict(
             role="user",
             content="Only include actual payload elements and function arguments in the example. Be concise.",
@@ -255,7 +253,7 @@ def get_completion_prompt_messages(
         # rv.append(
         #     MessageDict(
         #         role="user",
-        #         content="To import the Poly API library, use `import poly from 'polyapi';`",
+        #         content="If you suggest using a function from the Poly API Library, give me an example of how to invoke the function with `import poly from 'polyapi';` at the top.",
         #     )
         # )
         rv.append(library)

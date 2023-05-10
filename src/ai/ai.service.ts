@@ -56,6 +56,23 @@ export class AiService {
     );
   }
 
+  async getWebhookDescription(url: string, description: string, payload: string): Promise<FunctionDescriptionDto> {
+    this.logger.debug(`Getting description for webhook: ${url} POST`);
+
+    return await lastValueFrom(
+      this.httpService.post(`${this.config.scienceServerBaseUrl}/webhook-description`, {
+        url,
+        method: 'POST',
+        short_description: description,
+        payload,
+      }).pipe(
+        map(response => response.data),
+      ).pipe(
+        catchError(this.processScienceServerError()),
+      ),
+    );
+  }
+
   async configure(name: string, value: string) {
     // configure the AI server parameters
     return await lastValueFrom(

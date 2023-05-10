@@ -53,6 +53,7 @@ export class AuthProviderController {
   @UseGuards(ApiKeyGuard)
   async createAuthProvider(@Req() req, @Body() data: CreateAuthProviderDto) {
     const {
+      name = '',
       context,
       authorizeUrl,
       tokenUrl,
@@ -62,7 +63,7 @@ export class AuthProviderController {
       refreshEnabled = false,
     } = data;
     return this.service.toAuthProviderDto(
-      await this.service.createAuthProvider(req.user, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
+      await this.service.createAuthProvider(req.user, name, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
     );
   }
 
@@ -70,6 +71,7 @@ export class AuthProviderController {
   @UseGuards(ApiKeyGuard)
   async updateAuthProvider(@Req() req, @Param('id') id: string, @Body() data: UpdateAuthProviderDto) {
     const {
+      name,
       context,
       authorizeUrl,
       tokenUrl,
@@ -85,7 +87,7 @@ export class AuthProviderController {
     }
 
     return this.service.toAuthProviderDto(
-      await this.service.updateAuthProvider(req.user, authProvider, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
+      await this.service.updateAuthProvider(req.user, authProvider, name, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
     );
   }
 

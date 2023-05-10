@@ -69,6 +69,7 @@ model AuthProvider {
   createdAt        DateTime    @default(now()) @map("created_at")
   user             User        @relation(fields: [userId], references: [id])
   userId           Int         @map("user_id")
+  name             String?
   context          String
   authorizeUrl     String      @map("authorize_url")
   tokenUrl         String      @map("token_url")
@@ -169,9 +170,11 @@ model ConfigVariable {
 }
 
 model GptPlugin {
-  id          Int      @id @default(autoincrement())
-  slug        String   @unique
-  name        String
-  iconUrl     String   @map("icon_url")
-  functionIds String  // json array of function publicIds for now
+  id                          Int      @id @default(autoincrement())
+  slug                        String   @unique
+  name                        String
+  descriptionForMarketplace   String   @default("") @map("description_for_marketplace")
+  descriptionForModel         String   @default("") @map("description_for_model")
+  iconUrl                     String   @map("icon_url")
+  functionIds                 String  // json array of function publicIds for now
 }

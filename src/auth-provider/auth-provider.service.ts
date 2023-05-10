@@ -74,6 +74,7 @@ export class AuthProviderService {
 
   async createAuthProvider(
     user: User,
+    name: string,
     context: string,
     authorizeUrl: string,
     tokenUrl: string,
@@ -89,6 +90,7 @@ export class AuthProviderService {
     this.logger.debug(`Creating auth provider for user ${user.id} with context ${context} and authorizeUrl ${authorizeUrl}`);
     return this.prisma.authProvider.create({
       data: {
+        name,
         context,
         authorizeUrl,
         tokenUrl,
@@ -108,6 +110,7 @@ export class AuthProviderService {
   async updateAuthProvider(
     user: User,
     authProvider: AuthProvider,
+    name: string | undefined | null,
     context: string | undefined,
     authorizeUrl: string | undefined,
     tokenUrl: string | undefined,
@@ -134,6 +137,7 @@ export class AuthProviderService {
         id: authProvider.id,
       },
       data: {
+        name,
         context,
         authorizeUrl,
         tokenUrl,
@@ -157,6 +161,7 @@ export class AuthProviderService {
   toAuthProviderDto(authProvider: AuthProvider): AuthProviderDto {
     return {
       id: authProvider.id,
+      name: authProvider.name,
       context: authProvider.context,
       authorizeUrl: authProvider.authorizeUrl,
       tokenUrl: authProvider.tokenUrl,
@@ -497,6 +502,11 @@ export class AuthProviderService {
       id: authProvider.id,
       context: authProvider.context,
       name: 'getToken',
+      description: `This function obtains a token${authProvider.name
+        ? ` from ${authProvider.name}`
+        : ''} using the OAuth 2.0 authorization code flow. It will return a login url if the user needs to log in, a token once they are logged in, and an error if the user fails to log in. It allows an optional callback url where the user is going to be redirected after log in.${authProvider.refreshEnabled
+        ? ' If the refresh token flow is enabled, the refresh token will be stored on the poly server.'
+        : ''}`,
       function: {
         arguments: this.getGetTokenFunctionArguments(authProvider),
         returnType: {
@@ -510,6 +520,9 @@ export class AuthProviderService {
         id: authProvider.id,
         context: authProvider.context,
         name: 'introspectToken',
+        description: `This function should be used to introspect an access token${authProvider.name
+          ? ` for ${authProvider.name}`
+          : ''}. It will return a JSON with the claims of the token.`,
         function: {
           arguments: [{
             name: 'token',
@@ -532,6 +545,9 @@ export class AuthProviderService {
         id: authProvider.id,
         context: authProvider.context,
         name: 'revokeToken',
+        description: `This function revokes both an access token and any associated refresh tokens${authProvider.name
+          ? ` for ${authProvider.name}`
+          : ''}.`,
         function: {
           arguments: [{
             name: 'token',
@@ -554,6 +570,9 @@ export class AuthProviderService {
         id: authProvider.id,
         context: authProvider.context,
         name: 'refreshToken',
+        description: `This function can be used to refresh an access token${authProvider.name
+          ? ` for ${authProvider.name}`
+          : ''}. In this case an access token, expired or not, can be passed in to refresh it for a new one. The refresh token to be used is stored on the poly server.`,
         function: {
           arguments: [{
             name: 'token',
@@ -700,8 +719,8 @@ export class AuthProviderService {
               type: {
                 kind: 'primitive',
                 type: 'string',
-              }
-            }
+              },
+            },
           ].filter(Boolean),
         },
       },

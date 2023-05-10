@@ -1,5 +1,6 @@
 export class AuthProviderDto {
   id: string;
+  name: string | null;
   context: string;
   authorizeUrl: string;
   tokenUrl: string;

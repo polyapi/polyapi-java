@@ -13,6 +13,7 @@ import { CommonService } from 'common/common.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { EventService } from 'event/event.service';
 import { UserService } from 'user/user.service';
+import { AiService } from 'ai/ai.service';
 import { PropertySpecification, WebhookHandleDto, WebhookHandleSpecification } from '@poly/common';
 import { ConfigService } from 'config/config.service';
 import { SpecsService } from 'specs/specs.service';
@@ -28,19 +29,27 @@ export class WebhookService {
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
     private readonly eventService: EventService,
+    private readonly aiService: AiService,
     private readonly userService: UserService,
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
   ) {
   }
 
-  private create(data: Omit<Prisma.WebhookHandleCreateInput, 'createdAt'>): Promise<WebhookHandle> {
-    return this.prisma.webhookHandle.create({
+  private create(data: Omit<Prisma.WebhookHandleCreateInput, 'createdAt'>, tx?: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0]): Promise<WebhookHandle> {
+
+    const createData: Parameters<typeof this.prisma.webhookHandle.create>[0] = {
       data: {
         createdAt: new Date(),
         ...data,
-      },
-    });
+      }
+    }
+
+    if (tx) {
+      return tx.webhookHandle.create(createData);
+    }
+
+    return this.prisma.webhookHandle.create(createData);
   }
 
   private getWebhookFilterConditions(contexts?: string[], names?: string[], ids?: string[]) {
@@ -95,6 +104,24 @@ export class WebhookService {
     });
   }
 
+  private async getAIWebhookData(webhookHandle: WebhookHandle, description: string, eventPayload: any) {
+    const {
+      name: aiName,
+      description: aiDescription,
+      context: aiContext,
+    } = await this.aiService.getWebhookDescription(
+      `${this.config.hostUrl}/webhooks/${webhookHandle?.id}`,
+      description,
+      JSON.stringify(eventPayload),
+    );
+
+    return {
+      name: aiName,
+      description: aiDescription,
+      context: aiContext
+    }
+  }
+
   public async createOrUpdateWebhookHandle(
     user: User,
     context: string | null,
@@ -102,18 +129,20 @@ export class WebhookService {
     eventPayload: any,
     description: string,
   ): Promise<WebhookHandle> {
-    name = this.normalizeName(name);
-    context = this.normalizeContext(context);
+    
 
     this.logger.debug(`Creating webhook handle for ${context}/${name}...`);
     this.logger.debug(`Event payload: ${JSON.stringify(eventPayload)}`);
 
     const webhookHandle = await this.prisma.webhookHandle.findFirst({
-      where: {
+      where: context === null ? { name } :  {
         name,
         context,
       },
     });
+
+    name = this.normalizeName(name, webhookHandle);
+    context = this.normalizeContext(context, webhookHandle);
 
     if (!await this.checkContextAndNameDuplicates(user, context, name, webhookHandle ? [webhookHandle.id] : [])) {
       throw new ConflictException(`Function with ${context}/${name} is already registered.`);
@@ -125,28 +154,73 @@ export class WebhookService {
       }
 
       this.logger.debug(`Webhook handle found for ${context}/${name} - updating...`);
+
+      if(!name || !context || !description) {
+        const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
+
+        return this.prisma.webhookHandle.update({
+          where: {
+            id: webhookHandle.id,
+          },
+          data: {
+            eventPayload: JSON.stringify(eventPayload),
+            context: context || aiResponse.context,
+            description: description || aiResponse.description,
+            name: name || aiResponse.name
+          },
+        });
+      }
+
+
       return this.prisma.webhookHandle.update({
         where: {
           id: webhookHandle.id,
         },
         data: {
           eventPayload: JSON.stringify(eventPayload),
-          description,
+          name,
+          context,
+          description: description || webhookHandle.description
         },
       });
     } else {
       this.logger.debug(`Creating new webhook handle for ${context}/${name}...`);
-      return this.create({
-        user: {
-          connect: {
-            id: user.id,
+
+      return this.prisma.$transaction(async tx => {
+
+        let webhookHandle = await this.create({
+          user: {
+            connect: {
+              id: user.id,
+            },
           },
-        },
-        name,
-        context,
-        eventPayload: JSON.stringify(eventPayload),
-        description,
+          name,
+          context: context || '',
+          eventPayload: JSON.stringify(eventPayload),
+          description,
+        }, tx);
+        
+        if(!name || !description || !context) {
+          const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
+
+          webhookHandle = await tx.webhookHandle.update({
+            where: {
+              id: webhookHandle.id,
+            },
+            data: {
+              eventPayload: JSON.stringify(eventPayload),
+              context: context || aiResponse.context,
+              description: description || aiResponse.description,
+              name: name || aiResponse.name
+            },
+          });
+        }
+
+        return webhookHandle;
+      }, {
+        timeout: 10000
       });
+
     }
   }
 
@@ -231,14 +305,14 @@ export class WebhookService {
     return !paths.includes(functionPath);
   }
 
-  private normalizeName(name: string | null, webhookHandle?: WebhookHandle) {
+  private normalizeName(name: string | null, webhookHandle: WebhookHandle | null = null) {
     if (name == null) {
       name = webhookHandle?.name || '';
     }
     return name.replace(/[^a-zA-Z0-9.]/g, '');
   }
 
-  private normalizeContext(context: string | null, webhookHandle?: WebhookHandle) {
+  private normalizeContext(context: string | null, webhookHandle: WebhookHandle | null = null) {
     if (context == null) {
       context = webhookHandle?.context || '';
     }

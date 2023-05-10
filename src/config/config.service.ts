@@ -74,4 +74,8 @@ export class ConfigService {
   get functionArgsParameterLimit(): number {
     return Number(this.get('FUNCTION_ARGS_PARAMETER_LIMIT', 5));
   }
+
+  get polyClientNpmVersion(): string {
+    return this.get('POLY_CLIENT_NPM_VERSION', 'latest');
+  }
 }

@@ -871,14 +871,14 @@ export class FunctionService {
 
               const visitor = (node: ts.Node): ts.Node => {
 
-                if(returnType !== null) {
+                if (returnType !== null) {
                   return node;
                 }
 
                 if (ts.isExportAssignment(node)) {
                   const result = ts.visitEachChild(node, visitor, context);
-    
-                  if(fnDelaration) {
+
+                  if (fnDelaration) {
                     return fnDelaration;
                   }
                   return result;
@@ -887,13 +887,13 @@ export class FunctionService {
                 if (ts.isObjectLiteralExpression(node)) {
                   return ts.visitEachChild(node, visitor, context);
                 }
-    
+
                 if (ts.isPropertyAssignment(node)) {
                   contextChain.push(node.name.getText());
 
                   const result = ts.visitEachChild(node, visitor, context);
 
-                  if(!fnDelaration) {
+                  if (!fnDelaration) {
                     contextChain.pop();
                   }
 
@@ -907,14 +907,14 @@ export class FunctionService {
                       name: param.name.getText(),
                       type: param.type?.getText() || 'any',
                     }));
-                    
+
                     returnType = node.type?.getText() || 'any';
-    
+
                     if (ts.isMethodDeclaration(node)) {
                       fnDelaration = factory.createFunctionDeclaration([], node.asteriskToken, node.name?.getText(), node.typeParameters, node.parameters, node.type, node.body);
                     } else {
                       fnDelaration = node;
-                    }    
+                    }
                   }
                 }
 
@@ -936,7 +936,6 @@ export class FunctionService {
     }
 
     code = result.outputText;
-
 
     context = context || contextChain.join('.');
 
@@ -1010,11 +1009,14 @@ export class FunctionService {
     });
   }
 
-  async executeServerFunction(customFunction: CustomFunction, args: any[], clientID: string) {
+  async executeServerFunction(customFunction: CustomFunction, args: Record<string, any>, clientID: string) {
     this.logger.debug(`Executing server function ${customFunction.publicId} with arguments ${JSON.stringify(args)}`);
 
+    const functionArguments = JSON.parse(customFunction.arguments || '[]');
+    const argumentsList = functionArguments.map((arg: FunctionArgument) => args[arg.key]);
+
     try {
-      const result = await this.faasService.executeFunction(customFunction.publicId, args);
+      const result = await this.faasService.executeFunction(customFunction.publicId, argumentsList);
       this.logger.debug(
         `Server function ${customFunction.publicId} executed successfully with result: ${JSON.stringify(result)}`,
       );
@@ -1303,5 +1305,19 @@ export class FunctionService {
         }
       },
     );
+  }
+
+  async updateAllServerFunctions(user: User) {
+    this.logger.debug(`Updating all server functions. Invoked by user ${user.id}...`);
+    const serverFunctions = await this.prisma.customFunction.findMany({
+      where: {
+        serverSide: true,
+      },
+    });
+
+    for (const serverFunction of serverFunctions) {
+      this.logger.debug(`Updating server function ${serverFunction.id}...`);
+      await this.faasService.updateFunction(serverFunction.publicId, user.apiKey);
+    }
   }
 }

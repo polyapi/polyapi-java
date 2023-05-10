@@ -171,9 +171,11 @@ model ConfigVariable {
 }
 
 model GptPlugin {
-  id          Int      @id @default(autoincrement())
-  slug        String   @unique
-  name        String
-  iconUrl     String   @map("icon_url")
-  functionIds String  // json array of function publicIds for now
+  id                          Int      @id @default(autoincrement())
+  slug                        String   @unique
+  name                        String
+  description_for_marketplace String   @default("")
+  description_for_model       String   @default("")
+  iconUrl                     String   @map("icon_url")
+  functionIds                 String  // json array of function publicIds for now
 }

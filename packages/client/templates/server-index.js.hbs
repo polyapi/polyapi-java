@@ -4,18 +4,23 @@ const merge = require('lodash/merge');
 
 const serverFunctions = [
 {{#each specifications}}
-  {{#if context}}
-    ['{{context}}.{{name}}', '{{id}}'],
-  {{else}}
-    ['{{name}}', '{{id}}'],
-  {{/if}}
+  ['{{#if context}}{{context}}.{{/if}}{{name}}', '{{id}}',{{#each function.arguments}}'{{name}}',{{/each}}],
 {{/each}}
 ];
 
 module.exports = (clientID) => merge(
   {},
   serverFunctions.reduce(
-    (acc, [path, id]) => set(acc, path, (...args) => axios.post(`{{apiBaseUrl}}/functions/server/${id}/execute`, { clientID, args }).then(({ data }) => data)),
+    (acc, [path, id, ...argKeys]) => set(
+      acc,
+      path,
+      (...args) => axios.post(
+        `{{apiBaseUrl}}/functions/server/${id}/execute`,
+        {
+          clientID,
+          args: argKeys.reduce((acc, key, index) => ({ ...acc, [key]: args[index] }), {})
+        }
+      ).then(({ data }) => data)),
     {}
   )
 );

@@ -22,12 +22,23 @@ export class GptPluginController {
   }
 
   @UseGuards(ApiKeyGuard)
-  @Post('plugin/create')
+  @Get('plugins/:slug')
+  public async pluginGet(@Req() req: Request, @Param('slug') slug): Promise<unknown> {
+    const plugin = await this.service.getPlugin(slug);
+    return {
+      plugin: plugin,
+      plugin_url: `https://${plugin.slug}.${req.hostname}`,
+    };
+  }
+
+  @UseGuards(ApiKeyGuard)
+  @Post('plugins')
   public async pluginCreate(@Req() req: Request, @Body() body: CreatePluginDto): Promise<unknown> {
     // HACK this is actually get or create based on slug!
-    const domain = await this.service.createPlugin(body);
+    const plugin = await this.service.createPlugin(body);
     return {
-      domain: domain,
+      plugin: plugin,
+      plugin_url: `https://${plugin.slug}.${req.hostname}`,
     };
   }
 }

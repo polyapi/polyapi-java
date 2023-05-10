@@ -1,15 +1,32 @@
 openapi: 3.0.1
 info:
-  title: Poly API
+  title: Melia Resorts
   description: Endpoints that allow users to execute functions on PolyAPI
   version: 'v1'
 servers:
   - url: https://staging.polyapi.io
 paths:
+  /functions/custom/304948f9-6693-4000-a0fb-a1ac25a9ff29/execute:
+    post:
+      operationId: operaCheckIn
+      summary: This function takes in a last name and first name, as strings, looks up the guest reservation, assigns a room, and then checks the guest into the hotel. The date of the reservation must be for today or else the guest will not be checked into the hotel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/operaCheckInArgs'
+      responses:
+        "201":
+          description: details about the check in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/operaCheckInResponse'
   /functions/custom/bdcbd314-afbb-4462-be5f-4c7518c47595/execute:
     post:
       operationId: operaReservation
-      summary: Get details about a guest and book a reservation at the hotel The Dreams Hotel In the Sands. The hotel is located on the Strip in Las Vegas Nevada. Make sure to collect the user's full details. Do not assume the user's name or phone number for example. All dates should be formatted YYYY-MM-DD.
+      summary: Get details about a guest and book a reservation at the Melia Resort. The Melia resort is in Ibiza. Make sure to collect the user's full details. Do not assume the user's name or phone number for example. All dates should be formatted YYYY-MM-DD.
       requestBody:
         required: true
         content:
@@ -26,7 +43,7 @@ paths:
   /functions/custom/65f21242-da64-4268-9579-6aab27a33784/execute:
     post:
       operationId: operaAvailability
-      summary: takes details of a guests desired stay and checks availability for those dates, number of people, at our specific hotel The Dreams Hotel In the Sands. All dates should be passed in the form YYYY-MM-DD.
+      summary: takes details of a guests desired stay and checks availability for those dates, number of people, at the Melia Resort. All dates should be passed in the form YYYY-MM-DD.
       requestBody:
         required: true
         content:
@@ -200,3 +217,14 @@ components:
           type: string
         MonetaryValue:
           type: number
+    operaCheckInArgs:
+      type: object
+      properties:
+        args:
+          type: array
+          items:
+            type: string
+          description: lastName and firstName of the guest checking in
+    operaCheckInResponse:
+      type: string
+      description: A string which confirms that the guest was checked in, or will provide a summary of what failed. If the guest does not have a reservation, please suggest another potential spelling for their name, or to book a reservation for today.

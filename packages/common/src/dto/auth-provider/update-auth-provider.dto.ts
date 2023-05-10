@@ -1,6 +1,9 @@
 import { IsOptional, IsUrl } from 'class-validator';
 
 export class UpdateAuthProviderDto {
+  @IsOptional()
+  name?: string;
+  @IsOptional()
   context?: string;
   @IsUrl({
     require_protocol: true,

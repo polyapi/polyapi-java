@@ -1,6 +1,8 @@
 import { IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 
 export class CreateAuthProviderDto {
+  @IsOptional()
+  name?: string;
   @IsNotEmpty()
   context: string;
   @IsNotEmpty()

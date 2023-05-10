@@ -117,7 +117,7 @@ def get_top_function_matches(
 
     # IMPLEMENTATION GUIDE FOR ISSUE 212
 
-    items = _filter_items_based_on_http_method(items, keyword_data.get('http_methods'))
+    items = filter_items_based_on_http_method(items, keyword_data.get('http_methods'))
 
     # TODO: remove this comments after pr is approved
     # inside this function, we are going to need to go to the database and lookup all the api functions
@@ -157,6 +157,16 @@ def get_top_function_matches(
 
     # TODO
     return keyword_matches, stats
+
+
+def filter_items_based_on_http_method(items: List[SpecificationDto], http_methods: str) -> List[SpecificationDto]:
+    db = get_client()
+    result = db.apifunction.find_many(where={
+        'publicId': {'in': [item.get('id') for item in items]},
+    })
+    items_to_remove = {rs.publicId for rs in result if rs.method not in http_methods}
+    items = [item for item in items if item.get('id') not in items_to_remove]
+    return items
 
 
 def _generate_match_count(stats: StatsDict) -> int:
@@ -208,13 +218,3 @@ def _get_stats(
     stats["scores"] = scores
     stats["match_count"] = match_count
     return stats
-
-
-def _filter_items_based_on_http_method(items: List[SpecificationDto], http_methods: str) -> List[SpecificationDto]:
-    db = get_client()
-    result = db.apifunction.find_many(where={
-        'publicId': {'in': [item.get('id') for item in items]},
-    })
-    items_to_remove = [rs.publicId for rs in result if rs.method not in http_methods]
-    items = [item for item in items if item.get('id') not in items_to_remove]
-    return items

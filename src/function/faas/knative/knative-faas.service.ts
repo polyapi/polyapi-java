@@ -49,9 +49,14 @@ export class KNativeFaasService implements FaasService {
     const functionPath = this.getFunctionPath(id);
     const functionPort = this.getRunningPort(functionPath);
 
-    if (!functionPort && maxRetryCount > 0) {
-      await this.run(id);
-      return this.executeFunction(id, args, maxRetryCount - 1);
+    if (!functionPort) {
+      if (maxRetryCount > 0) {
+        await this.run(id);
+        return this.executeFunction(id, args, maxRetryCount - 1);
+      } else {
+        this.logger.error(`Function ${id} is not running`);
+        throw new Error(`Function ${id} is not running`);
+      }
     }
 
     this.logger.debug(`Executing server function '${id}' (maxRetryCount=${maxRetryCount})...`);
@@ -75,17 +80,28 @@ export class KNativeFaasService implements FaasService {
     );
   }
 
+  async updateFunction(id: string, apiKey: string): Promise<void> {
+    const functionPath = this.getFunctionPath(id);
+    if (!fs.existsSync(functionPath)) {
+      return;
+    }
+
+    await this.stopFunction(id);
+    await this.preparePolyLib(functionPath, apiKey);
+  }
+
   private getFunctionPath(id: string): string {
     return `${BASE_FOLDER}/function-${id}`;
   }
 
   private async preparePolyLib(functionPath: string, apiKey: string) {
-    await exec(`npm install --prefix ${functionPath} polyapi`);
-    fs.mkdirSync(`${functionPath}/node_modules/.poly`);
+    await exec(`npm install --prefix ${functionPath} polyapi@${this.config.polyClientNpmVersion}`);
+    fs.mkdirSync(`${functionPath}/node_modules/.poly`, { recursive: true });
     await exec(`POLY_API_BASE_URL=${this.config.hostUrl} POLY_API_KEY=${apiKey} npx --prefix ${functionPath} poly generate`);
   };
 
   private async run(id: string) {
+    this.logger.debug(`Running server function '${id}'...`);
     const functionPath = this.getFunctionPath(id);
     await exec(
       `${KNATIVE_EXEC_FILE} build --registry ${REGISTRY}`,
@@ -102,12 +118,18 @@ export class KNativeFaasService implements FaasService {
   };
 
   private async cleanUpFunction(id: string, functionPath: string) {
-    fs.rmSync(functionPath, { recursive: true });
+    await this.stopFunction(id);
+
     try {
       await exec(`${KNATIVE_EXEC_FILE} delete ${id}`);
     } catch (e) {
       // ignore
     }
+
+    fs.rmSync(functionPath, { recursive: true });
+  }
+
+  private async stopFunction(id: string) {
     try {
       await exec(`docker stop $(docker ps -q --filter ancestor=${REGISTRY}/${id}:latest)`);
     } catch (e) {

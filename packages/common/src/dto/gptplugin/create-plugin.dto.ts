@@ -5,6 +5,7 @@ export class CreatePluginDto {
   slug: string;
   name?: string;
   iconUrl?: string;
-  description?: string;
+  descriptionForMarketplace?: string;
+  descriptionForModel?: string;
   functionIds?: string[];
 }

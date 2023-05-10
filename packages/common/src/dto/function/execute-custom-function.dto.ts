@@ -1,4 +1,4 @@
 export interface ExecuteCustomFunctionDto {
   clientID: string;
-  args: any[];
+  args: Record<string, any>;
 }

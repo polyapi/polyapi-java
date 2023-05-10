@@ -214,7 +214,7 @@ export class FunctionController {
   }
 
   @Post('/server/:id/execute')
-  async executeCustomFunction(@Param('id') id: string, @Body() executeFunctionDto: ExecuteCustomFunctionDto): Promise<any> {
+  async executeServerFunction(@Param('id') id: string, @Body() executeFunctionDto: ExecuteCustomFunctionDto): Promise<any> {
     const customFunction = await this.service.findCustomFunctionByPublicId(id);
     if (!customFunction) {
       throw new NotFoundException(`Function with publicId ${id} not found.`);
@@ -224,6 +224,13 @@ export class FunctionController {
     }
 
     return await this.service.executeServerFunction(customFunction, executeFunctionDto.args, executeFunctionDto.clientID);
+  }
+
+  @UseGuards(new ApiKeyGuard([Role.Admin]))
+  @Post('/server/all/update')
+  async updateAllServerFunctions(@Req() req) {
+    void this.service.updateAllServerFunctions(req.user);
+    return 'Functions are being updated in background. Please check logs for more details.';
   }
 
   @Delete('/')
