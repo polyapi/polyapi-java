@@ -115,17 +115,7 @@ def get_top_function_matches(
     """get top function matches based on keywords"""
     match_limit = get_function_match_limit()
 
-    # IMPLEMENTATION GUIDE FOR ISSUE 212
-
     items = filter_items_based_on_http_method(items, keyword_data.get('http_methods'))
-
-    # TODO: remove this comments after pr is approved
-    # inside this function, we are going to need to go to the database and lookup all the api functions
-    # so that we can know what http methods they support
-    # prisma.apifuction.find_many(where={id: in: [ids]]})
-
-    # check the method of each `item` if it is an ApiFunction
-    # if the method is not in the keyword_data.http_methods, remove it from the list
 
     keyword_matches, keyword_stats = _get_top(
         match_limit, items, keyword_data["keywords"]
