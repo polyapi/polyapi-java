@@ -154,7 +154,8 @@ def filter_items_based_on_http_method(items: List[SpecificationDto], http_method
     result = db.apifunction.find_many(where={
         'publicId': {'in': [item.get('id') for item in items]},
     })
-    items_to_remove = {rs.publicId for rs in result if rs.method not in http_methods}
+    http_methods_set = {http_method.strip() for http_method in http_methods.split(',')}
+    items_to_remove = {rs.publicId for rs in result if rs.method not in http_methods_set}
     items = [item for item in items if item.get('id') not in items_to_remove]
     return items
 
