@@ -74,7 +74,7 @@ export class TenantService implements OnModuleInit {
     }
 
     const toUserFullDto = user => ({
-      ...this.userService.toDto(user),
+      ...this.userService.toUserDto(user),
       userKeys: user.userKeys.map(userKey => this.userService.toUserKeyDto(userKey)),
     });
     const toTeamFullDto = team => ({
@@ -112,7 +112,8 @@ export class TenantService implements OnModuleInit {
             create: [
               {
                 name: environmentName || 'default',
-                appKey: environmentAppKey || crypto.randomUUID(),
+                appKey: environmentAppKey || this.environmentService.generateAppKey(),
+                subdomain: this.environmentService.generateSubdomainID(),
               },
             ],
           },
@@ -136,10 +137,10 @@ export class TenantService implements OnModuleInit {
           environments: true,
           teams: {
             include: {
-              users: true
-            }
-          }
-        }
+              users: true,
+            },
+          },
+        },
       });
 
       await tx.userKey.create({
@@ -147,15 +148,15 @@ export class TenantService implements OnModuleInit {
           key: userKey || crypto.randomUUID(),
           user: {
             connect: {
-              id: tenant.teams[0].users[0].id
-            }
+              id: tenant.teams[0].users[0].id,
+            },
           },
           environment: {
             connect: {
-              id: tenant.environments[0].id
-            }
-          }
-        }
+              id: tenant.environments[0].id,
+            },
+          },
+        },
       });
 
       return tenant;

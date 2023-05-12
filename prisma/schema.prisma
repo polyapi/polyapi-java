@@ -29,14 +29,15 @@ model Team {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  createdAt DateTime  @default(now()) @map("created_at")
-  name      String
-  team      Team?     @relation(fields: [teamId], references: [id])
-  teamId    String?   @map("team_id")
-  role      String    @default("USER")
-  vip       Boolean   @default(false) // is this person a VIP we want to track carefully?
-  userKeys  UserKey[]
+  id                   String                @id @default(uuid())
+  createdAt            DateTime              @default(now()) @map("created_at")
+  name                 String
+  team                 Team?                 @relation(fields: [teamId], references: [id])
+  teamId               String?               @map("team_id")
+  role                 String                @default("USER")
+  vip                  Boolean               @default(false) // is this person a VIP we want to track carefully?
+  userKeys             UserKey[]
+  conversationMessages ConversationMessage[]
 
   @@map("user")
 }
@@ -49,7 +50,9 @@ model UserKey {
   environment   Environment @relation(fields: [environmentId], references: [id])
   environmentId String      @map("environment_id")
   key           String      @unique
+  permissions   String      @default("{}")
 
+  @@unique([userId, environmentId])
   @@map("user_key")
 }
 
@@ -59,6 +62,7 @@ model Environment {
   name                 String
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
   tenantId             String                @map("tenant_id")
+  subdomain            String                @unique
   appKey               String                @unique @map("app_key")
   apiFunctions         ApiFunction[]
   webhookHandles       WebhookHandle[]
@@ -149,6 +153,8 @@ model WebhookHandle {
 model ConversationMessage {
   id            String            @id @default(uuid())
   createdAt     DateTime          @default(now())
+  user          User              @relation(fields: [userId], references: [id])
+  userId        String            @map("user_id")
   environment   Environment       @relation(fields: [environmentId], references: [id])
   environmentId String            @map("environment_id")
   name          String            @default("") // not used for now. in future, will allow the user to have multiple conversations

@@ -15,28 +15,23 @@ export class EnvironmentService {
     return {
       id: environment.id,
       name: environment.name,
+      subdomain: environment.subdomain,
       appKey: environment.appKey,
     };
+  }
+
+  generateAppKey() {
+    return crypto.randomUUID();
+  }
+
+  generateSubdomainID() {
+    return crypto.randomBytes(4).toString('hex');
   }
 
   async getAllByTenant(tenantId: string) {
     return this.prisma.environment.findMany({
       where: {
         tenantId,
-      },
-    });
-  }
-
-  async create(tenantId: string, name: string) {
-    return this.prisma.environment.create({
-      data: {
-        name,
-        appKey: crypto.randomUUID(),
-        tenant: {
-          connect: {
-            id: tenantId,
-          },
-        },
       },
     });
   }
@@ -60,6 +55,40 @@ export class EnvironmentService {
       include: {
         tenant: true,
       }
+    });
+  }
+
+  async create(tenantId: string, name: string) {
+    return this.prisma.environment.create({
+      data: {
+        name,
+        appKey: this.generateAppKey(),
+        subdomain: this.generateSubdomainID(),
+        tenant: {
+          connect: {
+            id: tenantId,
+          },
+        },
+      },
+    });
+  }
+
+  async update(environment: Environment, name: string) {
+    return this.prisma.environment.update({
+      where: {
+        id: environment.id,
+      },
+      data: {
+        name,
+      },
+    });
+  }
+
+  async delete(id: string) {
+    return this.prisma.environment.delete({
+      where: {
+        id,
+      },
     });
   }
 }

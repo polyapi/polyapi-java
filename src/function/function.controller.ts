@@ -20,6 +20,7 @@ import {
   ExecuteCustomFunctionDto,
   FunctionBasicDto,
   FunctionDetailsDto,
+  Permission,
   Role,
   UpdateApiFunctionDto,
   UpdateCustomFunctionDto,
@@ -82,7 +83,7 @@ export class FunctionController {
       throw new NotFoundException(`Function with id ${id} not found.`);
     }
 
-    await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user);
+    await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, Permission.Use);
 
     return await this.service.executeApiFunction(apiFunction, data.args, data.clientID);
   }
@@ -111,6 +112,8 @@ export class FunctionController {
   @Post('/client')
   async createClientFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<any> {
     const { context = '', name, code } = data;
+
+    await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
       return await this.service.createCustomFunction(req.user.environment, context, name, code, false);
@@ -144,7 +147,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user);
+    await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user, Permission.CustomDev);
 
     return this.service.customFunctionToDetailsDto(
       await this.service.updateCustomFunction(clientFunction, context, description),
@@ -159,7 +162,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user);
+    await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user, Permission.CustomDev);
 
     await this.service.deleteCustomFunction(id);
   }
@@ -177,6 +180,8 @@ export class FunctionController {
   @Post('/server')
   async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<any> {
     const { context = '', name, code } = data;
+
+    await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
       return await this.service.createCustomFunction(req.user.environment, context, name, code, true);
@@ -210,7 +215,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user);
+    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, Permission.CustomDev);
 
     return this.service.customFunctionToDetailsDto(
       await this.service.updateCustomFunction(serverFunction, context, description),
@@ -225,7 +230,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user);
+    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, Permission.CustomDev);
 
     await this.service.deleteCustomFunction(id);
   }
@@ -241,7 +246,7 @@ export class FunctionController {
       throw new BadRequestException(`Function with id ${id} is not server function.`);
     }
 
-    await this.authService.checkEnvironmentEntityAccess(customFunction, req.user);
+    await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, Permission.Use);
 
     return await this.service.executeServerFunction(customFunction, data.args, data.clientID);
   }

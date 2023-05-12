@@ -1057,9 +1057,9 @@ export class FunctionService {
     return payload;
   }
 
-  async setSystemPrompt(environmentId: string, prompt: string): Promise<SystemPrompt> {
+  async setSystemPrompt(environmentId: string, userId: string, prompt: string): Promise<SystemPrompt> {
     // clear the conversation so the user can test the new system prompt!
-    this.aiService.clearConversation(environmentId);
+    await this.aiService.clearConversation(environmentId, userId);
 
     const systemPrompt = await this.prisma.systemPrompt.findFirst({ orderBy: { createdAt: 'desc' } });
     if (systemPrompt) {

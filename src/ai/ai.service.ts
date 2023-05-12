@@ -11,10 +11,11 @@ export class AiService {
   constructor(private readonly httpService: HttpService, private readonly config: ConfigService) {
   }
 
-  async getFunctionCompletion(userId: number, message: string): Promise<FunctionCompletionDto> {
+  async getFunctionCompletion(environmentId: string, userId: string, message: string): Promise<FunctionCompletionDto> {
     this.logger.debug(`Sending message to Science server for function completion: ${message}`);
     return await lastValueFrom(
       this.httpService.post(`${this.config.scienceServerBaseUrl}/function-completion`, {
+        environment_id: environmentId,
         user_id: userId,
         question: message,
       }).pipe(
@@ -28,11 +29,12 @@ export class AiService {
     );
   }
 
-  async clearConversation(environmentId: string) {
-    this.logger.debug(`Clearing conversation for environment: ${environmentId}`);
+  async clearConversation(environmentId: string, userId: string) {
+    this.logger.debug(`Clearing conversation for environment: ${environmentId} ${userId}`);
     await lastValueFrom(
       this.httpService.post(`${this.config.scienceServerBaseUrl}/clear-conversation`, {
-        user_id: environmentId,
+        environment_id: environmentId,
+        user_id: userId,
       }).pipe(
         catchError(this.processScienceServerError()),
       ),
@@ -77,11 +79,11 @@ export class AiService {
     // configure the AI server parameters
     return await lastValueFrom(
       this.httpService.post(
-        `${this.config.scienceServerBaseUrl}/configure`, {name, value}
+        `${this.config.scienceServerBaseUrl}/configure`, { name, value },
       ).pipe(
         catchError(this.processScienceServerError()),
-      )
-    )
+      ),
+    );
   }
 
   private processScienceServerError() {

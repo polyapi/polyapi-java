@@ -1,34 +1,55 @@
-import { Req, Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
+import { Req, Body, Controller, Logger, Post, UseGuards, InternalServerErrorException } from '@nestjs/common';
 import { SendQuestionDto, SendQuestionResponseDto, SendCommandDto, SendConfigureDto, Role } from '@poly/common';
 import { ChatService } from 'chat/chat.service';
 import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
 import { AiService } from 'ai/ai.service';
+import { AuthRequest } from 'common/types';
+import { UserService } from 'user/user.service';
 
 @Controller('chat')
 export class ChatController {
   private readonly logger = new Logger(ChatController.name);
 
-  constructor(private readonly service: ChatService, private readonly aiService: AiService) {}
+  constructor(
+    private readonly service: ChatService,
+    private readonly aiService: AiService,
+    private readonly userService: UserService,
+  ) {
+  }
 
-  @Post('/question')
   @UseGuards(PolyKeyGuard)
-  public async sendQuestion(@Req() req, @Body() body: SendQuestionDto): Promise<SendQuestionResponseDto> {
-    const responseTexts = await this.service.getMessageResponseTexts(req.user.id, body.message);
+  @Post('/question')
+  public async sendQuestion(@Req() req: AuthRequest, @Body() body: SendQuestionDto): Promise<SendQuestionResponseDto> {
+    const environmentId = req.user.environment.id;
+    const userId = req.user.user?.id || (await this.userService.findAdminUserByEnvironmentId(environmentId))?.id;
+
+    if (!userId) {
+      throw new InternalServerErrorException('Cannot find user to process command');
+    }
+
+    const responseTexts = await this.service.getMessageResponseTexts(environmentId, userId, body.message);
     return {
       texts: responseTexts,
     };
   }
 
-  @Post('/command')
   @UseGuards(PolyKeyGuard)
-  public async sendCommand(@Req() req, @Body() body: SendCommandDto) {
-    await this.service.processCommand(req.user.id, body.command);
+  @Post('/command')
+  public async sendCommand(@Req() req: AuthRequest, @Body() body: SendCommandDto) {
+    const environmentId = req.user.environment.id;
+    const userId = req.user.user?.id || (await this.userService.findAdminUserByEnvironmentId(environmentId))?.id;
+
+    if (!userId) {
+      throw new InternalServerErrorException('Cannot find user to process command');
+    }
+
+    await this.service.processCommand(environmentId, userId, body.command);
   }
 
-  @UseGuards(new PolyKeyGuard([Role.Admin]))
+  @UseGuards(new PolyKeyGuard([Role.SuperAdmin]))
   @Post('/ai-configuration')
-  async aiConfiguration(@Req() req, @Body() body: SendConfigureDto): Promise<string> {
+  async aiConfiguration(@Req() req: AuthRequest, @Body() body: SendConfigureDto): Promise<string> {
     await this.aiService.configure(body.name, body.value);
-    return "chirp"
+    return 'chirp';
   }
 }

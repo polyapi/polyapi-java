@@ -9,8 +9,8 @@ export class ChatService {
   constructor(private readonly aiService: AiService) {
   }
 
-  public async getMessageResponseTexts(userId: number, message: string): Promise<ChatText[]> {
-    const { answer, stats } = await this.aiService.getFunctionCompletion(userId, message);
+  public async getMessageResponseTexts(environmentId: string, userId: string, message: string): Promise<ChatText[]> {
+    const { answer, stats } = await this.aiService.getFunctionCompletion(environmentId, userId, message);
 
     return [{
       type: 'markdown',
@@ -19,13 +19,13 @@ export class ChatService {
     }];
   }
 
-  async processCommand(userId: string, command: string) {
+  async processCommand(environmentId: string, userId: string, command: string) {
     this.logger.debug(`Processing chat command: ${command}`);
     const [commandName] = command.split(' ');
 
     switch (commandName) {
       case 'clear':
-        await this.aiService.clearConversation(userId);
+        await this.aiService.clearConversation(environmentId, userId);
         break;
     }
   }

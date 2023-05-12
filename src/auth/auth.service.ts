@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { AuthData } from 'common/types';
-import { Role } from '@poly/common';
+import { Permission, Permissions, Role } from '@poly/common';
 import { Environment, Tenant, User } from '@prisma/client';
 import { TenantService } from 'tenant/tenant.service';
 import { EnvironmentService } from 'environment/environment.service';
@@ -19,9 +19,11 @@ export class AuthService {
 
   public async checkTenantAccess(
     tenantId: string,
-    { tenant, user }: AuthData,
+    authData: AuthData,
     roles?: Role[],
+    ...permissions: Permission[]
   ) {
+    const { tenant, user } = authData;
     if (user?.role === Role.SuperAdmin) {
       return true;
     }
@@ -33,35 +35,60 @@ export class AuthService {
       throw new ForbiddenException('You do not have access to this entity');
     }
 
+    await this.checkPermissions(authData, ...permissions);
+
     return true;
   }
 
   public async checkEnvironmentEntityAccess(
     environmentEntity: { environmentId: string },
-    { environment, user, userKey }: AuthData,
-    // TODO: add permissions to check
+    authData: AuthData,
+    ...permissions: Permission[]
   ) {
-    if (environment?.id === environmentEntity.environmentId) {
-      return true;
-    }
+    const { environment, user} = authData;
+
     if (user?.role === Role.SuperAdmin) {
       return true;
     }
-    if (userKey?.environmentId === environmentEntity.environmentId) {
+
+    if (environment.id !== environmentEntity.environmentId) {
+      throw new ForbiddenException('You do not have access to this entity');
+    }
+
+    await this.checkPermissions(authData, ...permissions);
+
+    return true;
+  }
+
+  async checkPermissions({ user, userKey }: AuthData, ...permissions: Permission[]) {
+    if (!permissions.length) {
+      return true;
+    }
+    if (!userKey) {
+      // not restricted by user permissions
       return true;
     }
 
-    throw new ForbiddenException('You do not have access to this entity');
+    if (user?.role === Role.SuperAdmin || user?.role === Role.Admin) {
+      return true;
+    }
+
+    const userPermissions = JSON.parse(userKey.permissions) as Permissions;
+    permissions.forEach(permission => {
+      if (!userPermissions[permission]) {
+        throw new ForbiddenException(`Missing '${permission}' permission`);
+      }
+    });
   }
 
   async getAuthData(polyKey: string) {
     let user: User | null = null;
-    let environment: Environment & {tenant: Tenant} | null = null;
+    let environment: Environment & { tenant: Tenant } | null = null;
 
-    const userKey = await this.userService.findUserKey(polyKey);
+    const userKey = await this.userService.findUserKeyById(polyKey, true, true);
     if (userKey) {
-      environment = await this.environmentService.findById(userKey.environmentId);
-      user = await this.userService.findById(userKey.userId);
+      environment = userKey.environment as Environment & { tenant: Tenant };
+      user = userKey.user;
       if (!user) {
         this.logger.error(`User key ${polyKey} has no valid user`);
         return null;
@@ -85,7 +112,7 @@ export class AuthService {
       tenant: environment.tenant,
       environment,
       user,
-      userKey
+      userKey,
     } as AuthData;
   }
 }
