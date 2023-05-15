@@ -341,26 +341,27 @@ def get_completion_answer_stream(user_id: int, question: str) -> Dict:
     messages, stats = get_completion_prompt_messages(question)
     resp = get_chat_completion_stream(messages)
 
-    collected_messages = []
-    for chunk in resp:
-        content = chunk["choices"][0].get("delta", {}).get("content")
-        if content:
-            answer, hit_token_limit = answer_processing_stream(
-                chunk["choices"][0], stats["match_count"]
-            )
-            if hit_token_limit:
-                # if we hit the token limit, let's just clear the conversation and start over
-                clear_conversation(user_id)
-            else:
-                # HACK always clear for now
-                clear_conversation(user_id)
-                # TODO this one is for discussion as response come in chunks not as full reply once
-                for message in messages:
-                    store_message(
-                        user_id,
-                        message,
-                    )
-                store_message(user_id, {"role": "assistant", "content": answer})
-            collected_messages.append(answer)
+    return resp
 
-    return {"answer": collected_messages, "stats": stats}
+    # TODO: need to reimplement this part for stream
+    # for chunk in resp:
+    #     content = chunk["choices"][0].get("delta", {}).get("content")
+    #     if content:
+    #         answer, hit_token_limit = answer_processing_stream(
+    #             chunk["choices"][0], stats["match_count"]
+    #         )
+    #         if hit_token_limit:
+    #             # if we hit the token limit, let's just clear the conversation and start over
+    #             clear_conversation(user_id)
+    #         else:
+    #             # HACK always clear for now
+    #             clear_conversation(user_id)
+    #             # TODO this one is for discussion as response come in chunks not as full reply once
+    #             for message in messages:
+    #                 store_message(
+    #                     user_id,
+    #                     message,
+    #                 )
+    #             store_message(user_id, {"role": "assistant", "content": answer})
+
+    # return {"answer": collected_messages, "stats": stats}

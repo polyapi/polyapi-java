@@ -17,7 +17,7 @@ def home():
 
 
 @bp.route("/function-completion", methods=["POST"])  # type: ignore
-def function_completion() -> Dict:
+def function_completion() -> Response:
     data: Dict = request.get_json(force=True)
     question: str = data["question"].strip()
     user_id: Optional[int] = data.get("user_id")
@@ -26,17 +26,13 @@ def function_completion() -> Dict:
     if is_vip_user(user_id):
         log(f"VIP USER {user_id}", resp, sep="\n")
 
-    return resp
+    def generate():
+        for chunk in resp:
+            content = chunk["choices"][0].get("delta", {}).get("content")
+            if content is not None:
+                yield 'data: {}\n\n'.format(content)
 
-    # TODO: keep in case we need it to send as mimetype text/event-stream and also other methods needs to be changed,
-    #  otherwise remove it
-    # def generate():
-    #     for chunk in resp:
-    #         content = chunk["choices"][0].get("delta", {}).get("content")
-    #         if content is not None:
-    #             yield 'data: {}\n\n'.format(content)
-    #
-    # return Response(generate(), mimetype='text/event-stream')
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @bp.route("/function-description", methods=["POST"])
