@@ -301,7 +301,7 @@ export class TenantController {
 
   @UseGuards(PolyKeyGuard)
   @Get(':id/environments')
-  async getTenantEnvironments(@Req() req: AuthRequest, @Param('id') tenantId: string): Promise<EnvironmentDto[]> {
+  async getEnvironments(@Req() req: AuthRequest, @Param('id') tenantId: string): Promise<EnvironmentDto[]> {
     const tenant = await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
     return (await this.environmentService.getAllByTenant(tenant.id))
@@ -319,6 +319,20 @@ export class TenantController {
     return this.environmentService.toDto(
       await this.environmentService.create(tenant.id, name),
     );
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Get(':id/environments/:environmentId')
+  async getEnvironment(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('environmentId') environmentId: string,
+  ): Promise<EnvironmentDto> {
+    const environment = await this.findEnvironment(tenantId, environmentId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.environmentService.toDto(environment);
   }
 
   @UseGuards(PolyKeyGuard)
