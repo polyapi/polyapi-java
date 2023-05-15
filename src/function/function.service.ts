@@ -49,6 +49,7 @@ import { FaasService } from 'function/faas/faas.service';
 import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
+import { uniqBy } from 'lodash';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
@@ -345,7 +346,7 @@ export class FunctionService {
 
     args.sort(compareArgumentsByRequired);
 
-    return args;
+    return uniqBy(args, 'key');
   }
 
   private toArgument(argument: string, argumentsMetadata: ArgumentsMetadata): FunctionArgument {
@@ -427,6 +428,7 @@ export class FunctionService {
         headers,
       )}\nBody:\n${JSON.stringify(body)}`,
     );
+
     return lastValueFrom(
       this.httpService
         .request({
@@ -665,7 +667,7 @@ export class FunctionService {
     description: string | null,
     argumentsMetadata: ArgumentsMetadata | null,
     response: any,
-    payload: string | null
+    payload: string | null,
   ) {
     if (name != null || context != null) {
       name = name ? await this.resolveFunctionName(user, name, apiFunction.context, false) : null;
@@ -704,7 +706,7 @@ export class FunctionService {
     );
 
     const finalContext = context == null ? apiFunction.context : context;
-    const finalName = name || apiFunction.name
+    const finalName = name || apiFunction.name;
 
     await this.throwErrIfInvalidResponse(response, payload, finalContext, finalName);
 
@@ -717,7 +719,7 @@ export class FunctionService {
         context: finalContext,
         description: description == null ? apiFunction.description : description,
         argumentsMetadata: JSON.stringify(argumentsMetadata),
-        ...(response ? { response: JSON.stringify(response) } : null)
+        ...(response ? { response: JSON.stringify(response) } : null),
       },
     });
   }
