@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatText } from '@poly/common';
+import { ChatText, SendQuestionMessageEventDto } from '@poly/common';
 import { AiService } from 'ai/ai.service';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class ChatService {
@@ -9,14 +10,8 @@ export class ChatService {
   constructor(private readonly aiService: AiService) {
   }
 
-  public async getMessageResponseTexts(userId: number, message: string): Promise<ChatText[]> {
-    const { answer, stats } = await this.aiService.getFunctionCompletion(userId, message);
-
-    return [{
-      type: 'markdown',
-      value: answer,
-      stats,
-    }];
+  public sendQuestion(userId: number, message: string): Observable<string> {
+    return this.aiService.getFunctionCompletion(userId, message);
   }
 
   async processCommand(userId: string, command: string) {

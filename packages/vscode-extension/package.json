@@ -3,7 +3,7 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "publisher": "Poly API Corp",
   "engines": {
     "vscode": "^1.75.0"
@@ -125,6 +125,7 @@
   "dependencies": {
     "@guanghechen/helper-string": "4.7.1",
     "axios": "^1.3.4",
+    "eventsource": "^2.0.2",
     "typescript": "4.9.5"
   }
 }

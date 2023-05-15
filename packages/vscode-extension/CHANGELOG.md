@@ -1,3 +1,6 @@
+### 0.1.19
+* Poly chat using event stream
+
 ### 0.1.18
 * Updated tooltips and copied code for changed specifications
 

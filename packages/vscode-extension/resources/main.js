@@ -41,7 +41,6 @@ const COMMANDS = ['clear'];
 
       codeElements.forEach((codeElement) => {
         const preCode = codeElement.parentElement;
-        preCode.classList.add('code-section', 'rounded-lg');
 
         const buttonWrapper = document.createElement('div');
         buttonWrapper.classList.add('code-actions-wrapper', 'flex', 'gap-4', 'flex-wrap', 'items-center', 'right-2', 'top-1', 'absolute');
@@ -60,16 +59,17 @@ const COMMANDS = ['clear'];
       return html.documentElement.innerHTML;
     };
 
-    const getResponseTextHtml = text => {
-      switch (text.type) {
+    const convertToHtml = data => {
+      switch (data.type) {
         case 'plain':
-          return `<div>${text.value}</div>`;
+          return `<div>${data.value}</div>`;
         case 'error':
-          return `<div class='response-text-error'>${text.value}</div>`;
+          return `<div class='response-text-error'>${data.value}</div>`;
         case 'js':
-          return getHtmlWithCodeCopy(marked.parse(`\`\`\`\n${text.value}\n\`\`\``));
+          return marked.parse(`\`\`\`\n${data.value}\n\`\`\``);
         case 'markdown':
-          return getHtmlWithCodeCopy(marked.parse(text.value));
+          // return getHtmlWithCodeCopy(marked.parse(data.value));
+          return marked.parse(data.value);
         default:
           return '';
       }
@@ -95,6 +95,7 @@ const COMMANDS = ['clear'];
       case 'setLoading': {
         const loadingContainer = document.querySelector('.loading-container');
 
+        console.log('%c setLoading', 'background: yellow; color: black', loadingContainer);
         if (!loadingContainer) {
           conversationList.innerHTML +=
             `<div class='loading-container p-4 self-end flex justify-between'>
@@ -107,18 +108,50 @@ const COMMANDS = ['clear'];
         scrollToLastMessage();
         break;
       }
-      case 'addResponseTexts': {
-        const texts = message.value;
+      case 'removeLoading': {
+        console.log('%c REMOVING LOADING', 'background: yellow; color: black');
         const loadingContainer = document.querySelector('.loading-container');
-
         loadingContainer?.remove();
+        break;
+      }
+      case 'addMessage': {
+        const data = message.data;
 
         conversationList.innerHTML +=
           `<div class='p-4 self-end'>
             <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
-            ${texts.map(text => getResponseTextHtml(text)).join('')}
+            ${convertToHtml(data)}
           </div>`;
         scrollToLastMessage();
+        break;
+      }
+      case 'updateMessage': {
+        const data = message.data;
+        const messageID = message.messageID;
+
+        const messageElement = document.getElementById(messageID);
+        if (messageElement) {
+          messageElement.innerHTML = convertToHtml(data);
+        } else {
+          conversationList.innerHTML +=
+            `<div class='p-4 self-end'>
+               <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
+               <span id='${message.messageID}'>${convertToHtml(data)}</span>
+             </div>`;
+        }
+
+        scrollToLastMessage();
+        break;
+      }
+      case 'finishMessage': {
+        const messageID = message.messageID;
+
+        const messageElement = document.getElementById(messageID);
+        if (messageElement) {
+          messageElement.innerHTML = getHtmlWithCodeCopy(messageElement.innerHTML);
+          scrollToLastMessage();
+        }
+
         break;
       }
       case 'clearConversation':

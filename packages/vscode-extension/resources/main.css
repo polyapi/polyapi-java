@@ -21,11 +21,12 @@
   grid-area: 1 / 1 / 2 / 2;
 }
 
-#conversation-list .code-section {
+#conversation-list pre {
   position: relative;
   margin-bottom: 1rem;
   overflow-x: auto;
   padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
   background: var(--vscode-terminal-ansiBlack);
 }
 

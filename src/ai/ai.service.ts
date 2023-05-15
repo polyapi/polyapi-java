@@ -1,8 +1,9 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
-import { catchError, lastValueFrom, map } from 'rxjs';
+import { catchError, lastValueFrom, map, Observable, Subscriber } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { FunctionCompletionDto, FunctionDescriptionDto } from '@poly/common';
+import EventSource from 'eventsource';
 
 @Injectable()
 export class AiService {
@@ -11,21 +12,24 @@ export class AiService {
   constructor(private readonly httpService: HttpService, private readonly config: ConfigService) {
   }
 
-  async getFunctionCompletion(userId: number, message: string): Promise<FunctionCompletionDto> {
+  getFunctionCompletion(userId: number, message: string): Observable<string> {
     this.logger.debug(`Sending message to Science server for function completion: ${message}`);
-    return await lastValueFrom(
-      this.httpService.post(`${this.config.scienceServerBaseUrl}/function-completion`, {
-        user_id: userId,
-        question: message,
-      }).pipe(
-        map(response => ({
-          answer: response.data.answer,
-          stats: response.data.stats,
-        })),
-      ).pipe(
-        catchError(this.processScienceServerError()),
-      ),
-    );
+
+    const eventSource = new EventSource(`${this.config.scienceServerBaseUrl}/function-completion?user_id=${userId}&question=${message}`);
+
+    return new Observable<string>(subscriber => {
+      eventSource.onmessage = (event) => {
+        subscriber.next(JSON.parse(event.data).chunk);
+      };
+      eventSource.onerror = (error) => {
+        if (error.message) {
+          this.logger.debug(`Error from Science server for function completion: ${error.message}`);
+          subscriber.error(error.message);
+        }
+        subscriber.complete();
+        eventSource.close();
+      };
+    });
   }
 
   async clearConversation(userId: string) {
@@ -60,11 +64,11 @@ export class AiService {
     // configure the AI server parameters
     return await lastValueFrom(
       this.httpService.post(
-        `${this.config.scienceServerBaseUrl}/configure`, {name, value}
+        `${this.config.scienceServerBaseUrl}/configure`, { name, value },
       ).pipe(
         catchError(this.processScienceServerError()),
-      )
-    )
+      ),
+    );
   }
 
   private processScienceServerError() {

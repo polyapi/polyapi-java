@@ -1,22 +1,35 @@
-import { Req, Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
-import { SendQuestionDto, SendQuestionResponseDto, SendCommandDto, SendConfigureDto, Role } from '@poly/common';
+import { Req, Body, Controller, Logger, Post, UseGuards, Sse, MessageEvent, Query } from '@nestjs/common';
+import {
+  SendQuestionDto,
+  SendCommandDto,
+  SendConfigureDto,
+  Role,
+  SendQuestionMessageEventDto,
+} from '@poly/common';
 import { ChatService } from 'chat/chat.service';
 import { ApiKeyGuard } from 'auth/api-key-auth-guard.service';
 import { AiService } from 'ai/ai.service';
+import { catchError, map, Observable } from 'rxjs';
 
 @Controller('chat')
 export class ChatController {
   private readonly logger = new Logger(ChatController.name);
 
-  constructor(private readonly service: ChatService, private readonly aiService: AiService) {}
+  constructor(private readonly service: ChatService, private readonly aiService: AiService) {
+  }
 
-  @Post('/question')
   @UseGuards(ApiKeyGuard)
-  public async sendQuestion(@Req() req, @Body() body: SendQuestionDto): Promise<SendQuestionResponseDto> {
-    const responseTexts = await this.service.getMessageResponseTexts(req.user.id, body.message);
-    return {
-      texts: responseTexts,
-    };
+  @Sse('/question')
+  public sendQuestion(@Req() req, @Query() data: SendQuestionDto): Observable<MessageEvent> {
+    this.logger.debug(`Sending question to chat: ${data.message}`);
+
+    return this.service.sendQuestion(req.user.id, data.message)
+      .pipe(
+        map(data => ({
+            data,
+          }),
+        ),
+      );
   }
 
   @Post('/command')
@@ -29,6 +42,6 @@ export class ChatController {
   @Post('/ai-configuration')
   async aiConfiguration(@Req() req, @Body() body: SendConfigureDto): Promise<string> {
     await this.aiService.configure(body.name, body.value);
-    return "chirp"
+    return 'chirp';
   }
 }

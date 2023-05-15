@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 from typing import Dict, Optional, Tuple
 from flask import Blueprint, Response, request, jsonify
 from openai import OpenAIError
@@ -16,11 +17,11 @@ def home():
     return f"<h1>Hello, World!</h1>\n<div>You probably want `POST /function_completion`! See the {readme_link} for details"
 
 
-@bp.route("/function-completion", methods=["POST"])  # type: ignore
+@bp.route("/function-completion", methods=["GET"])  # type: ignore
 def function_completion() -> Response:
-    data: Dict = request.get_json(force=True)
+    data: Dict = request.args.to_dict()
     question: str = data["question"].strip()
-    user_id: Optional[int] = data.get("user_id")
+    user_id: Optional[int] = int(data.get("user_id"))
     assert user_id
     resp = get_completion_or_conversation_answer(user_id, question)
     if is_vip_user(user_id):
@@ -30,7 +31,7 @@ def function_completion() -> Response:
         for chunk in resp:
             content = chunk["choices"][0].get("delta", {}).get("content")
             if content is not None:
-                yield 'data: {}\n\n'.format(content)
+                yield 'data: {}\n\n'.format(json.dumps({"chunk": content}))
 
     return Response(generate(), mimetype='text/event-stream')
 
