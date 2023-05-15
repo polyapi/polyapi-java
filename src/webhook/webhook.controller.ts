@@ -1,17 +1,16 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   Logger,
-  NotFoundException,
   Param,
   Patch,
   Post,
   Put,
   Req,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { WebhookService } from 'webhook/webhook.service';
 import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
@@ -23,14 +22,27 @@ import { AuthService } from 'auth/auth.service';
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 
-  public constructor(private readonly webhookService: WebhookService, private readonly authService: AuthService) {
-  }
+  public constructor(private readonly webhookService: WebhookService, private readonly authService: AuthService) {}
 
   @UseGuards(PolyKeyGuard)
   @Get()
   public async getWebhookHandles(@Req() req: AuthRequest) {
     const webhookHandles = await this.webhookService.getWebhookHandles(req.user.environment.id);
     return webhookHandles.map((handle) => this.webhookService.toDto(handle));
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Get(':id')
+  public async getWebhookHandle(@Req() req: AuthRequest, @Param('id') id: string) {
+    const webhookHandle = await this.webhookService.findWebhookHandle(id);
+
+    if (!webhookHandle) {
+      throw new NotFoundException();
+    }
+
+    await this.authService.checkEnvironmentEntityAccess(webhookHandle, req.user, Permission.Teach);
+
+    return this.webhookService.toDto(webhookHandle);
   }
 
   @UseGuards(PolyKeyGuard)
@@ -111,7 +123,7 @@ export class WebhookController {
       context,
       name,
       payload,
-      '',
+      ''
     );
     return this.webhookService.toDto(webhookHandle);
   }

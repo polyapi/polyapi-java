@@ -5,4 +5,6 @@ export interface UpdateApiFunctionDto {
   context?: string;
   description?: string;
   arguments?: ArgumentsMetadata;
+  response?: any;
+  payload?: string;
 }

@@ -63,6 +63,8 @@ export class FunctionController {
       context = null,
       description = null,
       arguments: argumentsMetadata = null,
+      response,
+      payload = null
     } = data;
     const apiFunction = await this.service.findApiFunction(id);
     if (!apiFunction) {
@@ -71,7 +73,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user);
 
     return this.service.apiFunctionToDetailsDto(
-      await this.service.updateApiFunction(apiFunction, name, context, description, argumentsMetadata),
+      await this.service.updateApiFunction(apiFunction, name, context, description, argumentsMetadata, response, payload),
     );
   }
 

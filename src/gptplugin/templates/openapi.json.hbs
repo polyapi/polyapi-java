@@ -16,6 +16,7 @@
       "post": {
         "summary": "{{this.description}}",
         "operationId": "{{this.operationId}}",
+        {{#if this.function.arguments}}
         "requestBody": {
           "required": true,
           "content": {
@@ -26,6 +27,7 @@
             }
           }
         },
+        {{/if}}
         "responses": {
           "201": {
             "description": "{{this.description}}",
@@ -46,31 +48,7 @@
   "components": {
     "schemas": {
       {{#each bodySchemas}}
-        "{{this.name}}": {
-          "type": "object",
-          {{#if this.arguments}}
-          "properties": {
-            "args": {
-              "type": "object",
-              "properties": {
-                {{#each this.arguments}}
-                "{{this.name}}": {
-                  "type": "{{this.type.type}}"
-                  {{!-- "required": {{this.required}} --}}
-                }{{#unless @last}},{{/unless}}
-                {{/each}}
-              },
-              "required": [
-                {{#each this.argumentsRequired}}
-                  "{{this}}"{{#unless @last}},{{/unless}}
-                {{/each}}
-              ]
-            }
-          },
-          "required": ["args"],
-          {{/if}}
-          "description": "{{this.description}}"
-        },
+        "{{this.name}}": {{{this.schema}}},
       {{/each}}
       {{#each responseSchemas}}
         "{{this.name}}": {{{this.schema}}}

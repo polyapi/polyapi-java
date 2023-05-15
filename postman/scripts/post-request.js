@@ -1,13 +1,24 @@
+const postmanCollection = require('postman-collection');
+
 const polyData = pm.environment.get('polyData');
-const functionId = pm.environment.get('polyFunctionId');
 const apiKey = pm.environment.get('X-PolyApiKey');
-const { url, body } = pm.request;
+const { method, description, url, body } = pm.request;
+
+const templateBody = new postmanCollection.RequestBody(pm.environment.get('templateBody'));
+const templateHeaders = new postmanCollection.HeaderList(null, pm.environment.get('templateHeaders'));
+const templateAuth = new postmanCollection.RequestAuth(pm.environment.get('templateAuth'));
+const templateUrl = new postmanCollection.Url(pm.environment.get('templateUrl'));
 
 pm.environment.unset('polyData');
 pm.environment.unset('polyFunctionId');
 
+pm.environment.unset('templateBody');
+pm.environment.unset('templateHeaders');
+pm.environment.unset('templateAuth');
+pm.environment.unset('templateUrl');
+
 const postRequest = {
-  url: `https://staging.polyapi.io/teach/${functionId}`,
+  url: 'https://staging.polyapi.io/teach',
   method: 'POST',
   header: {
     'Content-Type': 'application/json',
@@ -16,15 +27,22 @@ const postRequest = {
   body: {
     mode: 'raw',
     raw: JSON.stringify({
+      description: description?.context,
+      name: pm.info.requestName,
       ...polyData,
       url,
       body,
+      templateHeaders,
+      method,
+      templateAuth,
       response: pm.response.json(),
       variables: {
         ...pm.environment.toObject(),
         ...pm.collectionVariables.toObject(),
       },
       statusCode: pm.response.code,
+      templateUrl: `${templateUrl.protocol ? `${templateUrl.protocol}://` : ''}${templateUrl.getRemote()}${templateUrl.getPathWithQuery()}`,
+      templateBody
     }),
   },
 };

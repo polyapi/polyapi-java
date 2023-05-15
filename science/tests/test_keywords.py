@@ -1,8 +1,8 @@
 import json
 from unittest.mock import patch, Mock
-from app.keywords import extract_keywords, get_function_match_limit, keywords_similar, get_top_function_matches
+from app.keywords import extract_keywords, get_function_match_limit, keywords_similar, get_top_function_matches, \
+    filter_items_based_on_http_method
 from .testing import DbTestCase
-
 
 ACCUWEATHER = {
     "id": "f7588018-2364-4586-b60d-b08a285f1ea3",
@@ -33,6 +33,20 @@ SERVICE_NOW = {
         {"key": "impact", "name": "impact", "type": "string", "payload": True},
     ],
     "type": "url",
+}
+
+API_FUNCTION = {
+     'id': 'cdeff66d-f76d-4917-859c-6b5aa0cd85a1', 'type': 'apiFunction', 'context': 'travel',
+     'name': 'unitedAirlines.getStatus',
+     'description': 'get the status of a specific flight, including airport of origin and arrival',
+     'function': {
+         'arguments': [
+             {'name': 'tenant', 'required': True, 'type': {'kind': 'primitive', 'type': 'string'}},
+             {'name': 'flightID', 'required': True, 'type': {'kind': 'primitive', 'type': 'string'}},
+             {'name': 'shopToken', 'required': True, 'type': {'kind': 'primitive', 'type': 'string'}}
+         ],
+         'returnType': {'kind': 'void'}
+     }
 }
 
 
@@ -126,3 +140,11 @@ class T(DbTestCase):
         self.db.configvariable.upsert(where={"name": name}, data={"update": defaults, "create": defaults})
         limit = get_function_match_limit()
         self.assertEqual(limit, 6)
+
+    def test_filter_items_based_on_http_method(self):
+        api_functions = [API_FUNCTION]
+        non_api_functions = [ACCUWEATHER, GOOGLE_MAPS, SERVICE_NOW]
+        updated_items = filter_items_based_on_http_method(api_functions, "PATCH")
+        not_updated_items = filter_items_based_on_http_method(non_api_functions, "GET")
+        self.assertNotEqual(updated_items, api_functions)
+        self.assertEqual(not_updated_items, non_api_functions)

@@ -60,7 +60,7 @@ export class AuthProviderService {
           OR: contextConditions,
         },
       },
-    });
+  });
   }
 
   async getAuthProvider(id: string): Promise<AuthProvider | null> {

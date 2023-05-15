@@ -19,7 +19,7 @@ type NameContext = {
   context: string;
 };
 
-type PluginFunction = Specification & {
+export type PluginFunction = Specification & {
   executePath: string;
   operationId: string;
 };
@@ -62,30 +62,16 @@ function _getArgumentsRequired(args: PropertySpecification[]): string[] {
   return rv;
 }
 
-const _getBodySchema = (f: PluginFunction): Schema => {
-  const rv: Schema = {
-    name: `${f.operationId}Body`,
-    type: 'object',
-    // pretty sure OpenAPI needs a description so just use this!
-    description: 'arguments',
-  };
-  if (f.function.arguments) {
-    rv.arguments = f.function.arguments;
-    rv.argumentsRequired = _getArgumentsRequired(f.function.arguments);
-  }
-  return rv;
-};
-
-const _getReturnType = (t: PropertyType): string => {
+const _getOpenApiType = (t: PropertyType): string => {
   if (t.kind === 'void') {
-    return "string";
+    return 'string';
   } else if (t.kind === 'plain') {
-    if (t.value === "string" || t.value === "number" || t.value === "boolean") {
+    if (t.value === 'string' || t.value === 'number' || t.value === 'boolean') {
       return t.value;
     } else {
       // HACK just return string for now
-      return "string";
-    };
+      return 'string';
+    }
   } else if (t.kind === 'primitive') {
     return t.type;
   } else if (t.kind === 'function') {
@@ -106,7 +92,7 @@ function _cleanupProperties(properties: object) {
 async function _getResponseSchema(f: PluginFunction) {
   // @ts-expect-error: it's ok
   const jsonSchema = f.function.returnType.schema;
-  const type = _getReturnType(f.function.returnType);
+  const type = _getOpenApiType(f.function.returnType);
 
   let converted: null | OpenApiResponse = null;
   if (jsonSchema && type === 'object') {
@@ -117,6 +103,7 @@ async function _getResponseSchema(f: PluginFunction) {
   const schema: OpenApiResponse = {
     type,
     description: 'response',
+    properties: {},
   };
   if (converted?.properties) {
     schema.properties = converted.properties;
@@ -172,6 +159,24 @@ async function _customFunctionMap(f: CustomFunction, functionService: FunctionSe
   return new Promise((resolve) => {
     resolve(pluginFunc);
   });
+}
+
+function _getProperties(props: PropertySpecification[]) {
+  const rv: object = {};
+  for (const prop of props) {
+    const type = _getOpenApiType(prop.type)
+    const name = prop.name;
+    rv[name] = { type };
+    if (type === "object") {
+      // @ts-expect-error: we know from previous line this is object!
+      const properties: PropertySpecification[] = prop.type.properties
+      if (properties && properties.length > 0) {
+        rv[name].properties = _getProperties(properties)
+        rv[name].required = _getArgumentsRequired(properties)
+      }
+    }
+  }
+  return rv;
 }
 
 @Injectable()
@@ -230,12 +235,37 @@ export class GptPluginService {
 
     const functionIds = JSON.parse(plugin.functionIds);
     const functions = await this._getAllFunctions(functionIds);
-    const bodySchemas = functions.map((f) => _getBodySchema(f));
+
+    // @ts-expect-error: filter gets rid of nulls
+    const bodySchemas: Schema[] = functions.map((f) => this.getBodySchema(f)).filter((s) => s !== null);
+
     const responseSchemas = await Promise.all(functions.map((f) => _getResponseSchema(f)));
 
     const template = handlebars.compile(this.loadTemplate());
     return template({ plugin: plugin, hostname, functions, bodySchemas, responseSchemas });
   }
+
+  getBodySchema = (f: PluginFunction): object | null => {
+    if (!f.function.arguments || f.function.arguments.length === 0) {
+      return null;
+    }
+    const schema = {
+      type: 'object',
+      properties: {
+        args: {
+          type: 'object',
+          properties: _getProperties(f.function.arguments),
+          required: _getArgumentsRequired(f.function.arguments)
+        },
+      },
+      required: ['args'],
+      description: 'arguments',
+    };
+    return {
+      name: `${f.operationId}Body`,
+      schema: JSON.stringify(schema, null, 2),
+    };
+  };
 
   async getPlugin(slug: string): Promise<GptPlugin> {
     return this.prisma.gptPlugin.findUniqueOrThrow({
@@ -252,8 +282,15 @@ export class GptPluginService {
     if (body.functionIds) {
       const functions = await this._getAllFunctions(body.functionIds);
       if (functions.length !== body.functionIds.length) {
+        const badFunctionIds: string[] = [];
+        const goodFunctionIds = functions.map((f) => f.id);
+        for (const fid of body.functionIds) {
+          if (!goodFunctionIds.includes(fid)) {
+            badFunctionIds.push(fid);
+          }
+        }
         throw new BadRequestException(
-          'Invalid function id passed in functionIds. Are you sure this is the right environment and that the function type is supported?',
+          `Invalid function ids ${badFunctionIds} passed in functionIds. Are you sure this is the right environment and that the function type is supported?`,
         );
       }
     }

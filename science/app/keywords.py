@@ -5,6 +5,7 @@ from typing import Optional, Tuple, List
 from app.constants import VarName
 from app.typedefs import StatsDict, ExtractKeywordDto, SpecificationDto
 from app.utils import func_path, get_config_variable, log, remove_punctuation
+from prisma import get_client
 
 
 KEYWORD_PROMPT = """For the following prompt, give me back both the keywords from my prompt and semantically similar keywords.
@@ -114,15 +115,7 @@ def get_top_function_matches(
     """get top function matches based on keywords"""
     match_limit = get_function_match_limit()
 
-    # IMPLEMENTATION GUIDE FOR ISSUE 212
-
-    # `items = _filter_items_based_on_http_method(items, keyword_data.http_methods)`
-    # inside this function, we are going to need to go to the database and lookup all the api functions
-    # so that we can know what http methods they support
-    # prisma.apifuction.find_many(where={id: in: [ids]]})
-
-    # check the method of each `item` if it is an ApiFunction
-    # if the method is not in the keyword_data.http_methods, remove it from the list
+    items = filter_items_based_on_http_method(items, keyword_data.get('http_methods'))
 
     keyword_matches, keyword_stats = _get_top(
         match_limit, items, keyword_data["keywords"]
@@ -154,6 +147,17 @@ def get_top_function_matches(
 
     # TODO
     return keyword_matches, stats
+
+
+def filter_items_based_on_http_method(items: List[SpecificationDto], http_methods: str) -> List[SpecificationDto]:
+    db = get_client()
+    result = db.apifunction.find_many(where={
+        'publicId': {'in': [item.get('id') for item in items]},
+    })
+    http_methods_set = {http_method.strip() for http_method in http_methods.split(',')}
+    items_to_remove = {rs.publicId for rs in result if rs.method not in http_methods_set}
+    items = [item for item in items if item.get('id') not in items_to_remove]
+    return items
 
 
 def _generate_match_count(stats: StatsDict) -> int:

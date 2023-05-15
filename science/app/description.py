@@ -90,6 +90,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         log_error(data, completion, prompt)
     else:
         # for now log EVERYTHING
+        rv['description'] = rv['description'][:300]
         log("input:", str(data), "output:", completion, "prompt:", prompt, sep="\n")
 
     return rv
@@ -123,6 +124,7 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
         log_error(data, completion, prompt)
     else:
         # for now log EVERYTHING
+        rv['description'] = rv['description'][:300]
         log("input:", str(data), "output:", completion, "prompt:", prompt, sep="\n")
 
     return rv
