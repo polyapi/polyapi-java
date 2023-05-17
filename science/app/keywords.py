@@ -115,7 +115,7 @@ def get_top_function_matches(
     """get top function matches based on keywords"""
     match_limit = get_function_match_limit()
 
-    items = filter_items_based_on_http_method(items, keyword_data.get('http_methods'))
+    items = filter_items_based_on_http_method(items, keyword_data.get("http_methods"))
 
     keyword_matches, keyword_stats = _get_top(
         match_limit, items, keyword_data["keywords"]
@@ -149,14 +149,24 @@ def get_top_function_matches(
     return keyword_matches, stats
 
 
-def filter_items_based_on_http_method(items: List[SpecificationDto], http_methods: str) -> List[SpecificationDto]:
+def filter_items_based_on_http_method(
+    items: List[SpecificationDto], http_methods: Optional[str]
+) -> List[SpecificationDto]:
+    if not http_methods:
+        return items
+
     db = get_client()
-    result = db.apifunction.find_many(where={
-        'publicId': {'in': [item.get('id') for item in items]},
-    })
-    http_methods_set = {http_method.strip() for http_method in http_methods.split(',')}
-    items_to_remove = {rs.publicId for rs in result if rs.method not in http_methods_set}
-    items = [item for item in items if item.get('id') not in items_to_remove]
+    public_ids = [item.get("id", "") for item in items]
+    result = db.apifunction.find_many(
+        where={
+            "publicId": {"in": public_ids},
+        }
+    )
+    http_methods_set = {http_method.strip() for http_method in http_methods.split(",")}
+    items_to_remove = {
+        rs.publicId for rs in result if rs.method not in http_methods_set
+    }
+    items = [item for item in items if item.get("id") not in items_to_remove]
     return items
 
 
@@ -194,9 +204,7 @@ def _get_top(
     return top_matches[:match_limit], stats
 
 
-def _get_stats(
-    items_with_scores: List[Tuple[SpecificationDto, int]]
-) -> StatsDict:
+def _get_stats(items_with_scores: List[Tuple[SpecificationDto, int]]) -> StatsDict:
     stats: StatsDict = {"total": len(items_with_scores)}
     match_count = 0
 

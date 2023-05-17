@@ -1,7 +1,14 @@
+import copy
 import json
 from unittest.mock import patch, Mock
-from app.keywords import extract_keywords, get_function_match_limit, keywords_similar, get_top_function_matches, \
-    filter_items_based_on_http_method
+from app.keywords import (
+    extract_keywords,
+    get_function_match_limit,
+    keywords_similar,
+    get_top_function_matches,
+    filter_items_based_on_http_method,
+)
+from load_fixtures import load_functions, test_user_get_or_create
 from .testing import DbTestCase
 
 ACCUWEATHER = {
@@ -35,18 +42,32 @@ SERVICE_NOW = {
     "type": "url",
 }
 
-API_FUNCTION = {
-     'id': 'cdeff66d-f76d-4917-859c-6b5aa0cd85a1', 'type': 'apiFunction', 'context': 'travel',
-     'name': 'unitedAirlines.getStatus',
-     'description': 'get the status of a specific flight, including airport of origin and arrival',
-     'function': {
-         'arguments': [
-             {'name': 'tenant', 'required': True, 'type': {'kind': 'primitive', 'type': 'string'}},
-             {'name': 'flightID', 'required': True, 'type': {'kind': 'primitive', 'type': 'string'}},
-             {'name': 'shopToken', 'required': True, 'type': {'kind': 'primitive', 'type': 'string'}}
-         ],
-         'returnType': {'kind': 'void'}
-     }
+UNITED_GET_STATUS = {
+    "id": "TODO FILL IN",
+    "type": "apiFunction",
+    "context": "travel",
+    "name": "unitedAirlines.getStatus",
+    "description": "get the status of a specific flight, including airport of origin and arrival",
+    "function": {
+        "arguments": [
+            {
+                "name": "tenant",
+                "required": True,
+                "type": {"kind": "primitive", "type": "string"},
+            },
+            {
+                "name": "flightID",
+                "required": True,
+                "type": {"kind": "primitive", "type": "string"},
+            },
+            {
+                "name": "shopToken",
+                "required": True,
+                "type": {"kind": "primitive", "type": "string"},
+            },
+        ],
+        "returnType": {"kind": "void"},
+    },
 }
 
 
@@ -137,14 +158,26 @@ class T(DbTestCase):
         value = 6
         name = "function_match_limit"
         defaults = {"name": name, "value": str(value)}
-        self.db.configvariable.upsert(where={"name": name}, data={"update": defaults, "create": defaults})
+        self.db.configvariable.upsert(
+            where={"name": name}, data={"update": defaults, "create": defaults}
+        )
         limit = get_function_match_limit()
         self.assertEqual(limit, 6)
 
     def test_filter_items_based_on_http_method(self):
-        api_functions = [API_FUNCTION]
-        non_api_functions = [ACCUWEATHER, GOOGLE_MAPS, SERVICE_NOW]
-        updated_items = filter_items_based_on_http_method(api_functions, "PATCH")
-        not_updated_items = filter_items_based_on_http_method(non_api_functions, "GET")
-        self.assertNotEqual(updated_items, api_functions)
-        self.assertEqual(not_updated_items, non_api_functions)
+        user = test_user_get_or_create()
+        load_functions(user)
+        united = self.db.apifunction.find_first(where={"name": "unitedAirlines.getStatus"})
+        assert united
+
+        item = copy.deepcopy(UNITED_GET_STATUS)
+        item['id'] = united.publicId
+        items = [item]
+
+        # PATCH should filter out united GET
+        filtered = filter_items_based_on_http_method(items, "PATCH")
+        self.assertEqual(filtered, [])
+
+        # GET should not filter out united GET
+        filtered = filter_items_based_on_http_method(items, "GET")
+        self.assertEqual(filtered, items)

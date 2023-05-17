@@ -2,7 +2,7 @@
 from typing import Dict, Optional, Tuple
 from flask import Blueprint, Response, request, jsonify
 from openai import OpenAIError
-from .completion import get_completion_or_conversation_answer
+from .completion import get_completion_answer
 from app.description import get_function_description, get_webhook_description
 from app.typedefs import DescInputDto
 from app.utils import clear_conversation, is_vip_user, log, set_config_variable
@@ -22,7 +22,7 @@ def function_completion() -> Dict:
     question: str = data["question"].strip()
     user_id: Optional[int] = data.get("user_id")
     assert user_id
-    resp = get_completion_or_conversation_answer(user_id, question)
+    resp = get_completion_answer(user_id, question)
     if is_vip_user(user_id):
         log(f"VIP USER {user_id}", resp, sep="\n")
 

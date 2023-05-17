@@ -344,6 +344,7 @@ export class WebhookService {
                 returnType: {
                   kind: 'void',
                 },
+                synchronous: true,
               },
             },
           },

@@ -45,3 +45,7 @@ lerna-debug.log*
 # pycache
 __pycache__
 .mypy_cache/
+
+# docker file to be ignired
+/docker/certs
+/docker/data

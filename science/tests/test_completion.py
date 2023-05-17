@@ -117,18 +117,6 @@ class T(DbTestCase):
         messages = get_conversations_for_user(user.id)
         self.assertEqual(messages, [msg])
 
-    # def test_answer_processing_no_matches(self) -> None:
-    #     content = "The capitol of Sweden is Stockholm."
-    #     choice = {
-    #         "message": {"role": "assistant", "content": content},
-    #         "finish_reason": "stop",
-    #         "index": 0,
-    #     }
-    #     answer, hit_token_limit = answer_processing(choice, 0)
-    #     self.assertFalse(hit_token_limit)
-    #     self.assertTrue(answer.startswith("We weren't able "))
-    #     self.assertTrue(answer.endswith(content))
-
     @patch("app.keywords.get_similarity_threshold", new=_fake_threshold)
     @patch("app.completion.requests.get")
     def test_library_message_no_keywords(self, requests_get: Mock) -> None:
@@ -184,4 +172,4 @@ class T(DbTestCase):
         )
         self.assertEqual(requests_get.call_count, 1)
         self.assertEqual(stats["match_count"], 1)
-        self.assertEqual(len(messages), 3)
+        self.assertEqual(len(messages), 2)

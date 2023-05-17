@@ -49,6 +49,7 @@ import { FaasService } from 'function/faas/faas.service';
 import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
+import { uniqBy } from 'lodash';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
@@ -354,6 +355,7 @@ export class FunctionService {
         headers,
       )}\nBody:\n${JSON.stringify(body)}`,
     );
+
     return lastValueFrom(
       this.httpService
         .request({
@@ -817,7 +819,7 @@ export class FunctionService {
 
     args.sort(compareArgumentsByRequired);
 
-    return args;
+    return uniqBy(args, 'key');
   }
 
   private toArgument(argument: string, argumentsMetadata: ArgumentsMetadata): FunctionArgument {

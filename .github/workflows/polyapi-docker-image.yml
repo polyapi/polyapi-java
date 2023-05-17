@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "fm-develop-dockerized" ]
+    branches: [ "fm-test" ]
 
 jobs:
   build:
@@ -17,5 +17,5 @@ jobs:
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ghcr.io/polyapi/polyapi:latest -f docker/Dockerfile .
-        docker push ghcr.io/polyapi/polyapi:latest
+        docker build -t ghcr.io/polyapi/polyapi:v1 -f docker/Dockerfile .
+        docker push ghcr.io/polyapi/polyapi:v1

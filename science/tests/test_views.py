@@ -35,10 +35,12 @@ class T(DbTestCase):
         clear_conversation(user.id)
         self.assertFalse(self.db.conversationmessage.find_first(where={"id": msg.id}))
 
-    @patch("app.views.get_completion_or_conversation_answer")
+    @patch("app.views.get_completion_answer")
     def test_function_completion_error(self, get_answer: Mock) -> None:
         # setup
-        get_answer.side_effect = ServiceUnavailableError("The server is overloaded or not ready yet.")
+        get_answer.side_effect = ServiceUnavailableError(
+            "The server is overloaded or not ready yet."
+        )
         mock_input = {
             "question": "hi world",
             "user_id": 1,
@@ -54,10 +56,14 @@ class T(DbTestCase):
     @patch("app.description.openai.ChatCompletion.create")
     def test_function_description(self, chat_create: Mock) -> None:
         # setup
-        mock_output = json.dumps({"context": "booking.reservations", "name": "createReservation", "description": "This API call..."})
-        chat_create.return_value = {
-            "choices": [{"message": {"content": mock_output}}]
-        }
+        mock_output = json.dumps(
+            {
+                "context": "booking.reservations",
+                "name": "createReservation",
+                "description": "This API call...",
+            }
+        )
+        chat_create.return_value = {"choices": [{"message": {"content": mock_output}}]}
         mock_input: DescInputDto = {
             "url": "http://example.com",
             "method": "GET",
@@ -78,29 +84,32 @@ class T(DbTestCase):
 
     @patch("app.description.openai.ChatCompletion.create")
     def test_webhook_description(self, chat_create: Mock) -> None:
-      # setup
-      mock_output = json.dumps(
-        {"context": "booking.reservations", "name": "createReservation", "description": "This Event handler..."})
-      chat_create.return_value = {
-        "choices": [{"message": {"content": mock_output}}]
-      }
-      mock_input: DescInputDto = {
-        "url": "http://example.com",
-        "method": "GET",
-        "short_description": "I am the description",
-        "payload": "I am the payload",
-        "response": "I am the response",
-      }
+        # setup
+        mock_output = json.dumps(
+            {
+                "context": "booking.reservations",
+                "name": "createReservation",
+                "description": "This Event handler...",
+            }
+        )
+        chat_create.return_value = {"choices": [{"message": {"content": mock_output}}]}
+        mock_input: DescInputDto = {
+            "url": "http://example.com",
+            "method": "GET",
+            "short_description": "I am the description",
+            "payload": "I am the payload",
+            "response": "I am the response",
+        }
 
-      # execute
-      resp = self.client.post("/webhook-description", json=mock_input)
+        # execute
+        resp = self.client.post("/webhook-description", json=mock_input)
 
-      # test
-      self.assertEqual(chat_create.call_count, 1)
-      output = resp.get_json()
-      self.assertEqual(output["context"], "booking.reservations")
-      self.assertEqual(output["name"], "createReservation")
-      self.assertEqual(output["description"], "This Event handler...")
+        # test
+        self.assertEqual(chat_create.call_count, 1)
+        output = resp.get_json()
+        self.assertEqual(output["context"], "booking.reservations")
+        self.assertEqual(output["name"], "createReservation")
+        self.assertEqual(output["description"], "This Event handler...")
 
     def test_configure(self):
         data = {"name": "function_match_limit", "value": "4"}

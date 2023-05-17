@@ -26,7 +26,9 @@ For example, to create a new product on shopify the context should be "shopify.p
 
 Resources should be plural. For example, shopify.products, shopify.orders, shopify.customers, etc.
 
-The description should use keywords that makes search efficient. It can be a little redundant if that adds keywords but needs to remain human readable. It should be three to five sentences long.
+The description should use keywords that makes search efficient. It can be a little redundant if that adds keywords but 
+needs to remain human readable. It should be limited to 300 characters without losing meaning and also can be less than
+300 characters if it makes sense.
 
 Here is the {call_type}:
 
@@ -76,6 +78,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
+
     resp = openai.ChatCompletion.create(
         model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
     )
