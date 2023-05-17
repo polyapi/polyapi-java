@@ -158,7 +158,7 @@ export class FunctionController {
 
   @UseGuards(PolyKeyGuard)
   @Delete('/client/:id')
-  async deleteClientFunction(@Req() req, @Param('id') id: string): Promise<any> {
+  async deleteClientFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<any> {
     const clientFunction = await this.service.findClientFunction(id);
     if (!clientFunction) {
       throw new NotFoundException('Function not found');
@@ -255,8 +255,8 @@ export class FunctionController {
 
   @UseGuards(new PolyKeyGuard([Role.SuperAdmin]))
   @Post('/server/all/update')
-  async updateAllServerFunctions(@Req() req) {
-    void this.service.updateAllServerFunctions(req.user);
+  async updateAllServerFunctions(@Req() req: AuthRequest) {
+    void this.service.updateAllServerFunctions(req.user.environment);
     return 'Functions are being updated in background. Please check logs for more details.';
   }
 }
