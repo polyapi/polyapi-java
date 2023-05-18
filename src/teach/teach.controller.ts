@@ -5,7 +5,7 @@ import {
   TeachDto,
   TeachSystemPromptDto,
   TeachSystemPromptResponseDto,
-  TeachResponseDto,
+  TeachResponseDto
 } from '@poly/common';
 import { FunctionService } from 'function/function.service';
 import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
@@ -41,7 +41,8 @@ export class TeachController {
       method,
       templateAuth,
       templateUrl,
-      templateBody
+      templateBody,
+      id = null,
     } = teachDto;
     const environmentId = req.user.environment.id;
 
@@ -51,7 +52,9 @@ export class TeachController {
     this.logger.debug(
       `name: ${name}, context: ${context}, description: ${description}, payload: ${payload}, response: ${response}, statusCode: ${statusCode}`,
     );
-    return  this.functionService.teach(
+
+    return this.functionService.teach(
+      id,
       environmentId,
       url,
       body,
@@ -66,7 +69,7 @@ export class TeachController {
       method,
       templateUrl,
       templateBody,
-      templateAuth
+      templateAuth,
     );
   }
 

@@ -1,5 +1,5 @@
 import { Body, Variables, Header, Auth, Method } from '../..';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class TeachDto {
   name: string;
@@ -18,4 +18,7 @@ export class TeachDto {
   @IsNotEmpty()
   templateUrl: string;
   templateBody: Body;
+  @IsOptional()
+  @IsString()
+  id?: string;
 }

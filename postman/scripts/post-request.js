@@ -17,6 +17,16 @@ pm.environment.unset('templateHeaders');
 pm.environment.unset('templateAuth');
 pm.environment.unset('templateUrl');
 
+let response;
+
+const contentType = pm.response.headers.get('content-type') || '';
+
+if(contentType.match(/application\/json/) !== null) {
+    response = pm.response.json();
+} else {
+    response = pm.response.text();
+}
+
 const postRequest = {
   url: 'https://staging.polyapi.io/teach',
   method: 'POST',
@@ -35,7 +45,7 @@ const postRequest = {
       templateHeaders,
       method,
       templateAuth,
-      response: pm.response.json(),
+      response,
       variables: {
         ...pm.environment.toObject(),
         ...pm.collectionVariables.toObject(),

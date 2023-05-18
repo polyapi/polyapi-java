@@ -8,6 +8,11 @@ export const getSpecs = async (contexts?: string[], names?: string[], ids?: stri
       headers: {
         [POLY_HEADER_API_KEY]: process.env.POLY_API_KEY || '',
       },
+      params: {
+        contexts,
+        names,
+        ids
+      }
     })
   ).data;
 };
