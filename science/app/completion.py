@@ -22,27 +22,8 @@ from app.utils import (
     store_message,
 )
 
-# TODO: for now, it can be in separate method for dev purposes then needs to be cleaned up and original method modified
+
 def answer_processing(choice: ChatGptChoice, match_count: int) -> Tuple[str, bool]:
-    content = choice["message"]["content"]
-
-    if choice["finish_reason"] == "length":
-        # incomplete model output due to max_tokens parameter or token limit
-        # let's append a message explaining to the user answer is incomplete
-        content += "\n\nTOKEN LIMIT HIT\n\nPoly has hit the ChatGPT token limit for this conversation. Conversation reset. Please try again to see the full answer."
-        return content, True
-
-    if match_count:
-        return content, False
-    else:
-        return (
-            # f"We weren't able to find any Poly functions to do that.\n\nBeyond Poly, here's what we think:\n\n{content}",
-            content,
-            False,
-        )
-
-
-def answer_processing_stream(choice: ChatGptStreamChoice, match_count: int) -> Tuple[str, bool]:
     content = choice["delta"]["content"]
 
     if choice["finish_reason"] == "length":
@@ -68,7 +49,7 @@ def get_completion_or_conversation_answer(user_id: int, question: str) -> Dict:
     else:
         # return get_completion_answer(user_id, question)
         # TODO: for dev purposes only now
-        return get_completion_answer_stream(user_id, question)
+        return get_completion_answer(user_id, question)
 
 
 def get_conversations_for_user(user_id: Optional[int]) -> List[ConversationMessage]:
@@ -253,20 +234,6 @@ def get_chat_completion(messages: List[MessageDict]) -> Dict:
     return openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=stripped,
-    )
-
-
-# TODO: for now, it can be in separate method for dev purposes then needs to be cleaned up and original method modified
-def get_chat_completion_stream(messages: List[MessageDict]) -> Dict:
-    stripped = copy.deepcopy(messages)
-    for s in stripped:
-        # pop off all the data we use internally before sending the messages to OpenAI
-        s.pop("function_ids", None)
-        s.pop("webhook_ids", None)
-
-    return openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=stripped,
         stream=True
     )
 
@@ -316,40 +283,19 @@ def get_system_prompt() -> Optional[SystemPrompt]:
 def get_completion_answer(user_id: int, question: str) -> Dict:
     messages, stats = get_completion_prompt_messages(question)
     resp = get_chat_completion(messages)
-    answer, hit_token_limit = answer_processing(
-        resp["choices"][0], stats["match_count"]
-    )
-
-    if hit_token_limit:
-        # if we hit the token limit, let's just clear the conversation and start over
-        clear_conversation(user_id)
-    else:
-        # HACK always clear for now
-        clear_conversation(user_id)
-        for message in messages:
-            store_message(
-                user_id,
-                message,
-            )
-        store_message(user_id, {"role": "assistant", "content": answer})
-
-    return {"answer": answer, "stats": stats}
-
-
-# TODO: for now, it can be in separate method for dev purposes then needs to be cleaned up and original method modified
-def get_completion_answer_stream(user_id: int, question: str) -> Dict:
-    messages, stats = get_completion_prompt_messages(question)
-    resp = get_chat_completion_stream(messages)
 
     return resp
 
-    # TODO: need to reimplement this part for stream
     # for chunk in resp:
+    #     print(chunk)
     #     content = chunk["choices"][0].get("delta", {}).get("content")
     #     if content:
-    #         answer, hit_token_limit = answer_processing_stream(
+    #         print(content)
+    #         answer, hit_token_limit = answer_processing(
     #             chunk["choices"][0], stats["match_count"]
     #         )
+    #         print(answer)
+    #         print(hit_token_limit)
     #         if hit_token_limit:
     #             # if we hit the token limit, let's just clear the conversation and start over
     #             clear_conversation(user_id)

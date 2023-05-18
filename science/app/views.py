@@ -19,7 +19,7 @@ def home():
 
 @bp.route("/function-completion", methods=["GET"])  # type: ignore
 def function_completion() -> Response:
-    data: Dict = request.args.to_dict()
+    data: Dict = request.get_json(force=True)
     question: str = data["question"].strip()
     user_id: Optional[int] = int(data.get("user_id"))
     assert user_id
