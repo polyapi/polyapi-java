@@ -1,7 +1,10 @@
 import { Body, Variables, Header, Auth, Method } from '../..';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
+
+import { NotContainDots } from './../validators'
 
 export class TeachDto {
+  @Validate(NotContainDots)
   name: string;
   context?: string;
   description?: string;

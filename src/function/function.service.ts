@@ -2,7 +2,6 @@ import ts, { factory } from 'typescript';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   forwardRef,
   HttpException,
   HttpStatus,
@@ -17,7 +16,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import mustache from 'mustache';
 import mergeWith from 'lodash/mergeWith';
-import { CustomFunction, Prisma, SystemPrompt, ApiFunction, User, Environment } from '@prisma/client';
+import { CustomFunction, Prisma, SystemPrompt, ApiFunction, Environment } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ArgumentsMetadata,
@@ -160,9 +159,16 @@ export class FunctionService {
       const apiFunctions = await this.prisma.apiFunction.findMany({
         where: {
           environmentId,
-          url: {
-            startsWith: `${urlObject.origin}${urlObject.pathname}`,
-          },
+          OR: [
+            {
+              url: {
+                startsWith: `${urlObject.origin}${urlObject.pathname}?`,
+              }
+            },
+            {
+              url: templateUrl
+            }
+          ],
           method,
         },
       });
@@ -858,10 +864,25 @@ export class FunctionService {
     const toArgument = (arg: string) => this.toArgument(arg, JSON.parse(apiFunction.argumentsMetadata || '{}'));
     const args: FunctionArgument[] = [];
 
-    args.push(...(apiFunction.url.match(ARGUMENT_PATTERN)?.map(toArgument) || []));
-    args.push(...(apiFunction.headers?.match(ARGUMENT_PATTERN)?.map(toArgument) || []));
-    args.push(...(apiFunction.body?.match(ARGUMENT_PATTERN)?.map(toArgument) || []));
-    args.push(...(apiFunction.auth?.match(ARGUMENT_PATTERN)?.map(toArgument) || []));
+    args.push(...(apiFunction.url.match(ARGUMENT_PATTERN)?.map<FunctionArgument>(arg => ({
+      ...toArgument(arg),
+      location: 'url'
+    })) || []));
+    args.push(...(apiFunction.headers?.match(ARGUMENT_PATTERN)?.map<FunctionArgument>(arg => ({
+      ...toArgument(arg),
+      location: 'headers'
+    })) || []));
+    args.push(...(apiFunction.auth?.match(ARGUMENT_PATTERN)?.map<FunctionArgument>(arg => ({
+      ...toArgument(arg),
+      location: 'auth'
+    })) || []));
+
+    const bodyArgs = (apiFunction.body?.match(ARGUMENT_PATTERN)?.map<FunctionArgument>(arg => ({
+      ...toArgument(arg),
+      location: 'body'
+    })) || []).filter(bodyArg => !args.some(arg => arg.key === bodyArg.key));
+
+    args.push(...bodyArgs);
 
     args.sort(compareArgumentsByRequired);
 
@@ -961,7 +982,6 @@ export class FunctionService {
   ) {
     if (transformTextCase) {
       name = name.replace(/([\[\]\\/{}()])/g, ' ');
-      name = toCamelCase(name);
     }
 
     if (!fixDuplicate) {
@@ -1236,12 +1256,14 @@ export class FunctionService {
       }
 
       functionArgs.forEach((arg) => {
-        if (metadata[arg.key]) {
-          metadata[arg.key].payload = true;
-        } else {
-          metadata[arg.key] = {
-            payload: true,
-          };
+        if (arg.location === 'body') {
+          if (metadata[arg.key]) {
+            metadata[arg.key].payload = true;
+          } else {
+            metadata[arg.key] = {
+              payload: true,
+            };
+          }
         }
       });
     };

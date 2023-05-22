@@ -1,6 +1,6 @@
 FROM node:18
 RUN apt-get update && apt-get install -y \
-    python3-pip 
+    python3-pip
 COPY . /poly/app
 WORKDIR /poly/app
 ENV PRISMA_HOME_DIR=/poly/app/prisma
@@ -17,4 +17,4 @@ RUN groupadd -r poly && \
     chown -R poly:poly /poly
 USER poly
 ENTRYPOINT [ "sh","./docker/scripts/entrypoint.sh" ]
-EXPOSE 8000 5000
+EXPOSE 8000 5000 80

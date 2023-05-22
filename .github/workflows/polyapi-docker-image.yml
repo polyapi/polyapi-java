@@ -1,12 +1,16 @@
 name: Docker Image CI
-
 on:
   push:
-    branches: [ "fm-test" ]
+    branches:
+      - develop
+      - main
 
 jobs:
-  build:
+  develop:
+    name: Development docker build and push.
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/develop' }}
+
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
@@ -17,5 +21,23 @@ jobs:
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ghcr.io/polyapi/polyapi:v1 -f docker/Dockerfile .
-        docker push ghcr.io/polyapi/polyapi:v1
+        docker build -t ghcr.io/polyapi/polyapi-dev:latest -f docker/Dockerfile .
+        docker push ghcr.io/polyapi/polyapi-dev:latest
+
+  staging:
+    name: Staging docker build and push.
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build the Docker image
+      run: |
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
+        docker build -t ghcr.io/polyapi/polyapi-stg:latest -f docker/Dockerfile .
+        docker push ghcr.io/polyapi/polyapi-stg:latest

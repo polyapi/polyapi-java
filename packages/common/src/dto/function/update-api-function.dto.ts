@@ -1,6 +1,10 @@
+import { IsString, Validate } from 'class-validator';
 import { ArgumentsMetadata } from '../../function';
+import { NotContainDots } from '../validators';
 
-export interface UpdateApiFunctionDto {
+export class UpdateApiFunctionDto {
+  @IsString()
+  @Validate(NotContainDots)
   name?: string;
   context?: string;
   description?: string;

@@ -9,6 +9,7 @@ export interface FunctionArgument {
   typeSchema?: string;
   typeObject?: object;
   payload?: boolean;
+  location?: 'url' | 'body' | 'headers' | 'auth';
 }
 
 export interface FunctionBasicDto {
