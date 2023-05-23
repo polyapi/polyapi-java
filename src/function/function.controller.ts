@@ -112,13 +112,15 @@ export class FunctionController {
 
   @UseGuards(PolyKeyGuard)
   @Post('/client')
-  async createClientFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<any> {
+  async createClientFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {
     const { context = '', name, code } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
-      return await this.service.createCustomFunction(req.user.environment, context, name, code, false);
+      return this.service.customFunctionToDetailsDto(
+        await this.service.createCustomFunction(req.user.environment, context, name, code, false)
+      );
     } catch (e) {
       throw new BadRequestException(e.message);
     }
@@ -139,7 +141,7 @@ export class FunctionController {
 
   @UseGuards(PolyKeyGuard)
   @Patch('/client/:id')
-  async updateClientFunction(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateCustomFunctionDto): Promise<any> {
+  async updateClientFunction(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateCustomFunctionDto): Promise<FunctionDetailsDto> {
     const {
       context = null,
       description = null,
@@ -180,13 +182,15 @@ export class FunctionController {
 
   @UseGuards(PolyKeyGuard)
   @Post('/server')
-  async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<any> {
+  async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {
     const { context = '', name, code } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
-      return await this.service.createCustomFunction(req.user.environment, context, name, code, true);
+      return this.service.customFunctionToDetailsDto(
+        await this.service.createCustomFunction(req.user.environment, context, name, code, true)
+      );
     } catch (e) {
       throw new BadRequestException(e.message);
     }
@@ -207,7 +211,7 @@ export class FunctionController {
 
   @UseGuards(PolyKeyGuard)
   @Patch('/server/:id')
-  async updateServerFunction(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateCustomFunctionDto): Promise<any> {
+  async updateServerFunction(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateCustomFunctionDto): Promise<FunctionDetailsDto> {
     const {
       context = null,
       description = null,

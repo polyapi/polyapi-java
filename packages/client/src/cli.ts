@@ -3,7 +3,9 @@
 import yargs from 'yargs';
 import shell from 'shelljs';
 import setup from './commands/setup';
-import generate from './commands/generate';
+import {
+  generate
+} from './commands/generate';
 import { addCustomFunction } from './commands/function';
 import { loadConfig } from './config';
 

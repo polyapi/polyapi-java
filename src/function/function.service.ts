@@ -541,7 +541,7 @@ export class FunctionService {
     };
   }
 
-  async createCustomFunction(env: Environment, context: string, name: string, code: string, serverFunction: boolean) {
+  async createCustomFunction(env: Environment, context: string, name: string, code: string, serverFunction: boolean): Promise<CustomFunction> {
     let functionArguments: FunctionArgument[] | null = null;
     let returnType: string | null = null;
     const contextChain: string[] = [];
@@ -596,6 +596,7 @@ export class FunctionService {
                       key: param.name.getText(),
                       name: param.name.getText(),
                       type: param.type?.getText() || 'any',
+                      ...(param.questionToken ? { required: false } : {}),
                     }));
 
                     returnType = node.type?.getText() || 'any';
@@ -680,7 +681,7 @@ export class FunctionService {
 
       try {
         await this.faasService.createFunction(customFunction.id, name, code, env.appKey);
-        return this.prisma.customFunction.update({
+        customFunction = await this.prisma.customFunction.update({
           where: {
             id: customFunction.id,
           },
@@ -695,6 +696,8 @@ export class FunctionService {
         throw e;
       }
     }
+
+    return customFunction;
   }
 
   async updateCustomFunction(customFunction: CustomFunction, context: string | null, description: string | null) {
@@ -810,7 +813,7 @@ export class FunctionService {
 
     const toArgumentSpecification = async (arg: FunctionArgument): Promise<PropertySpecification> => ({
       name: arg.name,
-      required: true,
+      required: typeof arg.required === 'undefined' ? true : arg.required,
       type: {
         kind: 'plain',
         value: arg.type,

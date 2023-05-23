@@ -218,7 +218,7 @@ const generateTSDeclarationFiles = async (specs: Specification[]) => {
   );
 
   await generateTSIndexDeclarationFile(contexts);
-  await generateContextDataFile(contextData);
+  generateContextDataFile(contextData);
 };
 
 const generateTSIndexDeclarationFile = async (contexts: Context[]) => {
@@ -401,8 +401,19 @@ const generateTSContextDeclarationFile = async (
   );
 };
 
-const generateContextDataFile = async (contextData: Record<string, any>) => {
+const generateContextDataFile = (contextData: Record<string, any>) => {
   fs.writeFileSync(`${POLY_LIB_PATH}/specs.json`, JSON.stringify(contextData, null, 2));
+};
+
+const getContextDataFileContent = () => {
+  const contents = fs.readFileSync(`${POLY_LIB_PATH}/specs.json`, 'utf-8');
+
+  try {
+    return JSON.parse(contents) as Record<string, any>;
+  } catch(err) {
+    return {};
+  }
+
 };
 
 const getContextData = (specs: Specification[]) => {
@@ -414,12 +425,94 @@ const getContextData = (specs: Specification[]) => {
   return contextData;
 };
 
+const getSpecsFromContextData = (contextData) => {
+  const specs: Specification[] = [];
+
+  const traverseAndGetSpec = (data) => {
+    for(const key of Object.keys(data)) {
+
+      if(typeof data[key].context !== 'undefined') {
+        specs.push(data[key]);
+      } else {
+        traverseAndGetSpec(data[key]);
+      }
+
+    }
+  }
+
+  traverseAndGetSpec(contextData);
+
+  return specs;
+};
+
 const prettyPrint = (code: string, parser = 'typescript') =>
   prettier.format(code, {
     parser,
     singleQuote: true,
     printWidth: 160,
   });
+
+
+const showErrGettingSpecs = (error: any) => {
+  shell.echo(chalk.red('ERROR'));
+  shell.echo('Error while getting data from Poly server. Make sure the version of library/server is up to date.');
+  shell.echo(chalk.red(error.message), chalk.red(JSON.stringify(error.response?.data)));
+}
+
+const showErrGeneratingFiles = (error: any) => {
+  shell.echo(chalk.red('ERROR'));
+  shell.echo('Error while generating code files. Make sure the version of library/server is up to date.');
+  shell.echo(chalk.red(error.message));
+  shell.echo(chalk.red(error.stack));
+}
+
+const generateSingleCustomFunction = async(functionId: string)  => {
+  shell.echo('-n', chalk.rgb(255, 255, 255)(`Generating new custom function...`));
+
+  let contextData: Record<string, any> = {};
+  
+  try {
+    contextData = getContextDataFileContent();
+  } catch(error) {
+    shell.echo(chalk.red('ERROR'));
+    shell.echo('Error while fetching local context data.');
+    shell.echo(chalk.red(error.message));
+    shell.echo(chalk.red(error.stack));  
+    return;
+  }
+
+  const prevSpecs = getSpecsFromContextData(contextData);
+
+  let specs: Specification[] = [];
+
+  try {
+    specs = await getSpecs([], [], [functionId]);
+  } catch (error) {
+    showErrGettingSpecs(error);
+    return;
+  }
+
+  const [customFunction] = specs;
+
+  if (prevSpecs.some(prevSpec => prevSpec.id === customFunction.id)) {
+    specs = prevSpecs.map(prevSpec => {
+      if(prevSpec.id === customFunction.id) {
+        return customFunction;
+      }
+      return prevSpec;
+    });
+  } else {
+    prevSpecs.push(customFunction);
+    specs = prevSpecs;
+  }
+
+  try {
+    await generateJSFiles(specs);
+    await generateTSDeclarationFiles(specs);
+  } catch (error) {
+    showErrGeneratingFiles(error);
+  }
+}
 
 const generate = async (contexts?: string[], names?: string[], functionIds?: string[]) => {
   let specs: Specification[] = [];
@@ -428,26 +521,21 @@ const generate = async (contexts?: string[], names?: string[], functionIds?: str
 
   prepareDir();
   loadConfig();
-
+  
   try {
     // functions = await getFunctions(contexts, names, functionIds);
     // webhookHandles = await getWebhookHandles();
     specs = await getSpecs(contexts, names, functionIds);
   } catch (error) {
-    shell.echo(chalk.red('ERROR'));
-    shell.echo('Error while getting data from Poly server. Make sure the version of library/server is up to date.');
-    shell.echo(chalk.red(error.message), chalk.red(JSON.stringify(error.response?.data)));
+    showErrGettingSpecs(error);
     return;
   }
-
+  
   try {
     await generateJSFiles(specs);
     await generateTSDeclarationFiles(specs);
   } catch (error) {
-    shell.echo(chalk.red('ERROR'));
-    shell.echo('Error while generating code files. Make sure the version of library/server is up to date.');
-    shell.echo(chalk.red(error.message));
-    shell.echo(chalk.red(error.stack));
+    showErrGeneratingFiles(error);
     return;
   }
 
@@ -455,4 +543,4 @@ const generate = async (contexts?: string[], names?: string[], functionIds?: str
   shell.echo(chalk.rgb(255, 255, 255)(`\nPlease, restart your TS server to see the changes.`));
 };
 
-export default generate;
+export { generate, generateSingleCustomFunction };

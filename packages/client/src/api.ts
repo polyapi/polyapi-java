@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { POLY_HEADER_API_KEY } from './constants';
 import { Specification } from '@poly/common';
 
@@ -19,7 +19,7 @@ export const getSpecs = async (contexts?: string[], names?: string[], ids?: stri
 
 export const createServerFunction = async (context: string | null, name: string, code: string) => {
   return (
-    await axios.post(
+    await axios.post<any, AxiosResponse<CustomFunctionDefinitionDto>>(
       `${process.env.POLY_API_BASE_URL}/functions/server`,
       {
         context,
@@ -38,7 +38,7 @@ export const createServerFunction = async (context: string | null, name: string,
 
 export const createClientFunction = async (context: string | null, name: string, code: string) => {
   return (
-    await axios.post(
+    await axios.post<any, AxiosResponse<CustomFunctionDefinitionDto>>(
       `${process.env.POLY_API_BASE_URL}/functions/client`,
       {
         context,
