@@ -28,7 +28,7 @@ class T(DbTestCase):
         msg = self.db.conversationmessage.create(data=data)
 
         # clearing other user id shouldn't delete this msg
-        clear_conversation(-1)
+        clear_conversation("-1")
         self.assertTrue(self.db.conversationmessage.find_first(where={"id": msg.id}))
 
         # clearing this user id should clear it
