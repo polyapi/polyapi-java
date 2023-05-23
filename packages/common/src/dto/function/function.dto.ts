@@ -25,23 +25,3 @@ export interface FunctionDetailsDto extends FunctionBasicDto {
   arguments: FunctionArgument[];
   type: FunctionType;
 }
-
-export interface FunctionDefinitionDto {
-  id: string;
-  type: FunctionType;
-  context: string;
-  name: string;
-  description: string;
-  arguments: FunctionArgument[];
-  returnTypeName: string;
-  returnType?: string;
-}
-
-export interface ApiFunctionDefinitionDto extends FunctionDefinitionDto {
-  type: 'api';
-}
-
-export interface CustomFunctionDefinitionDto extends FunctionDefinitionDto {
-  type: 'client' | 'server';
-  customCode: string;
-}
