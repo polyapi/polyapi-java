@@ -269,7 +269,7 @@ def get_completion_answer(user_id: str, question: str) -> Dict:
         # lets pass ChatGPT the function and ask the question to make this work
         choice = get_best_function_example(best_function_id, question)
     else:
-        resp = get_chat_completion([{"role": "user", "content": question}])
+        resp = get_chat_completion([{"role": "user", "content": question}], stage="no_best_function")
         choice = resp["choices"][0]
 
     answer, hit_token_limit = answer_processing(choice)
