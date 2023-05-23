@@ -29,7 +29,9 @@ def test_user_get_or_create() -> User:
     db = get_client()
     user = db.user.find_first(where={"name": "test"})
     if not user:
-        user = db.user.create(data={"name": "test", "apiKey": "asdf", "role": "ADMIN"})
+        user = db.user.create(
+            data={"name": "test", "role": "ADMIN"}
+        )
     return user
 
 

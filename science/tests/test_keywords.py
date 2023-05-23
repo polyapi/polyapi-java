@@ -169,7 +169,7 @@ class T(DbTestCase):
         united = united_get_status_get_or_create(user)
 
         item = copy.deepcopy(UNITED_GET_STATUS)
-        item['id'] = united.publicId
+        item['id'] = united.id
         items = [item]
 
         # PATCH should filter out united GET

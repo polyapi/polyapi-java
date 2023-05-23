@@ -40,7 +40,7 @@ def answer_processing(choice: ChatGptChoice) -> Tuple[str, bool]:
     return content, False
 
 
-def get_conversations_for_user(user_id: Optional[int]) -> List[ConversationMessage]:
+def get_conversations_for_user(user_id: Optional[str]) -> List[ConversationMessage]:
     if not user_id:
         return []
 
@@ -183,7 +183,7 @@ def get_system_prompt() -> Optional[SystemPrompt]:
     return system_prompt
 
 
-def get_best_function(user_id: int, question: str) -> Tuple[str, StatsDict]:
+def get_best_function(user_id: str, question: str) -> Tuple[str, StatsDict]:
     messages, stats = get_best_function_messages(question)
     if not messages:
         # we have no candidate functions whatsoever, abort!
@@ -262,7 +262,7 @@ def get_best_function_example(public_id: str, question: str) -> ChatGptChoice:
     return resp["choices"][0]
 
 
-def get_completion_answer(user_id: int, question: str) -> Dict:
+def get_completion_answer(user_id: str, question: str) -> Dict:
     best_function_id, stats = get_best_function(user_id, question)
     if best_function_id:
         # we found a function that we think should answer this question

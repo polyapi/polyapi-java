@@ -964,7 +964,7 @@ export class FunctionService {
     const filterConditions = [
       ...contextConditions,
       names?.length ? { name: { in: names } } : undefined,
-      ids?.length ? { publicId: { in: ids } } : undefined,
+      ids?.length ? { id: { in: ids } } : undefined,
     ].filter(Boolean) as any[];
 
     if (filterConditions.length > 0) {

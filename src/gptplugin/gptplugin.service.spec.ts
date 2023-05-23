@@ -142,42 +142,42 @@ const PLUGIN_CREATE_SPEC: PluginFunction = {
 const TEST_PUBLIC_IDS = ['123', '456'];
 
 async function _createApiFunction(prisma: PrismaService) {
-  const user = await prisma.user.findFirst();
+  const environment = await prisma.environment.findFirst();
 
   const defaults = {
+    id: '123',
+    environmentId: environment?.id || "123",
     name: 'twilio.sendSms',
     context: 'comms.messaging',
-    userId: user ? user.id : 1,
     description: 'send a text message',
     method: 'GET',
     url: 'http://example.com/twilio',
-    publicId: '123',
     body: '{"mode":"urlencoded","urlencoded":[{"key":"To","value":"{{phone}}"},{"key":"From","value":"+17622396902"},{"key":"Body","value":"{{message}}"}]}',
     response:
       '{"body":"orale vato","num_segments":"1","direction":"outbound-api","from":"+17622396902","date_updated":"Tue, 21 Mar 2023 12:34:03 +0000","price":null,"error_message":null,"uri":"/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages/SM899acf9f2afdf9d8ca62a54fa4e29578.json","account_sid":"ACe562bccbc410295451a07d40747eb10b","num_media":"0","to":"+16504859634","date_created":"Tue, 21 Mar 2023 12:34:03 +0000","status":"queued","sid":"SM899acf9f2afdf9d8ca62a54fa4e29578","date_sent":null,"messaging_service_sid":null,"error_code":null,"price_unit":"USD","api_version":"2010-04-01","subresource_uris":{"media":"/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages/SM899acf9f2afdf9d8ca62a54fa4e29578/Media.json"}}',
   };
   return prisma.apiFunction.upsert({
-    where: { publicId: '123' },
+    where: { id: '123' },
     update: defaults,
     create: defaults,
   });
 }
 
 async function _createCustomFunction(prisma: PrismaService) {
-  const user = await prisma.user.findFirst();
+  const environment = await prisma.environment.findFirst();
 
   const defaults = {
+    id: '123',
+    environmentId: environment?.id || "123",
     name: 'sendProductUrlInSms',
     context: 'products.shopify',
-    userId: user ? user.id : 1,
     description: 'take a product ID and phone number',
-    publicId: '123',
     arguments: '[{"name":"productId","type":"number"},{"name":"phoneNumber","type":"string"}]',
     returnType: 'Promise<void>',
     code: 'dummy',
   };
   return prisma.customFunction.upsert({
-    where: { publicId: '123' },
+    where: { id: '123' },
     update: defaults,
     create: defaults,
   });
@@ -215,8 +215,8 @@ describe('GptPluginService', () => {
 
     // clear all functions between tests
     await Promise.all([
-      prisma.apiFunction.deleteMany({ where: { publicId: { in: TEST_PUBLIC_IDS } } }),
-      prisma.customFunction.deleteMany({ where: { publicId: { in: TEST_PUBLIC_IDS } } }),
+      prisma.apiFunction.deleteMany({ where: { id: { in: TEST_PUBLIC_IDS } } }),
+      prisma.customFunction.deleteMany({ where: { id: { in: TEST_PUBLIC_IDS } } }),
     ]);
   });
 
@@ -238,7 +238,7 @@ describe('GptPluginService', () => {
       expect(spec.servers[0].url).toBe('https://mass-effect.develop.polyapi.io');
 
       expect(Object.keys(spec.paths).length).toBe(1);
-      const path1 = spec.paths[`/functions/api/${apiFunc.publicId}/execute`];
+      const path1 = spec.paths[`/functions/api/${apiFunc.id}/execute`];
       expect(path1.post.summary).toBe('send a text message');
       expect(path1.post.operationId).toBe('commsMessagingTwilioSendSms');
 
@@ -257,7 +257,7 @@ describe('GptPluginService', () => {
       const spec = JSON.parse(specStr);
 
       expect(Object.keys(spec.paths).length).toBe(1);
-      const path1 = spec.paths[`/functions/server/${customFunc.publicId}/execute`];
+      const path1 = spec.paths[`/functions/server/${customFunc.id}/execute`];
       expect(path1.post.summary).toBe('take a product ID and phone number');
       expect(path1.post.operationId).toBe('productsShopifySendProductUrlInSms');
 
@@ -276,7 +276,7 @@ describe('GptPluginService', () => {
       };
 
       try {
-        await service.createPlugin(body);
+        await service.createOrUpdatePlugin(body);
         expect(0).toBe(1); // force error here if no error thrown
       } catch (e) {
         // should start with correct message

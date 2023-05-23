@@ -84,8 +84,8 @@ class T(DbTestCase):
         msg = self.db.conversationmessage.find_first(
             where={"id": msg.id}, include={"functions": True, "webhooks": True}
         )
-        self.assertEqual(function_ids, [f.functionPublicId for f in msg.functions])
-        self.assertEqual(webhook_ids, [w.webhookPublicId for w in msg.webhooks])
+        self.assertEqual(function_ids, [f.functionId for f in msg.functions])
+        self.assertEqual(webhook_ids, [w.webhookId for w in msg.webhooks])
 
     def test_get_public_id_none(self):
         result = get_public_id("foobar")
@@ -94,5 +94,5 @@ class T(DbTestCase):
     def test_get_public_id_api(self):
         user = test_user_get_or_create()
         united = united_get_status_get_or_create(user)
-        result = get_public_id(united.publicId)
+        result = get_public_id(united.id)
         self.assertEqual(result, united)
