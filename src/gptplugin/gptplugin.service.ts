@@ -11,6 +11,10 @@ import { ApiFunction, CustomFunction, GptPlugin } from '@prisma/client';
 import { Request } from 'express';
 
 const POLY_DEFAULT_ICON_URL = 'https://polyapi.io/wp-content/uploads/2023/03/poly-block-logo-mark.png';
+// for testing locally
+// what is the slug you chose for your pagekite?
+// see pagekite.me
+const LOCALHOST_PAGEKITE = 'megatronical'
 
 type AnyFunction = ApiFunction | CustomFunction;
 
@@ -164,15 +168,15 @@ async function _customFunctionMap(f: CustomFunction, functionService: FunctionSe
 function _getProperties(props: PropertySpecification[]) {
   const rv: object = {};
   for (const prop of props) {
-    const type = _getOpenApiType(prop.type)
+    const type = _getOpenApiType(prop.type);
     const name = prop.name;
     rv[name] = { type };
-    if (type === "object") {
+    if (type === 'object') {
       // @ts-expect-error: we know from previous line this is object!
-      const properties: PropertySpecification[] = prop.type.properties
+      const properties: PropertySpecification[] = prop.type.properties;
       if (properties && properties.length > 0) {
-        rv[name].properties = _getProperties(properties)
-        rv[name].required = _getArgumentsRequired(properties)
+        rv[name].properties = _getProperties(properties);
+        rv[name].required = _getArgumentsRequired(properties);
       }
     }
   }
@@ -188,8 +192,7 @@ export class GptPluginService {
     // TODO use with updatePlugin endpoint?
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
-  ) {
-  }
+  ) {}
 
   async _getAllFunctions(ids: string[]): Promise<PluginFunction[]> {
     const apiFunctions = await this.prisma.apiFunction.findMany({ where: { id: { in: ids } } });
@@ -208,8 +211,10 @@ export class GptPluginService {
   getOpenApiUrl(host: string, slug: string): string {
     const protocol = host === 'localhost' ? 'http' : 'https';
     if (slug === 'develop' || slug === 'staging') {
-      // HACK for now staging/develop just use hardcoded manifests
+      // HACK for now staging/develop/local just use hardcoded manifests
       return `${protocol}://${host}/openapi-${slug}.yaml`;
+    } else if (slug === LOCALHOST_PAGEKITE) {
+      return `${protocol}://${LOCALHOST_PAGEKITE}.pagekite.me/openapi-localhost.yaml`;
     } else {
       return `${protocol}://${host}/plugin/${slug}/openapi`;
     }
@@ -255,7 +260,7 @@ export class GptPluginService {
         args: {
           type: 'object',
           properties: _getProperties(f.function.arguments),
-          required: _getArgumentsRequired(f.function.arguments)
+          required: _getArgumentsRequired(f.function.arguments),
         },
       },
       required: ['args'],
@@ -337,10 +342,20 @@ export class GptPluginService {
     let descMarket = '';
     let descModel = '';
     let iconUrl = 'https://polyapi.io/wp-content/uploads/2023/03/poly-block-logo-mark.png';
+    let auth = {
+      type: 'none',
+      authorization_type: 'none',
+    };
     if (slug === 'staging') {
       name = 'Poly API Staging';
     } else if (slug == 'develop') {
       name = 'Poly API Develop';
+    } else if (slug == LOCALHOST_PAGEKITE) {
+      name = 'Poly API Local';
+      auth = {
+        type: 'user_http',
+        authorization_type: 'bearer',
+      };
     } else {
       const plugin = await this.prisma.gptPlugin.findUniqueOrThrow({ where: { slug } });
       name = plugin.name;
@@ -355,9 +370,7 @@ export class GptPluginService {
       name_for_model: lodash.snakeCase(name),
       description_for_human: descMarket || 'Ask ChatGPT to compose and execute chains of tasks on Poly API',
       description_for_model: descModel || 'Ask ChatGPT to compose and execute chains of tasks on Poly API',
-      auth: {
-        type: 'none',
-      },
+      auth,
       api: {
         type: 'openapi',
         url: this.getOpenApiUrl(host, slug),
