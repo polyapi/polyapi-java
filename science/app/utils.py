@@ -173,7 +173,7 @@ def get_public_id(public_id: str) -> Optional[AnyFunction]:
 
 def query_node_server(path: str) -> Response:
     db = get_client()
-    user = db.user.find_first(where={"role": "ADMIN"})
+    user = db.user.find_first(where={"role": "SUPER_ADMIN"})
     if not user:
         raise NotImplementedError("ERROR: no admin user, cannot access Node API")
 
