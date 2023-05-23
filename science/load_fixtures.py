@@ -3,7 +3,7 @@ import datetime
 import csv
 from typing import List, TypedDict
 from prisma import Prisma, register, get_client
-from prisma.models import User
+from prisma.models import User, ApiFunction
 from app.utils import url_function_path
 
 
@@ -65,6 +65,16 @@ def load_functions(user: User) -> None:
     db.webhookdefined.delete_many()
     conversations_deleted = db.conversationmessage.delete_many()
     print(f"Deleted {conversations_deleted} conversations.")
+
+
+def united_get_status_get_or_create(user: User, load=True) -> ApiFunction:
+    if load:
+        load_functions(user)
+
+    db = get_client()
+    united = db.apifunction.find_first(where={"name": "unitedAirlines.getStatus"})
+    assert united
+    return united
 
 
 if __name__ == "__main__":

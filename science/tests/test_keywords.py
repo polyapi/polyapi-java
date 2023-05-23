@@ -8,7 +8,7 @@ from app.keywords import (
     get_top_function_matches,
     filter_items_based_on_http_method,
 )
-from load_fixtures import load_functions, test_user_get_or_create
+from load_fixtures import test_user_get_or_create, united_get_status_get_or_create
 from .testing import DbTestCase
 
 ACCUWEATHER = {
@@ -166,9 +166,7 @@ class T(DbTestCase):
 
     def test_filter_items_based_on_http_method(self):
         user = test_user_get_or_create()
-        load_functions(user)
-        united = self.db.apifunction.find_first(where={"name": "unitedAirlines.getStatus"})
-        assert united
+        united = united_get_status_get_or_create(user)
 
         item = copy.deepcopy(UNITED_GET_STATUS)
         item['id'] = united.publicId

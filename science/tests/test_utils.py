@@ -1,11 +1,12 @@
 import uuid
 from .testing import DbTestCase
 from app.typedefs import SpecificationDto
-from load_fixtures import load_functions, test_user_get_or_create
-from app.utils import func_args, func_path, func_path_with_args, store_message
+from load_fixtures import load_functions, test_user_get_or_create, united_get_status_get_or_create
+from app.utils import func_args, func_path, func_path_with_args, get_public_id, store_message
 
 FUNC: SpecificationDto = {
     "id": "60062c03-dcfd-437d-832c-6cba9543f683",
+    "type": "apiFunction",
     "name": "gMapsGetXy",
     "context": "shipping",
     "description": "",
@@ -45,6 +46,7 @@ class T(DbTestCase):
     def test_func_path(self) -> None:
         data: SpecificationDto = {
             "id": "123",
+            "type": "apiFunction",
             "name": "twilio.sendSMS",
             "context": "messaging",
             "description": "send SMS",
@@ -84,3 +86,13 @@ class T(DbTestCase):
         )
         self.assertEqual(function_ids, [f.functionPublicId for f in msg.functions])
         self.assertEqual(webhook_ids, [w.webhookPublicId for w in msg.webhooks])
+
+    def test_get_public_id_none(self):
+        result = get_public_id("foobar")
+        self.assertIsNone(result)
+
+    def test_get_public_id_api(self):
+        user = test_user_get_or_create()
+        united = united_get_status_get_or_create(user)
+        result = get_public_id(united.publicId)
+        self.assertEqual(result, united)

@@ -1,29 +1,34 @@
+import json
 import copy
-import requests
 import openai
-from flask import current_app
-from requests import Response
 from typing import List, Dict, Optional, Tuple
 from prisma import get_client
 from prisma.models import ConversationMessage, SystemPrompt
 
 # TODO change to relative imports
-from app.typedefs import ChatGptChoice, ExtractKeywordDto, StatsDict
+from app.typedefs import (
+    ChatCompletionResponse,
+    ChatGptChoice,
+    ExtractKeywordDto,
+    StatsDict,
+)
 from app.keywords import extract_keywords, get_top_function_matches
 from app.typedefs import (
     SpecificationDto,
     MessageDict,
 )
 from app.utils import (
+    public_id_to_spec,
+    get_public_id,
     log,
     clear_conversation,
     func_path_with_args,
-    func_path,
+    query_node_server,
     store_message,
 )
 
 
-def answer_processing(choice: ChatGptChoice, match_count: int) -> Tuple[str, bool]:
+def answer_processing(choice: ChatGptChoice) -> Tuple[str, bool]:
     content = choice["message"]["content"]
 
     if choice["finish_reason"] == "length":
@@ -32,16 +37,10 @@ def answer_processing(choice: ChatGptChoice, match_count: int) -> Tuple[str, boo
         content += "\n\nTOKEN LIMIT HIT\n\nPoly has hit the ChatGPT token limit for this conversation. Conversation reset. Please try again to see the full answer."
         return content, True
 
-    if match_count:
-        return content, False
-    else:
-        return (
-            content,
-            False,
-        )
+    return content, False
 
 
-def get_conversations_for_user(user_id: Optional[str]) -> List[ConversationMessage]:
+def get_conversations_for_user(user_id: Optional[int]) -> List[ConversationMessage]:
     if not user_id:
         return []
 
@@ -55,34 +54,6 @@ def get_conversations_for_user(user_id: Optional[str]) -> List[ConversationMessa
 
 def log_matches(question: str, type: str, matches: int, total: int):
     log(f"{type}: {matches} out of {total} matched: {question}")
-
-
-def query_node_server(type: str) -> Response:
-    db = get_client()
-    user_key = db.userkey.find_first(where={"user": {"role": "SUPER_ADMIN"}})
-    if not user_key:
-        raise NotImplementedError("ERROR: no super admin user key, cannot access Node API")
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-PolyApiKey": user_key.key,
-    }
-    base = current_app.config['NODE_API_URL']
-    resp = requests.get(f"{base}/{type}", headers=headers)
-    assert resp.status_code == 200, resp.content
-    return resp
-
-
-def get_question_message_dict(question, match_count) -> MessageDict:
-    if match_count > 0:
-        # let's ask it to give us one of the matching functions!
-        question_msg = MessageDict(
-            role="user", content="From the Poly API Library, " + question
-        )
-    else:
-        # there are no matches, let's just ask the question to ChatGPT in general
-        question_msg = MessageDict(role="user", content=question)
-    return question_msg
 
 
 def get_function_options_prompt(
@@ -100,13 +71,10 @@ def get_function_options_prompt(
     function_parts: List[str] = []
     webhook_parts: List[str] = []
     for match in top_matches:
-        if match['type'] == "webhookHandle":
-            webhook_parts.append(webhook_prompt(match))
+        if match["type"] == "webhookHandle":
+            webhook_parts.append(spec_prompt(match))
         else:
-            desc = match.get('description', "")
-            function_parts.append(
-                f"// {match['type']}: {desc}\n{func_path_with_args(match)}"
-            )
+            function_parts.append(spec_prompt(match))
 
     content = _join_content(function_parts, webhook_parts)
 
@@ -134,18 +102,18 @@ def _join_content(function_parts: List[str], webhook_parts: List[str]) -> str:
     return "\n\n".join(parts)
 
 
-def webhook_prompt(hook: SpecificationDto) -> str:
-    parts = [func_path(hook)]
-    # DAN TODO how we get urls?
-    urls: List[Dict] = []
-    for url in urls:
-        if hook["id"] in url:
-            continue
-        parts.append(f"url: {url}")
+def spec_prompt(match: SpecificationDto) -> str:
+    desc = match.get("description", "")
+    parts = [
+        f"// id: {match['id']}",
+        f"// type: {match['type']}",
+        f"// description: {desc}",
+        func_path_with_args(match),
+    ]
     return "\n".join(parts)
 
 
-def get_chat_completion(messages: List[MessageDict]) -> Dict:
+def get_chat_completion(messages: List[MessageDict], *, temperature=1.0, stage="") -> ChatCompletionResponse:
     """send the messages to OpenAI and get a response"""
     stripped = copy.deepcopy(messages)
     for s in stripped:
@@ -153,34 +121,57 @@ def get_chat_completion(messages: List[MessageDict]) -> Dict:
         s.pop("function_ids", None)
         s.pop("webhook_ids", None)
 
-    return openai.ChatCompletion.create(
+    resp: ChatCompletionResponse = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=stripped,
+        temperature=temperature,
     )
+    if stage:
+        parts = [f"STAGE: {stage}"]
+        parts.append("PROMPT:")
+        parts += [str(s) for s in stripped]
+        parts.append("ANSWER:")
+        parts.append(str(resp['choices'][0]))
+        log("\n".join(parts))
+
+    return resp
 
 
-def get_completion_prompt_messages(
+BEST_FUNCTION_CHOICE_TEMPLATE = """
+Which function can be used to accomplish this user prompt:
+%s
+
+Please return just the id of the function in this format:
+
+```
+{"id": functionId}
+```
+
+If no function is suitable, please return the following:
+
+```
+{"id": "none"}
+```
+"""
+
+
+def get_best_function_messages(
     question: str,
 ) -> Tuple[List[MessageDict], StatsDict]:
     keywords = extract_keywords(question)
     library, stats = get_function_options_prompt(keywords)
     stats["prompt"] = question
 
-    rv = []
+    # system_prompt = get_system_prompt()
+    # if system_prompt and system_prompt.content:
+    #     rv.append({"role": "system", "content": system_prompt.content})
+    if not library:
+        return [], stats
 
-    if library:
-        MessageDict(
-            role="user",
-            content="Only include actual payload elements and function arguments in the example. Be concise.",
-        )
-        rv.append(library)
-
-    question_msg = get_question_message_dict(question, bool(library))
-    rv.append(question_msg)
-
-    system_prompt = get_system_prompt()
-    if system_prompt and system_prompt.content:
-        rv.insert(0, {"role": "system", "content": system_prompt.content})
+    question_msg = MessageDict(
+        role="user", content=BEST_FUNCTION_CHOICE_TEMPLATE % question
+    )
+    rv: List[MessageDict] = [library, question_msg]
     return rv, stats
 
 
@@ -192,24 +183,95 @@ def get_system_prompt() -> Optional[SystemPrompt]:
     return system_prompt
 
 
-def get_completion_answer(user_id: str, question: str) -> Dict:
-    messages, stats = get_completion_prompt_messages(question)
-    resp = get_chat_completion(messages)
-    answer, hit_token_limit = answer_processing(
-        resp["choices"][0], stats["match_count"]
-    )
+def get_best_function(user_id: int, question: str) -> Tuple[str, StatsDict]:
+    messages, stats = get_best_function_messages(question)
+    if not messages:
+        # we have no candidate functions whatsoever, abort!
+        clear_conversation(user_id)
+        return "", stats
 
-    if hit_token_limit:
-        # if we hit the token limit, let's just clear the conversation and start over
-        clear_conversation(user_id)
+    resp = get_chat_completion(messages, stage="get_best_function", temperature=0.2)
+    answer_msg = resp["choices"][0]["message"]
+    messages.append(answer_msg)
+
+    # HACK just store convo for debugging
+    # always clear for now
+    clear_conversation(user_id)
+    for message in messages:
+        store_message(
+            user_id,
+            message,
+        )
+
+    # we tell ChatGPT to send us back "none" if no function matches
+
+    try:
+        public_id = _extract_json_from_completion(answer_msg["content"])['id']
+    except Exception as e:
+        log(f"invalid function id returned, setting public_id to none: {e}")
+        public_id = "none"
+
+    if public_id != "none" and get_public_id(public_id):
+        # valid public id, send it back!
+        return public_id, stats
     else:
-        # HACK always clear for now
-        clear_conversation(user_id)
-        for message in messages:
-            store_message(
-                user_id,
-                message,
-            )
-        store_message(user_id, {"role": "assistant", "content": answer})
+        # we received invalid public id, just send back nothing
+        return "", stats
+
+
+def _extract_json_from_completion(content: str) -> Dict:
+    """ sometimes OpenAI returns straight JSON, sometimes it gets chatty
+    this extracts just the code snippet wrapped in ``` if it is valid JSON
+    """
+    parts = content.split("```")
+    for part in parts:
+        try:
+            return json.loads(part)
+        except json.JSONDecodeError:
+            # move on to the next part, hopefully valid JSON!
+            pass
+
+    # if we get here we have invalid JSON
+    # just reraise last error!
+    raise
+
+
+BEST_FUNCTION_DETAILS_TEMPLATE = """Please be concise.
+To import the Poly API Library:
+`import poly from 'polyapi'`
+Use the following function, and add any additional code you see fit, to answer my question:
+{spec_str}
+"""
+BEST_FUNCTION_QUESTION_TEMPLATE = "My question:\n{question}"
+
+
+def get_best_function_example(public_id: str, question: str) -> ChatGptChoice:
+    """take in the best function and get OpenAI to return an example of how to use that function"""
+
+    spec = public_id_to_spec(public_id)
+    if not spec:
+        raise NotImplementedError(f"spec doesnt exist for {public_id}? was is somehow deleted?")
+
+    best_function_prompt = BEST_FUNCTION_DETAILS_TEMPLATE.format(spec_str=spec_prompt(spec))
+    question_prompt = BEST_FUNCTION_QUESTION_TEMPLATE.format(question=question)
+    messages = [
+        MessageDict(role="user", content=best_function_prompt),
+        MessageDict(role="user", content=question_prompt)
+    ]
+    resp = get_chat_completion(messages, stage="get_best_function_example")
+    return resp["choices"][0]
+
+
+def get_completion_answer(user_id: int, question: str) -> Dict:
+    best_function_id, stats = get_best_function(user_id, question)
+    if best_function_id:
+        # we found a function that we think should answer this question
+        # lets pass ChatGPT the function and ask the question to make this work
+        choice = get_best_function_example(best_function_id, question)
+    else:
+        resp = get_chat_completion([{"role": "user", "content": question}])
+        choice = resp["choices"][0]
+
+    answer, hit_token_limit = answer_processing(choice)
 
     return {"answer": answer, "stats": stats}

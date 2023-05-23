@@ -1,5 +1,9 @@
-from typing import Dict, Tuple, TypedDict, List, Literal
+from typing import Dict, Tuple, TypedDict, List, Literal, Union
 from typing_extensions import NotRequired
+from prisma.models import ApiFunction, CustomFunction, AuthProvider, WebhookHandle
+
+
+AnyFunction = Union[ApiFunction, CustomFunction, AuthProvider, WebhookHandle]
 
 
 class DescInputDto(TypedDict):
@@ -76,6 +80,10 @@ class ChatGptChoice(TypedDict):
     message: MessageDict  # no function_ids or webhook_ids
     finish_reason: Literal['stop', 'length', 'content_filter', None]
     index: int
+
+
+class ChatCompletionResponse(TypedDict):
+    choices: List[ChatGptChoice]
 
 
 class StatsDict(TypedDict, total=False):

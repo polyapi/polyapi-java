@@ -1,9 +1,12 @@
 import string
-from typing import List, Optional
+import requests
+from requests import Response
+from flask import current_app
+from typing import List, Optional, Union
 from app.constants import VarName
-from app.typedefs import MessageDict, PropertySpecification, SpecificationDto
+from app.typedefs import MessageDict, PropertySpecification, SpecificationDto, AnyFunction
 from prisma import Prisma, get_client, register
-from prisma.models import ConversationMessage, ApiFunction, ConfigVariable
+from prisma.models import ConversationMessage, ConfigVariable
 
 
 # HACK should have better name
@@ -58,8 +61,11 @@ def func_path_with_args(func: SpecificationDto) -> str:
     return f"{func_path(func)}({', '.join(args)})"
 
 
-def url_function_path(func: ApiFunction) -> str:
-    return f"{func.context}.{func.name}"
+def url_function_path(func: AnyFunction) -> str:
+    # HACK AuthProvider doesn't have a true name
+    # more like a set of standard function names?
+    name = getattr(func, "name", "getToken")
+    return f"{func.context}.{name}"
 
 
 def log(*args, **kwargs) -> None:
@@ -136,3 +142,55 @@ remove_punctuation_translation = str.maketrans("", "", string.punctuation)
 
 def remove_punctuation(s: str) -> str:
     return s.translate(remove_punctuation_translation)
+
+
+def get_public_id(public_id: str) -> Optional[AnyFunction]:
+    """ check all possible tables for a public uuid
+    return the corresponding object if it exists
+    """
+    db = get_client()
+    result: Union[AnyFunction, None]
+
+    result = db.apifunction.find_first(where={"publicId": public_id})
+    if result:
+        return result
+
+    result = db.customfunction.find_first(where={"publicId": public_id})
+    if result:
+        return result
+
+    result = db.authprovider.find_first(where={"id": public_id})
+    if result:
+        return result
+
+    result = db.webhookhandle.find_first(where={"id": public_id})
+    if result:
+        return result
+
+    return None
+
+
+def query_node_server(path: str) -> Response:
+    db = get_client()
+    user = db.user.find_first(where={"role": "ADMIN"})
+    if not user:
+        raise NotImplementedError("ERROR: no admin user, cannot access Node API")
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-PolyApiKey": user.apiKey,
+        "Accept": "application/poly.function-definition+json",
+    }
+    base = current_app.config["NODE_API_URL"]
+    resp = requests.get(f"{base}/{path}", headers=headers)
+    assert resp.status_code == 200, resp.content
+    return resp
+
+
+def public_id_to_spec(public_id: str) -> Optional[SpecificationDto]:
+    specs_resp = query_node_server("specs")
+    items: List[SpecificationDto] = specs_resp.json()
+    for item in items:
+        if item['id'] == public_id:
+            return item
+    return None

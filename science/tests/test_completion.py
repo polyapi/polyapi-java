@@ -3,9 +3,10 @@ from typing import List
 from mock import Mock, patch
 from load_fixtures import test_user_get_or_create
 from app.completion import (
+    get_best_function_example,
     get_conversations_for_user,
     get_function_options_prompt,
-    get_completion_prompt_messages,
+    get_best_function_messages,
 )
 from app.typedefs import ExtractKeywordDto, SpecificationDto
 from .testing import DbTestCase
@@ -118,18 +119,18 @@ class T(DbTestCase):
         self.assertEqual(messages, [msg])
 
     @patch("app.keywords.get_similarity_threshold", new=_fake_threshold)
-    @patch("app.completion.requests.get")
-    def test_library_message_no_keywords(self, requests_get: Mock) -> None:
-        requests_get.return_value = Mock(status_code=200, json=lambda: get_functions())
+    @patch("app.completion.query_node_server")
+    def test_library_message_no_keywords(self, query_node_server: Mock) -> None:
+        query_node_server.return_value = Mock(status_code=200, json=lambda: get_functions())
 
         d, stats = get_function_options_prompt(None)
-        self.assertEqual(requests_get.call_count, 0)
+        self.assertEqual(query_node_server.call_count, 0)
         self.assertIsNone(d)
 
     @patch("app.keywords.get_similarity_threshold", new=_fake_threshold)
-    @patch("app.completion.requests.get")
-    def test_library_message_functions(self, requests_get: Mock) -> None:
-        requests_get.side_effect = [
+    @patch("app.completion.query_node_server")
+    def test_library_message_functions(self, query_node_server: Mock) -> None:
+        query_node_server.side_effect = [
             Mock(status_code=200, json=lambda: get_functions()),
             Mock(status_code=200, json=lambda: []),
         ]
@@ -140,36 +141,55 @@ class T(DbTestCase):
         )
         d, stats = get_function_options_prompt(keyword_data)
         assert d
-        self.assertEqual(requests_get.call_count, 1)
+        self.assertEqual(query_node_server.call_count, 1)
         self.assertEqual(stats["match_count"], 3)
         self.assertIn("Here are some functions", d["content"])
 
     @patch("app.keywords.get_similarity_threshold", new=_fake_threshold)
-    @patch("app.completion.requests.get")
-    def test_library_message_webhooks(self, requests_get: Mock) -> None:
-        requests_get.side_effect = [
+    @patch("app.completion.query_node_server")
+    def test_library_message_webhooks(self, query_node_server: Mock) -> None:
+        query_node_server.side_effect = [
             Mock(status_code=200, json=lambda: get_webhooks()),
         ]
 
         d, stats = get_function_options_prompt({"keywords": "foo bar"})  # type: ignore
         assert d
-        self.assertEqual(requests_get.call_count, 1)
+        self.assertEqual(query_node_server.call_count, 1)
         self.assertEqual(stats["match_count"], 1)
         self.assertTrue(d["content"].startswith("Here are some event handlers"))
         self.assertIn("poly.shipping.packageDelivered", d["content"])
 
     @patch("app.completion.extract_keywords", new=_fake_extract)
-    @patch("app.completion.requests.get")
-    def test_get_completion_prompt_messages(self, requests_get: Mock) -> None:
+    @patch("app.completion.query_node_server")
+    def test_get_best_function_messages(self, query_node_server: Mock) -> None:
         self.db.systemprompt.delete_many()  # no system prompt!
 
-        requests_get.side_effect = [
+        query_node_server.side_effect = [
             Mock(status_code=200, json=lambda: get_functions()),
         ]
 
-        messages, stats = get_completion_prompt_messages(
+        messages, stats = get_best_function_messages(
             "how do I create a new incident in ServiceNow?"
         )
-        self.assertEqual(requests_get.call_count, 1)
+        self.assertEqual(query_node_server.call_count, 1)
         self.assertEqual(stats["match_count"], 1)
         self.assertEqual(len(messages), 2)
+
+    @patch("app.utils.query_node_server")
+    @patch("app.completion.get_chat_completion")
+    def test_get_best_function_example(self, get_chat_completion, query_node_server):
+        get_chat_completion.return_value = {"choices": ["foobar"]}
+        query_node_server.return_value = Mock(status_code=200, json=get_functions)
+
+        # user = test_user_get_or_create()
+        # united = united_get_status_get_or_create(user)
+        result = get_best_function_example("60062c03-dcfd-437d-832c-6cba9543f683", "how do I check flight?")
+
+        self.assertEqual(get_chat_completion.call_count, 1)
+        messages = get_chat_completion.call_args[0][0]
+        print(messages[0]['content'])
+        print(messages[1]['content'])
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(query_node_server.call_count, 1)
+
+        self.assertEqual(result, "foobar")
