@@ -67,7 +67,7 @@ def log(*args, **kwargs) -> None:
 
 
 def store_message(
-    user_id: Optional[int], data: MessageDict
+    user_id: Optional[str], data: MessageDict
 ) -> Optional[ConversationMessage]:
     if not user_id:
         return None
@@ -88,7 +88,7 @@ def store_message(
     return rv
 
 
-def clear_conversation(user_id: int):
+def clear_conversation(user_id: str):
     db = get_client()
     db.functiondefined.delete_many(where={"message": {"userId": user_id}})  # type: ignore
     db.webhookdefined.delete_many(where={"message": {"userId": user_id}})  # type: ignore
@@ -123,7 +123,7 @@ def quick_db_connect():
     return db
 
 
-def is_vip_user(user_id: Optional[int]) -> bool:
+def is_vip_user(user_id: Optional[str]) -> bool:
     if not user_id:
         return False
 

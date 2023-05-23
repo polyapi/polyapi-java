@@ -41,7 +41,7 @@ def answer_processing(choice: ChatGptChoice, match_count: int) -> Tuple[str, boo
         )
 
 
-def get_conversations_for_user(user_id: Optional[int]) -> List[ConversationMessage]:
+def get_conversations_for_user(user_id: Optional[str]) -> List[ConversationMessage]:
     if not user_id:
         return []
 
@@ -59,14 +59,13 @@ def log_matches(question: str, type: str, matches: int, total: int):
 
 def query_node_server(type: str) -> Response:
     db = get_client()
-    user = db.user.find_first(where={"role": "ADMIN"})
-    if not user:
-        raise NotImplementedError("ERROR: no admin user, cannot access Node API")
+    user_key = db.userkey.find_first(where={"user": {"role": "SUPER_ADMIN"}})
+    if not user_key:
+        raise NotImplementedError("ERROR: no super admin user key, cannot access Node API")
 
     headers = {
         "Content-Type": "application/json",
-        "X-PolyApiKey": user.apiKey,
-        "Accept": "application/poly.function-definition+json",
+        "X-PolyApiKey": user_key.key,
     }
     base = current_app.config['NODE_API_URL']
     resp = requests.get(f"{base}/{type}", headers=headers)
@@ -193,7 +192,7 @@ def get_system_prompt() -> Optional[SystemPrompt]:
     return system_prompt
 
 
-def get_completion_answer(user_id: int, question: str) -> Dict:
+def get_completion_answer(user_id: str, question: str) -> Dict:
     messages, stats = get_completion_prompt_messages(question)
     resp = get_chat_completion(messages)
     answer, hit_token_limit = answer_processing(

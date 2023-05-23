@@ -32,7 +32,6 @@ import {
   PostmanVariableEntry,
   PropertySpecification,
   PropertyType,
-  Role,
   ServerFunctionSpecification,
   Specification,
   TeachResponseDto,

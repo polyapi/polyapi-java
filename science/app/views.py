@@ -20,7 +20,7 @@ def home():
 def function_completion() -> Dict:
     data: Dict = request.get_json(force=True)
     question: str = data["question"].strip()
-    user_id: Optional[int] = data.get("user_id")
+    user_id: Optional[str] = data.get("user_id")
     assert user_id
     resp = get_completion_answer(user_id, question)
     if is_vip_user(user_id):
@@ -44,7 +44,6 @@ def webhook_description() -> Response:
 @bp.route("/clear-conversation", methods=["POST"])
 def clear_conversation_view() -> str:
     user_id = request.get_json(force=True)["user_id"]
-    user_id = int(user_id)
     clear_conversation(user_id)
     return "Conversation Cleared"
 
