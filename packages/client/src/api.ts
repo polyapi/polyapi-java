@@ -1,6 +1,7 @@
 import Axios from 'axios';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import https from 'https';
 import { POLY_HEADER_API_KEY } from './constants';
 import { Specification } from '@poly/common';
 import dotenv from 'dotenv';
@@ -9,14 +10,15 @@ dotenv.config();
 
 const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy || process.env.npm_config_proxy;
 const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.npm_config_https_proxy;
+const nodeEnv = process.env.NODE_ENV;
 
 const axios = Axios.create({
-  httpAgent: httpProxy ? new HttpProxyAgent(httpProxy) : undefined,
+  httpAgent: httpProxy ? new HttpProxyAgent(httpProxy) : nodeEnv ? new https.Agent({rejectUnauthorized: false,}) : undefined,
   httpsAgent: httpsProxy
     ? new HttpsProxyAgent(httpsProxy, {
-        rejectUnauthorized: process.env.NODE_ENV !== 'development',
+        rejectUnauthorized: nodeEnv !== 'development',
       })
-    : undefined,
+    : nodeEnv ? new https.Agent({rejectUnauthorized: false,}) : undefined,
   proxy: false,
 });
 
