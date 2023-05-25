@@ -13,12 +13,12 @@ const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process
 const nodeEnv = process.env.NODE_ENV;
 
 const axios = Axios.create({
-  httpAgent: httpProxy ? new HttpProxyAgent(httpProxy) : nodeEnv ? new https.Agent({rejectUnauthorized: false,}) : undefined,
+  httpAgent: httpProxy ? new HttpProxyAgent(httpProxy) : nodeEnv == 'development' ? new https.Agent({rejectUnauthorized: false,}) : undefined,
   httpsAgent: httpsProxy
     ? new HttpsProxyAgent(httpsProxy, {
         rejectUnauthorized: nodeEnv !== 'development',
       })
-    : nodeEnv ? new https.Agent({rejectUnauthorized: false,}) : undefined,
+    : nodeEnv == 'development' ? new https.Agent({rejectUnauthorized: false,}) : undefined,
   proxy: false,
 });
 
