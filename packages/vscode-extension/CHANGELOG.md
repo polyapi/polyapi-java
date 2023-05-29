@@ -1,3 +1,6 @@
+### 0.1.22
+* Added webhook description
+
 ### 0.1.21
 * Fixed publisher name
 

@@ -338,7 +338,7 @@ export class WebhookService {
       id: webhookHandle.id,
       name: toCamelCase(webhookHandle.name),
       context: webhookHandle.context,
-      description: '',
+      description: webhookHandle.description,
       function: {
         arguments: [
           {
