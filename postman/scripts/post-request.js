@@ -38,7 +38,7 @@ const postRequest = {
     mode: 'raw',
     raw: JSON.stringify({
       description: description?.context,
-      name: pm.info.requestName,
+      requestName: pm.info.requestName,
       ...polyData,
       url,
       body,

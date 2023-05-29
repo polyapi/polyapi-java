@@ -5,7 +5,9 @@ import { NotContainDots } from './../validators'
 
 export class TeachDto {
   @Validate(NotContainDots)
-  name: string;
+  requestName: string;
+  @Validate(NotContainDots)
+  name?: string;
   context?: string;
   description?: string;
   payload?: string;
