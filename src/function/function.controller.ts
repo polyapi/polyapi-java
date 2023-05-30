@@ -248,7 +248,7 @@ export class FunctionController {
     await this.service.deleteCustomFunction(id);
   }
 
-  @UseGuards(PolyKeyGuard)
+  // @UseGuards(PolyKeyGuard)
   @Post('/server/:id/execute')
   async executeServerFunction(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: ExecuteCustomFunctionDto): Promise<any> {
     const customFunction = await this.service.findServerFunction(id);
@@ -259,7 +259,8 @@ export class FunctionController {
       throw new BadRequestException(`Function with id ${id} is not server function.`);
     }
 
-    await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, Permission.Use);
+    // TODO: temporarily disabled for GPT plugin purposes
+    // await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, Permission.Use);
 
     return await this.service.executeServerFunction(customFunction, data.args, data.clientID);
   }

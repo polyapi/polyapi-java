@@ -38,42 +38,56 @@ model User {
   teamId               String?               @map("team_id")
   role                 String                @default("USER")
   vip                  Boolean               @default(false) // is this person a VIP we want to track carefully?
-  userKeys             UserKey[]
   conversationMessages ConversationMessage[]
+  apiKeys              ApiKey[]
 
   @@map("user")
 }
 
-model UserKey {
-  id            String      @id @unique @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at")
-  user          User        @relation(fields: [userId], references: [id])
-  userId        String      @map("user_id")
-  environment   Environment @relation(fields: [environmentId], references: [id])
-  environmentId String      @map("environment_id")
-  key           String      @unique
-  permissions   String      @default("{}")
-
-  @@unique([userId, environmentId])
-  @@map("user_key")
-}
-
 model Environment {
-  id                   String                @id @default(uuid())
-  createdAt            DateTime              @default(now()) @map("created_at")
-  name                 String
-  tenant               Tenant                @relation(fields: [tenantId], references: [id])
-  tenantId             String                @map("tenant_id")
-  subdomain            String                @unique
-  appKey               String                @unique @map("app_key")
-  apiFunctions         ApiFunction[]
-  webhookHandles       WebhookHandle[]
-  customFunctions      CustomFunction[]
-  authProviders        AuthProvider[]
-  userKeys             UserKey[]
-  systemPrompts        SystemPrompt[]
+  id              String           @id @default(uuid())
+  createdAt       DateTime         @default(now()) @map("created_at")
+  name            String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  tenantId        String           @map("tenant_id")
+  subdomain       String           @unique
+  apiFunctions    ApiFunction[]
+  webhookHandles  WebhookHandle[]
+  customFunctions CustomFunction[]
+  authProviders   AuthProvider[]
+  systemPrompts   SystemPrompt[]
+  applications    Application[]
+  apiKeys         ApiKey[]
 
   @@map("environment")
+}
+
+model Application {
+  id            String      @id @default(uuid())
+  createdAt     DateTime    @default(now()) @map("created_at")
+  environment   Environment @relation(fields: [environmentId], references: [id])
+  environmentId String      @map("environment_id")
+  name          String
+  description   String      @default("")
+  apiKeys       ApiKey[]
+
+  @@map("application")
+}
+
+model ApiKey {
+  id            String       @id @default(uuid())
+  createdAt     DateTime     @default(now()) @map("created_at")
+  name          String
+  environment   Environment  @relation(fields: [environmentId], references: [id])
+  environmentId String       @map("environment_id")
+  key           String       @unique
+  permissions   String       @default("{}")
+  application   Application? @relation(fields: [applicationId], references: [id])
+  applicationId String?      @map("application_id")
+  user          User?        @relation(fields: [userId], references: [id])
+  userId        String?      @map("user_id")
+
+  @@map("api_key")
 }
 
 model ApiFunction {
@@ -153,15 +167,15 @@ model WebhookHandle {
 
 // store all the messages in a conversation
 model ConversationMessage {
-  id            String            @id @default(uuid())
-  createdAt     DateTime          @default(now())
-  user          User              @relation(fields: [userId], references: [id])
-  userId        String            @map("user_id")
-  name          String            @default("") // not used for now. in future, will allow the user to have multiple conversations
-  role          String // assistant or user
-  content       String
-  functions     FunctionDefined[]
-  webhooks      WebhookDefined[]
+  id        String            @id @default(uuid())
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id])
+  userId    String            @map("user_id")
+  name      String            @default("") // not used for now. in future, will allow the user to have multiple conversations
+  role      String // assistant or user
+  content   String
+  functions FunctionDefined[]
+  webhooks  WebhookDefined[]
 
   @@map("conversation_message")
 }

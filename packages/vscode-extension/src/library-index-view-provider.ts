@@ -88,7 +88,9 @@ class LibraryTreeItem extends vscode.TreeItem {
         break;
       case 'webhookHandle':
         this.tooltip = new vscode.MarkdownString(
-          `**Webhook listener**\n\n---\n\n${name}()`,
+          `**Webhook listener**\n\n---\n\n${
+            description ? `${description}\n\n---\n\n` : ''
+          }${name}()`,
         );
         break;
       default:
