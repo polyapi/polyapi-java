@@ -266,7 +266,6 @@ describe('GptPluginService', () => {
     it('should render for a Server Function', async () => {
       await _createPlugin(prisma);
       const serverFunc = await _createServerFunction(prisma);
-      console.log(serverFunc);
 
       const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io');
 
