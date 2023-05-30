@@ -256,10 +256,10 @@ export class FunctionService {
     );
 
     const finalContext = context || '';
-    const finalName = !(name || '').trim() ? requestName : (name as string);
+    const finalName = name?.trim() ? name: requestName;
     const finalDescription = description || '';
 
-    if(!finalName) {
+    if (!finalName) {
       throw new BadRequestException('Couldn\'t infer function name neither from user, ai service or postman request name.');
     }
 
