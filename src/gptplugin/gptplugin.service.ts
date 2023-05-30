@@ -280,6 +280,13 @@ export class GptPluginService {
     // slugs must be lowercase!
     body.slug = body.slug.toLowerCase();
 
+    // permission check
+    const plugin = await this.prisma.gptPlugin.findUnique({where: {slug: body.slug}})
+    if (plugin && plugin.environmentId != environment.id) {
+      throw new Error("Plugin is in different environment, cannot access with this key")
+    }
+
+    // function check
     const functionIds = body.functionIds ? JSON.stringify(body.functionIds) : '';
 
     if (body.functionIds) {
@@ -298,6 +305,7 @@ export class GptPluginService {
       }
     }
 
+    // ok lets go ahead and create or update!
     const update = {};
     if (body.name) {
       update['name'] = body.name;
