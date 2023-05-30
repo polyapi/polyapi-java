@@ -1203,10 +1203,10 @@ export class FunctionService {
 
       functionArgs.forEach((arg) => {
         if (arg.location === 'body') {
-          if (metadata[arg.key]) {
-            metadata[arg.key].payload = true;
+          if (newMetadata[arg.key]) {
+            newMetadata[arg.key].payload = true;
           } else {
-            metadata[arg.key] = {
+            newMetadata[arg.key] = {
               payload: true,
             };
           }
