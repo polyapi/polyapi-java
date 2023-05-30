@@ -175,7 +175,7 @@ async function _createApiFunction(prisma: PrismaService) {
   });
 }
 
-async function _createCustomFunction(prisma: PrismaService) {
+async function _createServerFunction(prisma: PrismaService) {
   const environment = await _createTestEnvironment(prisma);
 
   const defaults = {
@@ -187,6 +187,7 @@ async function _createCustomFunction(prisma: PrismaService) {
     arguments: '[{"name":"productId","type":"number"},{"name":"phoneNumber","type":"string"}]',
     returnType: 'Promise<void>',
     code: 'dummy',
+    serverSide: true,
   };
   return prisma.customFunction.upsert({
     where: { id: '456' },
@@ -262,17 +263,17 @@ describe('GptPluginService', () => {
       // TODO run openapi spec validator in tests?
     });
 
-    it('should render for a Custom Function', async () => {
+    it('should render for a Server Function', async () => {
       await _createPlugin(prisma);
-      const customFunc = await _createCustomFunction(prisma);
-      console.log(customFunc);
+      const serverFunc = await _createServerFunction(prisma);
+      console.log(serverFunc);
 
       const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io');
 
       const spec = JSON.parse(specStr);
 
       expect(Object.keys(spec.paths).length).toBe(1);
-      const path1 = spec.paths[`/functions/server/${customFunc.id}/execute`];
+      const path1 = spec.paths[`/functions/server/${serverFunc.id}/execute`];
       expect(path1.post.summary).toBe('take a product ID and phone number');
       expect(path1.post.operationId).toBe('productsShopifySendProductUrlInSms');
 
