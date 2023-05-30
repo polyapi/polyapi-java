@@ -1189,7 +1189,12 @@ export class FunctionService {
     const metadata: ArgumentsMetadata = JSON.parse(apiFunction.argumentsMetadata || '{}');
 
     const resolveArgumentParameterLimit = () => {
-      if (apiFunction.argumentsMetadata || functionArgs.length <= this.config.functionArgsParameterLimit) {
+
+      if (functionArgs.length <= this.config.functionArgsParameterLimit) {
+        for(const key of Object.keys(metadata)) {
+          const { payload, ...rest } = metadata[key];
+          metadata[key] = rest;
+        }
         return;
       }
 
@@ -1224,7 +1229,11 @@ export class FunctionService {
 
       for (const arg of functionArgs) {
         if (metadata[arg.key]?.type) {
-          newMetadata[arg.key] = metadata[arg.key];
+          const { payload, ...rest} = metadata[arg.key];
+          newMetadata[arg.key] = {
+            ...newMetadata[arg.key],
+            ...rest
+          };
           continue;
         }
         const value = variables[arg.key];
