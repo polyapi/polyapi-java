@@ -37,8 +37,7 @@ export class GptPluginController {
 
   @UseGuards(PolyKeyGuard)
   @Post('plugins')
-  public async pluginCreate(@Req() req: AuthRequest, @Body() body: CreatePluginDto): Promise<unknown> {
-    // HACK this is actually get or create based on slug!
+  public async pluginCreateOrUpdate(@Req() req: AuthRequest, @Body() body: CreatePluginDto): Promise<unknown> {
     const plugin = await this.service.createOrUpdatePlugin(req.user.environment, body);
     return {
       plugin: plugin,
