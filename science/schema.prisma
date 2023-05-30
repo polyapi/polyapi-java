@@ -58,6 +58,7 @@ model Environment {
   systemPrompts   SystemPrompt[]
   applications    Application[]
   apiKeys         ApiKey[]
+  gptPlugins      GptPlugin[]
 
   @@map("environment")
 }
@@ -244,4 +245,6 @@ model GptPlugin {
   descriptionForModel       String @default("") @map("description_for_model")
   iconUrl                   String @map("icon_url")
   functionIds               String // json array of function publicIds for now
+  environment   Environment @relation(fields: [environmentId], references: [id])
+  environmentId String      @map("environment_id")
 }

@@ -7,7 +7,7 @@ import { HttpService } from '@nestjs/axios';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreatePluginDto, PropertySpecification, PropertyType, Specification } from '@poly/common';
 import { FunctionService } from 'function/function.service';
-import { ApiFunction, CustomFunction, GptPlugin } from '@prisma/client';
+import { ApiFunction, CustomFunction, GptPlugin, Environment } from '@prisma/client';
 import { Request } from 'express';
 
 const POLY_DEFAULT_ICON_URL = 'https://polyapi.io/wp-content/uploads/2023/03/poly-block-logo-mark.png';
@@ -191,9 +191,10 @@ export class GptPluginService {
   ) {
   }
 
-  async _getAllFunctions(ids: string[]): Promise<PluginFunction[]> {
-    const apiFunctions = await this.prisma.apiFunction.findMany({ where: { id: { in: ids } } });
-    const customFunctions = await this.prisma.customFunction.findMany({ where: { id: { in: ids } } });
+  async _getAllFunctions(environmentId: string, ids: string[]): Promise<PluginFunction[]> {
+    // TODO lets filter these down to just supported functions?
+    const apiFunctions = await this.functionService.getApiFunctions(environmentId, [], [], ids);
+    const customFunctions = await this.functionService.getCustomFunctions(environmentId, [], [], ids);
     // const authFunctions = await this.prisma.authFunction.findMany({ where: { publicId: { in: publicIds } } });
 
     let promises = apiFunctions.map((apiFunction) => _apiFunctionMap(apiFunction, this.functionService));
@@ -236,7 +237,7 @@ export class GptPluginService {
     });
 
     const functionIds = JSON.parse(plugin.functionIds);
-    const functions = await this._getAllFunctions(functionIds);
+    const functions = await this._getAllFunctions(plugin.environmentId, functionIds);
 
     // @ts-expect-error: filter gets rid of nulls
     const bodySchemas: Schema[] = functions.map((f) => this.getBodySchema(f)).filter((s) => s !== null);
@@ -275,14 +276,14 @@ export class GptPluginService {
     });
   }
 
-  async createOrUpdatePlugin(body: CreatePluginDto): Promise<GptPlugin> {
+  async createOrUpdatePlugin(environment: Environment, body: CreatePluginDto): Promise<GptPlugin> {
     // slugs must be lowercase!
     body.slug = body.slug.toLowerCase();
 
     const functionIds = body.functionIds ? JSON.stringify(body.functionIds) : '';
 
     if (body.functionIds) {
-      const functions = await this._getAllFunctions(body.functionIds);
+      const functions = await this._getAllFunctions(environment.id, body.functionIds);
       if (functions.length !== body.functionIds.length) {
         const badFunctionIds: string[] = [];
         const goodFunctionIds = functions.map((f) => f.id);
@@ -325,6 +326,7 @@ export class GptPluginService {
         descriptionForMarketplace: body.descriptionForMarketplace || '',
         descriptionForModel: body.descriptionForModel || '',
         iconUrl: body.iconUrl ? body.iconUrl : POLY_DEFAULT_ICON_URL,
+        environmentId: environment.id,
         functionIds,
       },
     });

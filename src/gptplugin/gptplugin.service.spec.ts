@@ -3,6 +3,7 @@ import { GptPluginService, PluginFunction } from './gptplugin.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GptPluginModule } from './gptplugin.module';
+import { Environment } from '@prisma/client';
 
 const PLUGIN_CREATE_SPEC: PluginFunction = {
   id: '9d284b9d-c1a0-4d80-955d-9ef79343ddb7',
@@ -141,12 +142,23 @@ const PLUGIN_CREATE_SPEC: PluginFunction = {
 // use these known TEST_PUBLIC_IDS so we can appropriately clear between tests
 const TEST_PUBLIC_IDS = ['123', '456'];
 
+function isEnvironment(env: Environment | null): asserts env is Environment {
+  if (!env) throw new Error("environment is null!")
+}
+
+async function _createTestEnvironment(prisma) {
+  // HACK we should really create an environment instead of clobbering whichever is first
+  const env = prisma.environment.findFirst({orderBy: {id: 'asc'}});
+  isEnvironment(env)
+  return env
+}
+
 async function _createApiFunction(prisma: PrismaService) {
-  const environment = await prisma.environment.findFirst();
+  const environment = await _createTestEnvironment(prisma);
 
   const defaults = {
     id: '123',
-    environmentId: environment?.id || "123",
+    environmentId: environment.id,
     name: 'twilio.sendSms',
     context: 'comms.messaging',
     description: 'send a text message',
@@ -164,11 +176,11 @@ async function _createApiFunction(prisma: PrismaService) {
 }
 
 async function _createCustomFunction(prisma: PrismaService) {
-  const environment = await prisma.environment.findFirst();
+  const environment = await _createTestEnvironment(prisma);
 
   const defaults = {
-    id: '123',
-    environmentId: environment?.id || "123",
+    id: '456',
+    environmentId: environment.id,
     name: 'sendProductUrlInSms',
     context: 'products.shopify',
     description: 'take a product ID and phone number',
@@ -177,17 +189,19 @@ async function _createCustomFunction(prisma: PrismaService) {
     code: 'dummy',
   };
   return prisma.customFunction.upsert({
-    where: { id: '123' },
+    where: { id: '456' },
     update: defaults,
     create: defaults,
   });
 }
 
 async function _createPlugin(prisma: PrismaService) {
+  const environment = await _createTestEnvironment(prisma)
   const defaults = {
     name: 'Mass Effect',
     iconUrl: 'http://example.com/image.png',
     functionIds: '["123", "456"]',
+    environmentId: environment.id,
   };
   return prisma.gptPlugin.upsert({
     where: { slug: 'mass-effect' },
@@ -251,6 +265,7 @@ describe('GptPluginService', () => {
     it('should render for a Custom Function', async () => {
       await _createPlugin(prisma);
       const customFunc = await _createCustomFunction(prisma);
+      console.log(customFunc);
 
       const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io');
 
@@ -275,8 +290,9 @@ describe('GptPluginService', () => {
         functionIds: ['bad'],
       };
 
+      const environment = await _createTestEnvironment(prisma)
       try {
-        await service.createOrUpdatePlugin(body);
+        await service.createOrUpdatePlugin(environment, body);
         expect(0).toBe(1); // force error here if no error thrown
       } catch (e) {
         // should start with correct message
