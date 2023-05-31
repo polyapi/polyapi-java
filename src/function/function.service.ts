@@ -1197,10 +1197,6 @@ export class FunctionService {
     const resolveArgumentParameterLimit = () => {
 
       if (functionArgs.length <= this.config.functionArgsParameterLimit) {
-        for(const key of Object.keys(metadata)) {
-          const { payload, ...rest } = metadata[key];
-          metadata[key] = rest;
-        }
         return;
       }
 
