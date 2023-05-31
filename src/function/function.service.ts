@@ -133,6 +133,7 @@ export class FunctionService {
     environmentId: string,
     url: string,
     body: Body,
+    requestName: string,
     name: string | null,
     context: string | null,
     description: string | null,
@@ -255,8 +256,12 @@ export class FunctionService {
     );
 
     const finalContext = context || '';
-    const finalName = name || '';
+    const finalName = name?.trim() ? name: requestName;
     const finalDescription = description || '';
+
+    if (!finalName) {
+      throw new BadRequestException('Couldn\'t infer function name neither from user, ai service or postman request name.');
+    }
 
     await this.throwErrIfInvalidResponse(response, payload, context || '', finalName);
 
@@ -928,6 +933,7 @@ export class FunctionService {
   ) {
     if (transformTextCase) {
       name = name.replace(/([\[\]\\/{}()])/g, ' ');
+      name = toCamelCase(name);
     }
 
     if (!fixDuplicate) {

@@ -42,9 +42,9 @@ const prepareDir = () => {
   fs.rmSync(POLY_LIB_PATH, { recursive: true, force: true });
   fs.mkdirSync(POLY_LIB_PATH, { recursive: true });
   fs.mkdirSync(`${POLY_LIB_PATH}/api`);
-  fs.mkdirSync(`${POLY_LIB_PATH}/custom`);
+  fs.mkdirSync(`${POLY_LIB_PATH}/client`);
   fs.mkdirSync(`${POLY_LIB_PATH}/auth`);
-  fs.mkdirSync(`${POLY_LIB_PATH}/webhook-handles`);
+  fs.mkdirSync(`${POLY_LIB_PATH}/webhooks`);
   fs.mkdirSync(`${POLY_LIB_PATH}/server`);
 };
 
@@ -92,7 +92,7 @@ const generateApiFunctionJSFiles = async (specifications: ApiFunctionSpecificati
 const generateCustomFunctionJSFiles = async (specifications: CustomFunctionSpecification[]) => {
   const customIndexJSTemplate = handlebars.compile(await loadTemplate('custom-index.js.hbs'));
   fs.writeFileSync(
-    `${POLY_LIB_PATH}/custom/index.js`,
+    `${POLY_LIB_PATH}/client/index.js`,
     customIndexJSTemplate({
       specifications,
     }),
@@ -104,7 +104,7 @@ const generateCustomFunctionJSFiles = async (specifications: CustomFunctionSpeci
   const customFunctionJSTemplate = handlebars.compile(await loadTemplate('custom-function.js.hbs'));
   specifications.forEach((spec) => {
     fs.writeFileSync(
-      `${POLY_LIB_PATH}/custom/${spec.context ? `${spec.context}-` : ''}${spec.name}.js`,
+      `${POLY_LIB_PATH}/client/${spec.context ? `${spec.context}-` : ''}${spec.name}.js`,
       prettyPrint(customFunctionJSTemplate(spec), 'babel'),
     );
   });
@@ -113,7 +113,7 @@ const generateCustomFunctionJSFiles = async (specifications: CustomFunctionSpeci
 const generateWebhookHandlesJSFiles = async (specifications: WebhookHandleSpecification[]) => {
   const template = handlebars.compile(await loadTemplate('webhook-handles-index.js.hbs'));
   fs.writeFileSync(
-    `${POLY_LIB_PATH}/webhook-handles/index.js`,
+    `${POLY_LIB_PATH}/webhooks/index.js`,
     template({
       specifications,
       apiBaseUrl: getApiBaseUrl(),
@@ -538,7 +538,6 @@ const generate = async (contexts?: string[], names?: string[], functionIds?: str
   await generateSpecs(specs);
 
   shell.echo(chalk.green('DONE'));
-  shell.echo(chalk.rgb(255, 255, 255)(`\nPlease, restart your TS server to see the changes.`));
 };
 
 const generateSpecs = async (specs: Specification[]) => {
