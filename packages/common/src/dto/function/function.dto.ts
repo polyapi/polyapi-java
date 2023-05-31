@@ -21,5 +21,5 @@ export interface FunctionBasicDto {
 }
 
 export interface FunctionDetailsDto extends FunctionBasicDto {
-  arguments: FunctionArgument[];
+  arguments: Omit<FunctionArgument, 'location'>[];
 }

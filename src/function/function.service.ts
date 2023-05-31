@@ -115,7 +115,7 @@ export class FunctionService {
   apiFunctionToDetailsDto(apiFunction: ApiFunction): FunctionDetailsDto {
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
-      arguments: this.getFunctionArguments(apiFunction),
+      arguments: this.getFunctionArguments(apiFunction).map(({ location, ...rest }) => rest),
     };
   }
 
@@ -1227,7 +1227,7 @@ export class FunctionService {
         }
       }
 
-      for (const arg of functionArgs) {
+      for (const arg of functionArgs) { 
         if (metadata[arg.key]?.type) {
           const { payload, ...rest} = metadata[arg.key];
           newMetadata[arg.key] = {
@@ -1238,12 +1238,7 @@ export class FunctionService {
         }
         const value = variables[arg.key];
 
-        if (value == null) {
-          newMetadata[arg.key] = metadata[arg.key];
-          continue;
-        }
-
-        const [type, typeSchema] = await this.resolveArgumentType(value);
+        const [type, typeSchema] = await this.resolveArgumentType(value == null ? 'string' : value);
 
         if (newMetadata[arg.key]) {
           newMetadata[arg.key].type = type;
