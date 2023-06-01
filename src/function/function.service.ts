@@ -1240,7 +1240,7 @@ export class FunctionService {
         }
         const value = variables[arg.key];
 
-        const [type, typeSchema] = await this.resolveArgumentType(value == null ? 'string' : value);
+        const [type, typeSchema] = value == null ? ['string'] : await this.resolveArgumentType(value);
 
         if (newMetadata[arg.key]) {
           newMetadata[arg.key].type = type;
