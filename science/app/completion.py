@@ -283,12 +283,20 @@ def get_best_function_example(user_id: str, environment_id: str, public_ids: Lis
         MessageDict(role="user", content=question_prompt),
     ]
     insert_system_prompt(environment_id, messages)
-    resp = get_chat_completion(messages, temperature=0.5, stage="get_best_function_example")
+    resp = get_chat_completion(messages, temperature=0.5, stage="get_example")
     rv = resp["choices"][0]
 
-    # lets store them to look at
+    # lets store them to look at later
     messages.append(rv['message'])
     store_messages(user_id, messages)
+
+    # one final check for hallucinations
+    if has_hallucinations(specs, rv['message']):
+        rv = post_hallucation_completion()
+        store_messages(user_id, [
+            MessageDict(role="user", content="HALLUCINATION_DETECTED"),
+            rv['message']
+        ])
 
     return rv
 
@@ -301,7 +309,7 @@ def get_completion_answer(user_id: str, environment_id: str, question: str) -> D
         choice = get_best_function_example(user_id, environment_id, best_function_ids, question)
     else:
         resp = get_chat_completion(
-            [{"role": "user", "content": question}], stage="no_best_function"
+            [{"role": "user", "content": question}], stage="no_best_functions"
         )
         choice = resp["choices"][0]
 

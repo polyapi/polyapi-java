@@ -49,7 +49,7 @@ def extract_keywords(question: str) -> Optional[ExtractKeywordDto]:
             {"role": "user", "content": prompt},
             {
                 "role": "user",
-                "content": 'Return JSON with keys "keywords", "semantically_similar_keywords", and "http_methods". Each value should be a string and in English.',
+                "content": 'Return JSON with keys "keywords", "semantically_similar_keywords", and "http_methods". Each keyword should be a string and in English.',
             },
         ],
     )
