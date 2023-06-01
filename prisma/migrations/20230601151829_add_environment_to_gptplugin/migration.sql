@@ -18,8 +18,8 @@ CREATE TABLE "gpt_plugin" (
     "description_for_model" TEXT NOT NULL DEFAULT '',
     "icon_url" TEXT NOT NULL,
     "functionIds" TEXT NOT NULL,
-    "environment_id" TEXT NOT NULL,
-    CONSTRAINT "gpt_plugin_environment_id_fkey" FOREIGN KEY ("environment_id") REFERENCES "environment" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "environment_id" TEXT,
+    CONSTRAINT "gpt_plugin_environment_id_fkey" FOREIGN KEY ("environment_id") REFERENCES "environment" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateIndex

@@ -247,4 +247,6 @@ model GptPlugin {
   functionIds               String // json array of function publicIds for now
   environment   Environment @relation(fields: [environmentId], references: [id])
   environmentId String      @map("environment_id")
+
+  @@map("gpt_plugin")
 }
