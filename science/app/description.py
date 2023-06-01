@@ -3,6 +3,7 @@ import json
 import openai
 from app.typedefs import DescInputDto, DescOutputDto, ErrorDto
 from app.utils import camel_case, log
+from app.constants import CHAT_GPT_MODEL
 
 
 NAME_CONTEXT_DESCRIPTION_PROMPT = """
@@ -80,7 +81,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
     prompt_msg = {"role": "user", "content": prompt}
 
     resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
+        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:
@@ -114,7 +115,7 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
     )
     prompt_msg = {"role": "user", "content": prompt}
     resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
+        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:

@@ -2,7 +2,7 @@ import json
 import openai
 from thefuzz import fuzz
 from typing import Optional, Tuple, List
-from app.constants import VarName
+from app.constants import CHAT_GPT_MODEL, VarName
 from app.typedefs import StatsDict, ExtractKeywordDto, SpecificationDto
 from app.utils import func_path, get_config_variable, log, remove_punctuation
 from prisma import get_client
@@ -43,7 +43,7 @@ def get_extract_keywords_temperature() -> float:
 def extract_keywords(question: str) -> Optional[ExtractKeywordDto]:
     prompt = KEYWORD_PROMPT.format(prompt=question)
     resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=CHAT_GPT_MODEL,
         temperature=get_extract_keywords_temperature(),
         messages=[
             {"role": "user", "content": prompt},

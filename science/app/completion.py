@@ -26,6 +26,7 @@ from app.utils import (
     query_node_server,
     store_message,
 )
+from app.constants import CHAT_GPT_MODEL
 
 
 def insert_system_prompt(environment_id: str, messages: List[MessageDict]) -> None:
@@ -136,7 +137,7 @@ def get_chat_completion(
         s.pop("webhook_ids", None)
 
     resp: ChatCompletionResponse = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=CHAT_GPT_MODEL,
         messages=stripped,
         temperature=temperature,
     )
