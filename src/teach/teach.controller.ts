@@ -1,10 +1,7 @@
-import { Body, Controller, InternalServerErrorException, Logger, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Logger, Post, Req, UseGuards } from '@nestjs/common';
 import {
   Permission,
-  Role,
   TeachDto,
-  TeachSystemPromptDto,
-  TeachSystemPromptResponseDto,
   TeachResponseDto
 } from '@poly/common';
 import { ApiSecurity } from '@nestjs/swagger';
@@ -73,19 +70,5 @@ export class TeachController {
       templateBody,
       templateAuth,
     );
-  }
-
-  @UseGuards(new PolyKeyGuard([Role.Admin, Role.SuperAdmin]))
-  @Post('/system-prompt')
-  async teachSystemPrompt(@Req() req: AuthRequest, @Body() body: TeachSystemPromptDto): Promise<TeachSystemPromptResponseDto> {
-    const environmentId = req.user.environment.id;
-    const userId = req.user.user?.id || (await this.userService.findAdminUserByEnvironmentId(environmentId))?.id;
-
-    if (!userId) {
-      throw new InternalServerErrorException('Cannot find user to process command');
-    }
-
-    await this.functionService.setSystemPrompt(environmentId, userId, body.prompt);
-    return { response: 'Conversation cleared and new system prompt set!' };
   }
 }

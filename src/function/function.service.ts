@@ -15,7 +15,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import mustache from 'mustache';
 import mergeWith from 'lodash/mergeWith';
-import { ApiFunction, CustomFunction, Environment, Prisma, SystemPrompt } from '@prisma/client';
+import { ApiFunction, CustomFunction, Environment, Prisma } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ApiFunctionResponseDto,
@@ -1094,32 +1094,6 @@ export class FunctionService {
     }
 
     return payload;
-  }
-
-  async setSystemPrompt(environmentId: string, userId: string, prompt: string): Promise<SystemPrompt> {
-    // clear the conversation so the user can test the new system prompt!
-    await this.aiService.clearConversation(environmentId, userId);
-
-    const systemPrompt = await this.prisma.systemPrompt.findFirst({ orderBy: { createdAt: 'desc' } });
-    if (systemPrompt) {
-      this.logger.debug(`Found existing SystemPrompt ${systemPrompt.id}. Updating...`);
-      return this.prisma.systemPrompt.update({
-        where: {
-          id: systemPrompt.id,
-        },
-        data: {
-          content: prompt,
-        },
-      });
-    }
-
-    this.logger.debug(`Creating new SystemPrompt...`);
-    return this.prisma.systemPrompt.create({
-      data: {
-        environmentId,
-        content: prompt,
-      },
-    });
   }
 
   private async toPropertyType(name: string, type: ArgumentType, typeObject?: object): Promise<PropertyType> {

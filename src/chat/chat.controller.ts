@@ -4,6 +4,8 @@ import {
   SendQuestionResponseDto,
   SendCommandDto,
   SendConfigureDto,
+  TeachSystemPromptDto,
+  TeachSystemPromptResponseDto,
   Role,
   Permission,
 } from '@poly/common';
@@ -66,5 +68,19 @@ export class ChatController {
   async aiConfiguration(@Req() req: AuthRequest, @Body() body: SendConfigureDto): Promise<string> {
     await this.aiService.configure(body.name, body.value);
     return 'chirp';
+  }
+
+  @UseGuards(new PolyKeyGuard([Role.Admin, Role.SuperAdmin]))
+  @Post('/system-prompt')
+  async teachSystemPrompt(@Req() req: AuthRequest, @Body() body: TeachSystemPromptDto): Promise<TeachSystemPromptResponseDto> {
+    const environmentId = req.user.environment.id;
+    const userId = req.user.user?.id || (await this.userService.findAdminUserByEnvironmentId(environmentId))?.id;
+
+    if (!userId) {
+      throw new InternalServerErrorException('Cannot find user to process command');
+    }
+
+    await this.aiService.setSystemPrompt(environmentId, userId, body.prompt);
+    return { response: 'Conversation cleared and new system prompt set!' };
   }
 }
