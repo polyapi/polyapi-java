@@ -61,7 +61,7 @@ class LibraryTreeItem extends vscode.TreeItem {
 
     const getFunctionTooltip = (title: string) => {
       const toFunctionArgument = (arg: PropertySpecification) => {
-        return `${toCamelCase(arg.name)}${arg.required === false ? '?' : ''}: ${toTypeDeclaration(arg.type)}`;
+        return `${arg.name}${arg.required === false ? '?' : ''}: ${toTypeDeclaration(arg.type)}`;
       };
 
       return new vscode.MarkdownString(
@@ -152,7 +152,7 @@ export default class LibraryIndexViewProvider implements vscode.TreeDataProvider
     const { parentPath, data, label } = item;
     const { type, name } = data;
 
-    const toArgumentName = arg => `${toCamelCase(arg.name)}`;
+    const toArgumentName = arg => arg.name;
 
     switch (type) {
       case 'apiFunction':

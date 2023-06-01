@@ -1176,7 +1176,7 @@ export class FunctionService {
     const names = new Set<string>();
 
     for (const argument of args) {
-      const name = toCamelCase(argument.name);
+      const name = argument.name;
       if (names.has(name)) {
         return name;
       }

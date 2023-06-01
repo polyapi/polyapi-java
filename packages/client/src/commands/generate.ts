@@ -3,7 +3,7 @@ import handlebars from 'handlebars';
 import set from 'lodash/set';
 import chalk from 'chalk';
 import shell from 'shelljs';
-import { toCamelCase, toPascalCase } from '@guanghechen/helper-string';
+import { toPascalCase } from '@guanghechen/helper-string';
 import prettier from 'prettier';
 import { compile } from 'json-schema-to-typescript';
 import { v4 as uuidv4 } from 'uuid';
@@ -375,7 +375,7 @@ const generateTSContextDeclarationFile = async (
 
   const toFunctionDeclaration = (specification: Specification) => {
     const toArgumentDeclaration = (arg: PropertySpecification) => ({
-      name: toCamelCase(arg.name),
+      name: arg.name,
       required: arg.required,
       type: toTypeDeclaration(arg.type),
     });

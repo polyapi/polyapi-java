@@ -1,3 +1,6 @@
+### 0.1.23
+* Removed camel case treatment from function args.
+
 ### 0.1.22
 * Added webhook description
 
