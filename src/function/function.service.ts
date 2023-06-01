@@ -133,6 +133,7 @@ export class FunctionService {
     environmentId: string,
     url: string,
     body: Body,
+    requestName: string,
     name: string | null,
     context: string | null,
     description: string | null,
@@ -255,8 +256,12 @@ export class FunctionService {
     );
 
     const finalContext = context || '';
-    const finalName = name || '';
+    const finalName = name?.trim() ? name : requestName;
     const finalDescription = description || '';
+
+    if (!finalName) {
+      throw new BadRequestException('Couldn\'t infer function name neither from user, ai service or postman request name.');
+    }
 
     await this.throwErrIfInvalidResponse(response, payload, context || '', finalName);
 
@@ -440,7 +445,7 @@ export class FunctionService {
               } catch (e) {
                 return response;
               }
-            }
+            };
 
             this.logger.debug(`Raw response (id: ${apiFunction.id}):\nStatus: ${response.status}\n${JSON.stringify(response.data)}`);
 
@@ -557,7 +562,11 @@ export class FunctionService {
   customFunctionToDetailsDto(customFunction: CustomFunction): FunctionDetailsDto {
     return {
       ...this.customFunctionToBasicDto(customFunction),
-      arguments: JSON.parse(customFunction.arguments),
+      arguments: JSON.parse(customFunction.arguments).map((arg) => ({
+        ...arg,
+        required: arg.required == null ? true : arg.required,
+        secure: arg.secure == null ? false : arg.secure,
+      })),
     };
   }
 
@@ -636,11 +645,11 @@ export class FunctionService {
     return customFunction;
   }
 
-  async updateCustomFunction(customFunction: CustomFunction, context: string | null, description: string | null, visibility: Visibility | null) {
-    const { id, name } = customFunction;
+  async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null) {
+    const { id, name: currentName, context: currentContext } = customFunction;
 
-    if (context != null) {
-      if (!(await this.checkContextAndNameDuplicates(customFunction.environmentId, context, name, [id]))) {
+    if (context != null || name != null) {
+      if (!(await this.checkContextAndNameDuplicates(customFunction.environmentId, context || currentContext, name || currentName, [id]))) {
         throw new ConflictException(`Function with name ${name} and context ${context} already exists.`);
       }
     }
@@ -653,6 +662,7 @@ export class FunctionService {
         id,
       },
       data: {
+        name: name == null ? customFunction.name : name,
         context: context == null ? customFunction.context : context,
         description: description == null ? customFunction.description : description,
         visibility: visibility == null ? customFunction.visibility : visibility,
@@ -928,6 +938,7 @@ export class FunctionService {
   ) {
     if (transformTextCase) {
       name = name.replace(/([\[\]\\/{}()])/g, ' ');
+      name = toCamelCase(name);
     }
 
     if (!fixDuplicate) {

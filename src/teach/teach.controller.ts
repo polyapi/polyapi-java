@@ -29,6 +29,7 @@ export class TeachController {
     const {
       url,
       body,
+      requestName,
       name = null,
       context = null,
       description = null,
@@ -57,6 +58,7 @@ export class TeachController {
       environmentId,
       url,
       body,
+      requestName,
       name,
       context,
       description,

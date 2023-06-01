@@ -18,7 +18,7 @@ module.exports = (poly) => merge(
   customFunctions.reduce(
     (acc, [name, fn]) => set(acc, name, (...args) => {
       try {
-        fn(poly, ...args);
+        return fn(poly, ...args);
       } catch (e) {
         const match = e.message.match(MISSING_MODULE_ERROR_PATTERN);
         if (match) {

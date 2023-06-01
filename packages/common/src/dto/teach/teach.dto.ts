@@ -4,8 +4,13 @@ import { IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
 import { NotContainDots } from './../validators'
 
 export class TeachDto {
+  @IsString()
   @Validate(NotContainDots)
-  name: string;
+  requestName: string;
+  @IsOptional()
+  @IsString()
+  @Validate(NotContainDots)
+  name?: string;
   context?: string;
   description?: string;
   payload?: string;

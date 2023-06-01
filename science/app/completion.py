@@ -28,6 +28,16 @@ from app.utils import (
 )
 
 
+def insert_system_prompt(environment_id: str, messages: List[MessageDict]) -> None:
+    """ modify the array in place to insert the system prompt at the beginning!
+    """
+    # environment_id is unused but in the near future system prompts will be environment specific!
+    system_prompt = get_system_prompt()
+    if system_prompt and system_prompt.content:
+        p = MessageDict(role="system", content=system_prompt.content)
+        messages.insert(0, p)
+
+
 def answer_processing(choice: ChatGptChoice) -> Tuple[str, bool]:
     content = choice["message"]["content"]
 
@@ -168,9 +178,6 @@ def get_best_function_messages(
     library, stats = get_function_options_prompt(user_id, environment_id, keywords)
     stats["prompt"] = question
 
-    # system_prompt = get_system_prompt()
-    # if system_prompt and system_prompt.content:
-    #     rv.append({"role": "system", "content": system_prompt.content})
     if not library:
         return [], stats
 
@@ -178,6 +185,7 @@ def get_best_function_messages(
         role="user", content=BEST_FUNCTION_CHOICE_TEMPLATE % question
     )
     rv: List[MessageDict] = [library, question_msg]
+    insert_system_prompt(environment_id, rv)
     return rv, stats
 
 
@@ -270,6 +278,7 @@ def get_best_function_example(user_id: str, environment_id: str, public_id: str,
         MessageDict(role="user", content=best_function_prompt),
         MessageDict(role="user", content=question_prompt),
     ]
+    insert_system_prompt(environment_id, messages)
     resp = get_chat_completion(messages, stage="get_best_function_example")
     return resp["choices"][0]
 

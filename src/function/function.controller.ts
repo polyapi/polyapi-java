@@ -160,7 +160,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user, Permission.CustomDev);
 
     return this.service.customFunctionToDetailsDto(
-      await this.service.updateCustomFunction(clientFunction, context, description, visibility),
+      await this.service.updateCustomFunction(clientFunction, null, context, description, visibility),
     );
   }
 
@@ -219,6 +219,7 @@ export class FunctionController {
   @Patch('/server/:id')
   async updateServerFunction(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateCustomFunctionDto): Promise<FunctionDetailsDto> {
     const {
+      name = null,
       context = null,
       description = null,
       visibility = null,
@@ -231,7 +232,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, Permission.CustomDev);
 
     return this.service.customFunctionToDetailsDto(
-      await this.service.updateCustomFunction(serverFunction, context, description, visibility),
+      await this.service.updateCustomFunction(serverFunction, name, context, description, visibility),
     );
   }
 

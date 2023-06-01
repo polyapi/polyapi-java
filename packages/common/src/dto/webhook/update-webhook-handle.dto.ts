@@ -9,6 +9,7 @@ export class UpdateWebhookHandleDto {
   context?: string;
   @IsOptional()
   description?: string;
+  @IsOptional()
   @IsString()
   @IsEnum(Visibility)
   visibility?: Visibility;
