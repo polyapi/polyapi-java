@@ -8,6 +8,7 @@ from app.completion import (
     get_function_options_prompt,
     get_best_function_messages,
     _extract_json_from_completion,
+    has_hallucination,
 )
 from app.typedefs import ExtractKeywordDto, SpecificationDto
 from .testing import DbTestCase
@@ -254,3 +255,13 @@ class T(DbTestCase):
     def test_extract_json_from_completion(self):
         public_id = _extract_json_from_completion(STEP_2_RESPONSE_EXAMPLE)["id"]
         self.assertEqual(public_id, "9ce603a4-5b5f-4e1c-8a43-994b2d7e8df2")
+
+    def test_has_hallucination_no_specs(self):
+        specs = []
+        result = has_hallucination(specs, "poly.foobar.abc")
+        self.assertTrue(result)
+
+        result = has_hallucination(specs, "Thanks for using poly. We hope to see you again!")
+        self.assertFalse(result)
+
+    # TODO do partial spec?
