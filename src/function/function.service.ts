@@ -27,7 +27,6 @@ import {
   FunctionArgument,
   FunctionBasicDto,
   FunctionDetailsDto,
-  Visibility,
   Header,
   Method,
   PostmanVariableEntry,
@@ -35,8 +34,8 @@ import {
   PropertyType,
   ServerFunctionSpecification,
   Specification,
-  TeachResponseDto,
   Variables,
+  Visibility,
 } from '@poly/common';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -119,16 +118,7 @@ export class FunctionService {
     };
   }
 
-  createApiFunction(data: Omit<Prisma.ApiFunctionCreateInput, 'createdAt'>): Promise<ApiFunction> {
-    return this.prisma.apiFunction.create({
-      data: {
-        createdAt: new Date(),
-        ...data,
-      },
-    });
-  }
-
-  async teach(
+  async createOrUpdateApiFunction(
     id: string | null,
     environmentId: string,
     url: string,
@@ -146,7 +136,7 @@ export class FunctionService {
     templateUrl: string,
     templateBody: Body,
     templateAuth?: Auth,
-  ): Promise<TeachResponseDto> {
+  ): Promise<ApiFunction> {
     if (!(statusCode >= HttpStatus.OK && statusCode < HttpStatus.AMBIGUOUS)) {
       throw new BadRequestException(
         `Api response status code should be between ${HttpStatus.OK} and ${HttpStatus.AMBIGUOUS}.`,
@@ -277,7 +267,7 @@ export class FunctionService {
     };
 
     if (apiFunction && willRetrain) {
-      const updatedApiFunction = await this.prisma.apiFunction.update({
+      return this.prisma.apiFunction.update({
         where: {
           id: apiFunction.id,
         },
@@ -297,13 +287,9 @@ export class FunctionService {
           ),
         },
       });
-
-      return {
-        functionId: updatedApiFunction.id,
-      };
     }
 
-    const createdApiFunction = await this.prisma.apiFunction.create({
+    return this.prisma.apiFunction.create({
       data: {
         environment: {
           connect: {
@@ -325,10 +311,6 @@ export class FunctionService {
         method,
       },
     });
-
-    return {
-      functionId: createdApiFunction.id,
-    };
   }
 
   async updateApiFunction(
@@ -546,6 +528,7 @@ export class FunctionService {
         ],
         ...this.getFunctionFilterConditions(contexts, names, ids),
       },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
     });
   }
 
@@ -570,7 +553,7 @@ export class FunctionService {
     };
   }
 
-  async createCustomFunction(env: Environment, context: string, name: string, customCode: string, serverFunction: boolean, apiKey: string) {
+  async createCustomFunction(env: Environment, context: string, name: string, description: string, customCode: string, serverFunction: boolean, apiKey: string) {
     const {
       code,
       args,
@@ -597,6 +580,7 @@ export class FunctionService {
         },
         data: {
           code,
+          description: description || customFunction.description,
           arguments: JSON.stringify(args),
           returnType,
           requirements: JSON.stringify(requirements),
@@ -613,6 +597,7 @@ export class FunctionService {
           },
           context,
           name,
+          description,
           code,
           arguments: JSON.stringify(args),
           returnType,
@@ -689,6 +674,7 @@ export class FunctionService {
         ...this.getFunctionFilterConditions(contexts, names, ids),
         serverSide: false,
       },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
     });
   }
 
@@ -711,6 +697,7 @@ export class FunctionService {
         ...this.getFunctionFilterConditions(contexts, names, ids),
         serverSide: true,
       },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
     });
   }
 
@@ -1208,7 +1195,7 @@ export class FunctionService {
         }
       }
 
-      for (const arg of functionArgs) { 
+      for (const arg of functionArgs) {
         if (metadata[arg.key]?.type) {
           const { payload, ...rest} = metadata[arg.key];
           newMetadata[arg.key] = {

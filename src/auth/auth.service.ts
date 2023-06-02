@@ -141,8 +141,6 @@ export class AuthService {
   private fillPermissions(permissions: Permissions, user: User | null) {
     const isAdmin = user?.role === Role.SuperAdmin || user?.role === Role.Admin;
 
-    console.log('%c ADMIN', 'background: yellow; color: black', isAdmin);
-
     return Object.values(Permission)
       .reduce((acc, permission) => ({
           ...acc,

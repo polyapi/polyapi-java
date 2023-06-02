@@ -206,14 +206,13 @@ export class GptPluginService {
     return functions;
   }
 
-  getOpenApiUrl(host: string): string {
-    const slug = host.split(".")[0];
+  getOpenApiUrl(host: string, slug: string): string {
     const protocol = host === 'localhost' ? 'http' : 'https';
     if (slug === 'develop' || slug === 'staging') {
       // HACK for now staging/develop just use hardcoded manifests
       return `${protocol}://${host}/openapi-${slug}.yaml`;
     } else {
-      return `${protocol}://${host}/plugins`;
+      return `${protocol}://${host}/plugins/${slug}/openapi`;
     }
   }
 
@@ -230,8 +229,7 @@ export class GptPluginService {
     );
   }
 
-  async getOpenApiSpec(hostname: string): Promise<string> {
-    const slug = hostname.split(".")[0]
+  async getOpenApiSpec(hostname: string, slug: string): Promise<string> {
     const plugin = await this.prisma.gptPlugin.findUniqueOrThrow({
       where: { slug },
     });
@@ -372,7 +370,7 @@ export class GptPluginService {
       },
       api: {
         type: 'openapi',
-        url: this.getOpenApiUrl(host),
+        url: this.getOpenApiUrl(host, slug),
         is_user_authenticated: false,
       },
       logo_url: iconUrl,

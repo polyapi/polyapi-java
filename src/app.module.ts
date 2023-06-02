@@ -4,7 +4,6 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { AuthModule } from 'auth/auth.module';
 import { UserModule } from 'user/user.module';
 import { FunctionModule } from 'function/function.module';
-import { TeachModule } from 'teach/teach.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { ChatModule } from 'chat/chat.module';
 import { EventModule } from 'event/event.module';
@@ -34,7 +33,6 @@ import { ApplicationModule } from 'application/application.module';
     TeamModule,
     UserModule,
     AuthModule,
-    TeachModule,
     FunctionModule,
     WebhookModule,
     AuthProviderModule,

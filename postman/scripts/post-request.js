@@ -28,7 +28,7 @@ if(contentType.match(/application\/json/) !== null) {
 }
 
 const postRequest = {
-  url: 'https://staging.polyapi.io/teach',
+  url: 'https://staging.polyapi.io/functions/api',
   method: 'POST',
   header: {
     'Content-Type': 'application/json',

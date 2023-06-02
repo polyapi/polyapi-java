@@ -17,13 +17,19 @@ export const getSpecs = async (contexts?: string[], names?: string[], ids?: stri
   ).data;
 };
 
-export const createServerFunction = async (context: string | null, name: string, code: string) => {
+export const createServerFunction = async (
+  context: string | null,
+  name: string,
+  description: string | null,
+  code: string,
+) => {
   return (
     await axios.post<any, AxiosResponse<FunctionDetailsDto>>(
       `${process.env.POLY_API_BASE_URL}/functions/server`,
       {
         context,
         name,
+        description,
         code,
       },
       {
@@ -36,13 +42,19 @@ export const createServerFunction = async (context: string | null, name: string,
   ).data;
 };
 
-export const createClientFunction = async (context: string | null, name: string, code: string) => {
+export const createClientFunction = async (
+  context: string | null,
+  name: string,
+  description: string | null,
+  code: string,
+) => {
   return (
     await axios.post<any, AxiosResponse<FunctionDetailsDto>>(
       `${process.env.POLY_API_BASE_URL}/functions/client`,
       {
         context,
         name,
+        description,
         code,
       },
       {

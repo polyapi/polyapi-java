@@ -17,6 +17,7 @@ import { FunctionService } from 'function/function.service';
 import { PolyKeyGuard } from 'auth/poly-key-auth-guard.service';
 import {
   ApiFunctionResponseDto,
+  CreateApiFunctionDto,
   CreateCustomFunctionDto,
   ExecuteApiFunctionDto,
   ExecuteCustomFunctionDto,
@@ -43,6 +44,59 @@ export class FunctionController {
   async getApiFunctions(@Req() req: AuthRequest): Promise<FunctionBasicDto[]> {
     const apiFunctions = await this.service.getApiFunctions(req.user.environment.id);
     return apiFunctions.map((apiFunction) => this.service.apiFunctionToBasicDto(apiFunction));
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Post('/api')
+  async createApiFunction(@Req() req: AuthRequest, @Body() data: CreateApiFunctionDto): Promise<FunctionBasicDto> {
+    const {
+      url,
+      body,
+      requestName,
+      name = null,
+      context = null,
+      description = null,
+      payload = null,
+      response,
+      variables = {},
+      statusCode,
+      templateHeaders,
+      method,
+      templateAuth,
+      templateUrl,
+      templateBody,
+      id = null,
+    } = data;
+    const environmentId = req.user.environment.id;
+
+    await this.authService.checkPermissions(req.user, Permission.Teach);
+
+    this.logger.debug(`Creating API function in environment ${environmentId}...`);
+    this.logger.debug(
+      `name: ${name}, context: ${context}, description: ${description}, payload: ${payload}, response: ${response}, statusCode: ${statusCode}`,
+    );
+
+    return this.service.apiFunctionToBasicDto(
+      await this.service.createOrUpdateApiFunction(
+        id,
+        environmentId,
+        url,
+        body,
+        requestName,
+        name,
+        context,
+        description,
+        payload,
+        response,
+        variables,
+        statusCode,
+        templateHeaders,
+        method,
+        templateUrl,
+        templateBody,
+        templateAuth,
+      )
+    );
   }
 
   @UseGuards(PolyKeyGuard)
@@ -118,13 +172,13 @@ export class FunctionController {
   @UseGuards(PolyKeyGuard)
   @Post('/client')
   async createClientFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {
-    const { context = '', name, code } = data;
+    const { context = '', name, description = '', code } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
       return this.service.customFunctionToDetailsDto(
-        await this.service.createCustomFunction(req.user.environment, context, name, code, false, req.user.key)
+        await this.service.createCustomFunction(req.user.environment, context, name, description, code, false, req.user.key)
       );
     } catch (e) {
       throw new BadRequestException(e.message);
@@ -180,22 +234,21 @@ export class FunctionController {
   @UseGuards(PolyKeyGuard)
   @Get('/server')
   async getServerFunctions(@Req() req: AuthRequest): Promise<FunctionBasicDto[]> {
-    const customFunctions = await this.service.getCustomFunctions(req.user.environment.id);
+    const customFunctions = await this.service.getServerFunctions(req.user.environment.id);
     return customFunctions
-      .filter((customFunction) => customFunction.serverSide)
       .map((serverFunction) => this.service.customFunctionToBasicDto(serverFunction));
   }
 
   @UseGuards(PolyKeyGuard)
   @Post('/server')
   async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {
-    const { context = '', name, code } = data;
+    const { context = '', name, description = '', code } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
       return this.service.customFunctionToDetailsDto(
-        await this.service.createCustomFunction(req.user.environment, context, name, code, true, req.user.key)
+        await this.service.createCustomFunction(req.user.environment, context, name, description, code, true, req.user.key)
       );
     } catch (e) {
       throw new BadRequestException(e.message);

@@ -13,35 +13,48 @@ model Tenant {
   id           String        @id @default(uuid())
   createdAt    DateTime      @default(now()) @map("created_at")
   name         String
+  users        User[]
   teams        Team[]
   environments Environment[]
 
   @@map("tenant")
 }
 
-model Team {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  name      String
-  users     User[]
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  tenantId  String   @map("tenant_id")
-
-  @@map("team")
-}
-
 model User {
   id                   String                @id @default(uuid())
   createdAt            DateTime              @default(now()) @map("created_at")
   name                 String
-  team                 Team?                 @relation(fields: [teamId], references: [id])
-  teamId               String?               @map("team_id")
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  tenantId             String                @map("tenant_id")
   role                 String                @default("USER")
   vip                  Boolean               @default(false) // is this person a VIP we want to track carefully?
   conversationMessages ConversationMessage[]
   apiKeys              ApiKey[]
+  teamMembers          TeamMember[]
 
   @@map("user")
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now()) @map("created_at")
+  name        String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  tenantId    String       @map("tenant_id")
+  teamMembers TeamMember[]
+
+  @@map("team")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    String   @map("team_id")
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @map("user_id")
+
+  @@map("team_member")
 }
 
 model Environment {

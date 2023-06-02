@@ -60,19 +60,24 @@ export class TenantService implements OnModuleInit {
         id: tenant.id,
       },
       include: {
+        users: true,
         environments: {
           include: {
             applications: true,
             apiKeys: {
               include: {
-                user: true
-              }
+                user: true,
+              },
             },
-          }
+          },
         },
         teams: {
           include: {
-            users: true
+            teamMembers: {
+              include: {
+                user: true,
+              }
+            },
           },
         },
       },
@@ -87,12 +92,13 @@ export class TenantService implements OnModuleInit {
       apiKeys: environment.apiKeys.map(apiKey => this.authService.toApiKeyDto(apiKey)),
     });
     const toTeamFullDto = team => ({
-      ...this.teamService.toDto(team),
-      users: team.users.map(user => this.userService.toUserDto(user)),
+      ...this.teamService.toTeamDto(team),
+      members: team.teamMembers.map(member => this.teamService.toMemberDto(member)),
     });
     return {
       id: fullTenant.id,
       name: fullTenant.name,
+      users: fullTenant.users.map(user => this.userService.toUserDto(user)),
       environments: fullTenant.environments.map(toEnvironmentFullDto),
       teams: fullTenant.teams.map(toTeamFullDto),
     };
@@ -117,6 +123,14 @@ export class TenantService implements OnModuleInit {
       const tenant = await tx.tenant.create({
         data: {
           name,
+          users: {
+            create: [
+              {
+                name: userName || 'admin',
+                role: userRole || Role.Admin,
+              },
+            ],
+          },
           environments: {
             create: [
               {
@@ -129,35 +143,41 @@ export class TenantService implements OnModuleInit {
             create: [
               {
                 name: teamName || 'default',
-                users: {
-                  create: [
-                    {
-                      name: userName || 'admin',
-                      role: userRole || Role.Admin,
-                    },
-                  ],
-                },
               },
             ],
           },
         },
         include: {
+          users: true,
           environments: true,
-          teams: {
-            include: {
-              users: true,
+          teams: true,
+        },
+      });
+
+      // add user to team
+      await tx.teamMember.create({
+        data: {
+          team: {
+            connect: {
+              id: tenant.teams[0].id,
+            },
+          },
+          user: {
+            connect: {
+              id: tenant.users[0].id,
             },
           },
         },
       });
 
+      // create API key for user
       await tx.apiKey.create({
         data: {
           name: `api-key-${userRole || Role.Admin}`,
           key: userApiKey || crypto.randomUUID(),
           user: {
             connect: {
-              id: tenant.teams[0].users[0].id,
+              id: tenant.users[0].id,
             },
           },
           environment: {

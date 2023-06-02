@@ -3,7 +3,7 @@ import { IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
 
 import { NotContainDots } from './../validators'
 
-export class TeachDto {
+export class CreateApiFunctionDto {
   @IsString()
   @Validate(NotContainDots)
   requestName: string;

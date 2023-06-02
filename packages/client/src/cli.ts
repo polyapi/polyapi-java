@@ -82,13 +82,13 @@ yargs
             describe: 'Marks the function as a server function',
             type: 'boolean',
           }),
-      async ({ name, file, context, server = false }) => {
+      async ({ name, description, file, context, server = false }) => {
         if (!name || !file) {
           yargs.showHelp();
           return;
         }
 
-        await addCustomFunction(context, name, file, server);
+        await addCustomFunction(context, name, description, file, server);
       },
     );
   })

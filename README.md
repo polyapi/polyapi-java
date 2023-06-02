@@ -40,8 +40,7 @@ Head to the [Science Server README](https://github.com/polyapi/poly-alpha/blob/d
 
 ## Endpoints
 
-`POST /teach` - prepares Poly API function\
-`POST /teach/:functionId` - updated Poly API function with response and/or metadata\
+`POST /functions/api` - creates Poly API function\
 `PUT /webhook/:functionAlias` - creates a webhook handle to be used in an API with `functionAlias` as name of the
 listener function\
 `PUT /webhook/:context/:functionAlias` - creates a webhook handle to be used in an API with `context.functionAlias` as

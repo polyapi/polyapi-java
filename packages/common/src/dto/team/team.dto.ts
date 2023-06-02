@@ -1,4 +1,4 @@
-import { UserDto } from '../user';
+import { TeamMemberDto } from './team-member.dto';
 
 export class TeamDto {
   id: string;
@@ -6,5 +6,5 @@ export class TeamDto {
 }
 
 export class TeamFullDto extends TeamDto {
-  users: UserDto[];
+  members: TeamMemberDto[];
 }

@@ -24,12 +24,14 @@ import {
   CreateApplicationDto,
   CreateEnvironmentDto,
   CreateTeamDto,
+  CreateTeamMemberDto,
   CreateTenantDto,
   CreateUserDto,
   EnvironmentDto,
   GetTenantQuery,
   Role,
   TeamDto,
+  TeamMemberDto,
   TenantDto,
   UpdateApiKeyDto,
   UpdateApplicationDto,
@@ -45,6 +47,7 @@ import { AuthService } from 'auth/auth.service';
 import { AuthRequest } from 'common/types';
 import { UserService } from 'user/user.service';
 import { ApplicationService } from 'application/application.service';
+import { ApiImplicitQuery } from '@nestjs/swagger/dist/decorators/api-implicit-query.decorator';
 
 @ApiSecurity('X-PolyApiKey')
 @Controller('tenants')
@@ -102,93 +105,34 @@ export class TenantController {
   }
 
   @UseGuards(PolyKeyGuard)
-  @Get(':id/teams')
-  async getTeams(@Req() req: AuthRequest, @Param('id') tenantId: string): Promise<TeamDto[]> {
-    const tenant = await this.findTenant(tenantId);
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-    return (await this.teamService.getAllByTenant(tenant.id))
-      .map(team => this.teamService.toDto(team));
-  }
-
-  @UseGuards(PolyKeyGuard)
-  @Post(':id/teams')
-  async createTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Body() data: CreateTeamDto): Promise<TeamDto> {
-    const tenant = await this.findTenant(tenantId);
-    const { name } = data;
-
+  @Get(':id/users')
+  async getUsers(@Req() req: AuthRequest, @Param('id') tenantId: string): Promise<UserDto[]> {
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
-    return this.teamService.toDto(
-      await this.teamService.create(tenant.id, name),
-    );
-  }
-
-  @UseGuards(PolyKeyGuard)
-  @Get(':id/teams/:teamId')
-  async getTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string): Promise<TeamDto> {
-    const team = await this.findTeam(tenantId, teamId);
-
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-
-    return this.teamService.toDto(team);
-  }
-
-  @UseGuards(PolyKeyGuard)
-  @Patch(':id/teams/:teamId')
-  async updateTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string, @Body() data: UpdateTeamDto): Promise<TeamDto> {
-    const team = await this.findTeam(tenantId, teamId);
-    const { name } = data;
-
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-
-    return this.teamService.toDto(
-      await this.teamService.update(team, name),
-    );
-  }
-
-  @UseGuards(PolyKeyGuard)
-  @Delete(':id/teams/:teamId')
-  async deleteTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string) {
-    const team = await this.findTeam(tenantId, teamId);
-
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-
-    await this.teamService.delete(team.id);
-  }
-
-  @UseGuards(PolyKeyGuard)
-  @Get(':id/teams/:teamId/users')
-  async getUsers(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string): Promise<UserDto[]> {
-    const team = await this.findTeam(tenantId, teamId);
-
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-
-    return (await this.userService.getAllUsersByTeam(team.id))
+    return (await this.userService.getAllUsersByTenant(tenantId))
       .map(user => this.userService.toUserDto(user));
   }
 
   @UseGuards(PolyKeyGuard)
-  @Post(':id/teams/:teamId/users')
-  async createUser(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string, @Body() data: CreateUserDto): Promise<UserDto> {
-    const team = await this.findTeam(tenantId, teamId);
+  @Post(':id/users')
+  async createUser(@Req() req: AuthRequest, @Param('id') tenantId: string, @Body() data: CreateUserDto): Promise<UserDto> {
     const { name, role = Role.User } = data;
 
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     return this.userService.toUserDto(
-      await this.userService.createUser(team.id, name, role as Role),
+      await this.userService.createUser(tenantId, name, role as Role),
     );
   }
 
   @UseGuards(PolyKeyGuard)
-  @Get(':id/teams/:teamId/users/:userId')
+  @Get(':id/users/:userId')
   async getUser(
     @Req() req: AuthRequest,
     @Param('id') tenantId: string,
-    @Param('teamId') teamId: string,
     @Param('userId') userId: string,
   ): Promise<UserDto> {
-    const user = await this.findUser(tenantId, teamId, userId);
+    const user = await this.findUser(tenantId, userId);
 
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -196,15 +140,14 @@ export class TenantController {
   }
 
   @UseGuards(PolyKeyGuard)
-  @Patch(':id/teams/:teamId/users/:userId')
+  @Patch(':id/users/:userId')
   async updateUser(
     @Req() req: AuthRequest,
     @Param('id') tenantId: string,
-    @Param('teamId') teamId: string,
     @Param('userId') userId: string,
     @Body() data: UpdateUserDto,
   ): Promise<UserDto> {
-    const user = await this.findUser(tenantId, teamId, userId);
+    const user = await this.findUser(tenantId, userId);
     const { name, role } = data;
 
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
@@ -215,13 +158,127 @@ export class TenantController {
   }
 
   @UseGuards(PolyKeyGuard)
-  @Delete(':id/teams/:teamId/users/:userId')
-  async deleteUser(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string, @Param('userId') userId: string) {
-    const user = await this.findUser(tenantId, teamId, userId);
+  @Delete(':id/users/:userId')
+  async deleteUser(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('userId') userId: string) {
+    const user = await this.findUser(tenantId, userId);
 
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     await this.userService.deleteUser(user.id);
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Get(':id/teams')
+  async getTeams(@Req() req: AuthRequest, @Param('id') tenantId: string): Promise<TeamDto[]> {
+    const tenant = await this.findTenant(tenantId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+    return (await this.teamService.getAllTeamsByTenant(tenant.id))
+      .map(team => this.teamService.toTeamDto(team));
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Post(':id/teams')
+  async createTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Body() data: CreateTeamDto): Promise<TeamDto> {
+    const tenant = await this.findTenant(tenantId);
+    const { name } = data;
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.teamService.toTeamDto(
+      await this.teamService.createTeam(tenant.id, name),
+    );
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Get(':id/teams/:teamId')
+  async getTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string): Promise<TeamDto> {
+    const team = await this.findTeam(tenantId, teamId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.teamService.toTeamDto(team);
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Patch(':id/teams/:teamId')
+  async updateTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string, @Body() data: UpdateTeamDto): Promise<TeamDto> {
+    const team = await this.findTeam(tenantId, teamId);
+    const { name } = data;
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.teamService.toTeamDto(
+      await this.teamService.updateTeam(team, name),
+    );
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Delete(':id/teams/:teamId')
+  async deleteTeam(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string) {
+    const team = await this.findTeam(tenantId, teamId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    await this.teamService.deleteTeam(team.id);
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Get(':id/teams/:teamId/members')
+  async getMembers(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string): Promise<TeamMemberDto[]> {
+    const team = await this.findTeam(tenantId, teamId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return (await this.teamService.getAllMembersByTeam(team.id))
+      .map(member => this.teamService.toMemberDto(member));
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Post(':id/teams/:teamId/members')
+  async createMember(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('teamId') teamId: string,
+    @Body() data: CreateTeamMemberDto,
+  ): Promise<TeamMemberDto> {
+    const { userId } = data;
+    const team = await this.findTeam(tenantId, teamId);
+    const user = await this.findUser(tenantId, userId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    if (await this.teamService.checkMemberExists(team.id, userId)) {
+      throw new BadRequestException('Given user is already member of this team.');
+    }
+
+    return this.teamService.toMemberDto(
+      await this.teamService.createMember(team.id, user.id),
+    );
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Get(':id/teams/:teamId/members/:memberId')
+  async getMember(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('teamId') teamId: string,
+    @Param('memberId') memberId: string,
+  ): Promise<TeamMemberDto> {
+    const member = await this.findMember(tenantId, teamId, memberId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.teamService.toMemberDto(member);
+  }
+
+  @UseGuards(PolyKeyGuard)
+  @Delete(':id/teams/:teamId/members/:memberId')
+  async deleteMember(@Req() req: AuthRequest, @Param('id') tenantId: string, @Param('teamId') teamId: string, @Param('memberId') memberId: string) {
+    const member = await this.findMember(tenantId, teamId, memberId);
+
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    await this.teamService.deleteMember(member.id);
   }
 
   @UseGuards(PolyKeyGuard)
@@ -314,7 +371,7 @@ export class TenantController {
       throw new BadRequestException('Either userId or applicationId must be provided');
     }
     const application = applicationId ? await this.findApplication(tenantId, environmentId, applicationId) : null;
-    const user = userId ? await this.findUser(tenantId, null, userId) : null;
+    const user = userId ? await this.findUser(tenantId, userId) : null;
 
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -458,23 +515,32 @@ export class TenantController {
     return tenant;
   }
 
+  private async findUser(tenantId: string, userId: string) {
+    const user = await this.userService.findUserById(userId);
+
+    if (!user || (user.tenantId !== tenantId)) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+    return user;
+  }
+
   private async findTeam(tenantId: string, id: string) {
     const tenant = await this.findTenant(tenantId);
-    const team = await this.teamService.findById(id);
+    const team = await this.teamService.findTeamById(id);
     if (!team || team.tenantId !== tenant.id) {
       throw new NotFoundException(`Team with id ${id} not found`);
     }
     return team;
   }
 
-  private async findUser(tenantId: string, teamId: string | null, userId: string) {
+  private async findMember(tenantId: string, teamId: string, memberId: string) {
     const team = teamId ? await this.findTeam(tenantId, teamId) : null;
-    const user = await this.userService.findUserById(userId);
+    const member = await this.teamService.findMemberById(memberId);
 
-    if (!user || (team && user.teamId !== team.id)) {
-      throw new NotFoundException(`User with id ${userId} not found`);
+    if (!member || (team && member.teamId !== team.id)) {
+      throw new NotFoundException(`Member with id ${memberId} not found`);
     }
-    return user;
+    return member;
   }
 
   private async findEnvironment(tenantId: string, environmentId: string) {

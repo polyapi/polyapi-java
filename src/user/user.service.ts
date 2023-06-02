@@ -16,10 +16,10 @@ export class UserService {
     };
   }
 
-  async getAllUsersByTeam(teamId: string) {
+  async getAllUsersByTenant(tenantId: string) {
     return this.prisma.user.findMany({
       where: {
-        teamId,
+        tenantId,
       },
     });
   }
@@ -35,12 +35,10 @@ export class UserService {
   async findAdminUserByEnvironmentId(environmentId: string) {
     return this.prisma.user.findFirst({
       where: {
-        team: {
-          tenant: {
-            environments: {
-              some: {
-                id: environmentId,
-              },
+        tenant: {
+          environments: {
+            some: {
+              id: environmentId,
             },
           },
         },
@@ -51,12 +49,12 @@ export class UserService {
     });
   }
 
-  async createUser(teamId: string, name: string, role: Role) {
+  async createUser(tenantId: string, name: string, role: Role) {
     return this.prisma.user.create({
       data: {
-        team: {
+        tenant: {
           connect: {
-            id: teamId,
+            id: tenantId,
           },
         },
         name,

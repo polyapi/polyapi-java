@@ -19,9 +19,9 @@ export class GptPluginController {
     return this.service.getManifest(req);
   }
 
-  @Get('plugins')
-  public async pluginOpenApi(@Req() req: Request): Promise<unknown> {
-    const spec = await this.service.getOpenApiSpec(req.hostname);
+  @Get('plugins/:slug/openapi')
+  public async pluginOpenApi(@Req() req: Request, @Param('slug') slug: string): Promise<unknown> {
+    const spec = await this.service.getOpenApiSpec(req.hostname, slug);
     return spec;
   }
 

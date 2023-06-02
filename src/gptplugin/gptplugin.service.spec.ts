@@ -240,7 +240,7 @@ describe('GptPluginService', () => {
       await _createPlugin(prisma);
       const apiFunc = await _createApiFunction(prisma);
 
-      const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io');
+      const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io', 'mass-effect');
 
       const spec = JSON.parse(specStr);
 
@@ -267,7 +267,7 @@ describe('GptPluginService', () => {
       await _createPlugin(prisma);
       const serverFunc = await _createServerFunction(prisma);
 
-      const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io');
+      const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io', 'mass-effect');
 
       const spec = JSON.parse(specStr);
 
@@ -310,14 +310,14 @@ describe('GptPluginService', () => {
 
   describe('getOpenApiUrl', () => {
     it('should return the right url for the environment', async () => {
-      const url = service.getOpenApiUrl('mass-effect.polyapi.io');
-      expect(url).toBe('https://mass-effect.polyapi.io/plugins');
+      const url = service.getOpenApiUrl('mass-effect.polyapi.io', 'mass-effect');
+      expect(url).toBe('https://mass-effect.polyapi.io/plugins/mass-effect/openapi');
     });
   });
 
   describe('getManifest', () => {
     it('should return the manifest for the environment', async () => {
-      const url = service.getOpenApiUrl('develop.polyapi.io');
+      const url = service.getOpenApiUrl('develop.polyapi.io', 'develop');
       expect(url).toBe('https://develop.polyapi.io/openapi-develop.yaml');
     });
   });

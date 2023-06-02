@@ -6,7 +6,13 @@ import { loadConfig } from '../config';
 import { generateSingleCustomFunction } from './generate';
 import { FunctionDetailsDto } from '@poly/common';
 
-export const addCustomFunction = async (context: string | null, name: string, file: string, server: boolean) => {
+export const addCustomFunction = async (
+  context: string | null,
+  name: string,
+  description: string | null,
+  file: string,
+  server: boolean,
+) => {
   loadConfig();
 
   try {
@@ -15,10 +21,10 @@ export const addCustomFunction = async (context: string | null, name: string, fi
     const code = fs.readFileSync(file, 'utf8');
     if (server) {
       shell.echo('-n', chalk.rgb(255, 255, 255)(`Adding custom server side function...`));
-      customFunction = await createServerFunction(context, name, code);
+      customFunction = await createServerFunction(context, name, description, code);
     } else {
       shell.echo('-n', chalk.rgb(255, 255, 255)(`Adding custom client side function...`));
-      customFunction = await createClientFunction(context, name, code);
+      customFunction = await createClientFunction(context, name, description, code);
     }
     shell.echo(chalk.green('DONE'));
 

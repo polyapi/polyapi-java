@@ -1,21 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { Team } from '@prisma/client';
-import { TeamDto } from '@poly/common';
+import { Team, TeamMember, User } from '@prisma/client';
+import { TeamDto, TeamMemberDto } from '@poly/common';
+import { UserService } from 'user/user.service';
 
 @Injectable()
 export class TeamService {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(private readonly prisma: PrismaService, private readonly userService: UserService) {
   }
 
-  toDto(team: Team): TeamDto {
+  toTeamDto(team: Team): TeamDto {
     return {
       id: team.id,
       name: team.name,
     };
   }
 
-  async create(tenantId: string, name: string) {
+  toMemberDto(teamMember: TeamMember & { user: User }): TeamMemberDto {
+    return {
+      id: teamMember.id,
+      user: this.userService.toUserDto(teamMember.user),
+      teamId: teamMember.teamId,
+    };
+  }
+
+  async createTeam(tenantId: string, name: string) {
     return this.prisma.team.create({
       data: {
         tenant: {
@@ -28,7 +37,7 @@ export class TeamService {
     });
   }
 
-  async update(team: Team, name: string) {
+  async updateTeam(team: Team, name: string) {
     return this.prisma.team.update({
       where: {
         id: team.id,
@@ -39,7 +48,7 @@ export class TeamService {
     });
   }
 
-  async delete(id: string) {
+  async deleteTeam(id: string) {
     return this.prisma.team.delete({
       where: {
         id,
@@ -47,7 +56,7 @@ export class TeamService {
     });
   }
 
-  async findById(teamId) {
+  async findTeamById(teamId: string) {
     return this.prisma.team.findFirst({
       where: {
         id: teamId,
@@ -55,10 +64,62 @@ export class TeamService {
     });
   }
 
-  async getAllByTenant(tenantId: any) {
+  async getAllTeamsByTenant(tenantId: any) {
     return this.prisma.team.findMany({
       where: {
         tenantId,
+      },
+    });
+  }
+
+  async checkMemberExists(teamId: string, userId: string) {
+    const member = await this.prisma.teamMember.findFirst({
+      where: {
+        teamId,
+        userId,
+      },
+    });
+    return !!member;
+  }
+
+  async findMemberById(id: string) {
+    return this.prisma.teamMember.findFirst({
+      where: {
+        id,
+      },
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async createMember(teamId: string, userId: string) {
+    return this.prisma.teamMember.create({
+      data: {
+        teamId,
+        userId,
+      },
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async deleteMember(id: string) {
+    return this.prisma.teamMember.delete({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async getAllMembersByTeam(teamId: string) {
+    return this.prisma.teamMember.findMany({
+      where: {
+        teamId,
+      },
+      include: {
+        user: true,
       },
     });
   }
