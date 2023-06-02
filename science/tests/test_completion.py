@@ -249,6 +249,8 @@ class T(DbTestCase):
 
         self.assertTrue(result)
 
+    # def test_
+
     def test_extract_json_from_completion(self):
         public_id = _extract_json_from_completion(STEP_2_RESPONSE_EXAMPLE)["id"]
         self.assertEqual(public_id, "9ce603a4-5b5f-4e1c-8a43-994b2d7e8df2")

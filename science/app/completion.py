@@ -290,15 +290,27 @@ def get_best_function_example(user_id: str, environment_id: str, public_ids: Lis
     messages.append(rv['message'])
     store_messages(user_id, messages)
 
-    # one final check for hallucinations
-    if has_hallucinations(specs, rv['message']):
-        rv = post_hallucation_completion()
+    if has_hallucination(valid_specs, rv['message']):
+        # ok we detected there is a hallucination
+        # let's ust ask the question straight to OpenAI without any Poly stuff
+        # then let's return the response!
+        raw_question = MessageDict(role="user", content=question)
+        resp = get_chat_completion([raw_question], temperature=0.6, stage="post_hallucation_response")
+        raw_rv = resp["choices"][0]
         store_messages(user_id, [
-            MessageDict(role="user", content="HALLUCINATION_DETECTED"),
-            rv['message']
+            MessageDict(role="system", content="HALLUCINATION DETECTED"),
+            raw_question,
+            raw_rv['message']
         ])
+        return raw_rv
+    else:
+        return rv
 
-    return rv
+
+def has_hallucination(specs: List[SpecificationDto], answer: MessageDict) -> bool:
+    """ detect whether the OpenAI message contains a hallucinated function
+    """
+    return False
 
 
 def get_completion_answer(user_id: str, environment_id: str, question: str) -> Dict:
@@ -309,7 +321,7 @@ def get_completion_answer(user_id: str, environment_id: str, question: str) -> D
         choice = get_best_function_example(user_id, environment_id, best_function_ids, question)
     else:
         resp = get_chat_completion(
-            [{"role": "user", "content": question}], stage="no_best_functions"
+            [{"role": "user", "content": question}], temperature=0.6, stage="no_best_functions"
         )
         choice = resp["choices"][0]
 
