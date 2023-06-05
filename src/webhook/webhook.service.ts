@@ -59,17 +59,20 @@ export class WebhookService {
         })
       : [];
 
+    const idConditions = [ids?.length ? { id: { in: ids } } : undefined].filter(Boolean) as any;
+
     const filterConditions = [
-      ...contextConditions,
-      names?.length ? { name: { in: names } } : undefined,
-      ids?.length ? { id: { in: ids } } : undefined,
+      {
+        OR: contextConditions
+      },
+      names?.length ? { name: { in: names } } : undefined
     ].filter(Boolean) as any[];
 
     if (filterConditions.length > 0) {
       this.logger.debug(`webhookHandles filterConditions: ${JSON.stringify(filterConditions)}`);
     }
 
-    return filterConditions.length > 0 ? { OR: [...filterConditions] } : undefined;
+    return filterConditions.length > 0 ? [{ AND: filterConditions }, ...idConditions] : [];
   }
 
   public async findWebhookHandle(id: string): Promise<WebhookHandle | null> {
@@ -82,14 +85,19 @@ export class WebhookService {
 
   public async getWebhookHandles(environmentId: string, contexts?: string[], names?: string[], ids?: string[], includePublic = false): Promise<WebhookHandle[]> {
     this.logger.debug(`Getting webhook handles for environment ${environmentId}...`);
-
     return this.prisma.webhookHandle.findMany({
       where: {
-        OR: [
-          { environmentId },
-          includePublic ? { visibility: Visibility.Public } : {},
+        AND: [
+          {
+            OR: [
+              { environmentId },
+              includePublic ? { visibility: Visibility.Public } : {},
+            ]
+          },
+          {
+           OR: this.getWebhookFilterConditions(contexts, names, ids)
+          }
         ],
-        ...this.getWebhookFilterConditions(contexts, names, ids),
       },
       orderBy: {
         createdAt: 'desc',

@@ -15,7 +15,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import mustache from 'mustache';
 import mergeWith from 'lodash/mergeWith';
-import { ApiFunction, CustomFunction, Environment, Prisma } from '@prisma/client';
+import { ApiFunction, CustomFunction, Environment } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ApiFunctionResponseDto,
@@ -83,11 +83,17 @@ export class FunctionService {
   async getApiFunctions(environmentId: string, contexts?: string[], names?: string[], ids?: string[], includePublic = false) {
     return this.prisma.apiFunction.findMany({
       where: {
-        OR: [
-          { environmentId },
-          includePublic ? { visibility: Visibility.Public } : {},
-        ],
-        ...this.getFunctionFilterConditions(contexts, names, ids),
+        AND: [
+          {
+            OR: [
+              { environmentId },
+              includePublic ? { visibility: Visibility.Public } : {},
+            ],
+          },
+          {
+            OR: this.getFunctionFilterConditions(contexts, names, ids) 
+          }
+        ]
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
@@ -519,14 +525,20 @@ export class FunctionService {
     };
   }
 
-  async getCustomFunctions(environmentId: string, contexts?: string[], names?: string[], ids?: string[], includePublic = false) {
+  async getCustomFunctions(environmentId: string, contexts?: string[], names?: string[], ids?: string[], includePublic = false) {    
     return this.prisma.customFunction.findMany({
       where: {
-        OR: [
-          { environmentId },
-          includePublic ? { visibility: Visibility.Public } : {},
-        ],
-        ...this.getFunctionFilterConditions(contexts, names, ids),
+        AND: [
+          {
+            OR: [
+              { environmentId },
+              includePublic ? { visibility: Visibility.Public } : {},
+            ]
+          },
+          {
+            OR: this.getFunctionFilterConditions(contexts, names, ids)
+          }
+        ]
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
     });
@@ -667,11 +679,17 @@ export class FunctionService {
   async getClientFunctions(environmentId: string, contexts?: string[], names?: string[], ids?: string[]) {
     return this.prisma.customFunction.findMany({
       where: {
-        OR: [
-          { environmentId },
-          { visibility: Visibility.Public },
+        AND: [
+          {
+            OR: [
+              { environmentId },
+              { visibility: Visibility.Public },
+            ],
+          },
+          {
+            OR: this.getFunctionFilterConditions(contexts, names, ids)
+          }
         ],
-        ...this.getFunctionFilterConditions(contexts, names, ids),
         serverSide: false,
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
@@ -690,11 +708,17 @@ export class FunctionService {
   async getServerFunctions(environmentId: string, contexts?: string[], names?: string[], ids?: string[]) {
     return this.prisma.customFunction.findMany({
       where: {
-        OR: [
-          { environmentId },
-          { visibility: Visibility.Public },
+        AND: [
+          {
+            OR: [
+              { environmentId },
+              { visibility: Visibility.Public },
+            ]
+          },
+          {
+            OR: this.getFunctionFilterConditions(contexts, names, ids)
+          }
         ],
-        ...this.getFunctionFilterConditions(contexts, names, ids),
         serverSide: true,
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
@@ -902,17 +926,20 @@ export class FunctionService {
       })
       : [];
 
+    const idConditions = [ids?.length ? { id: { in: ids } } : undefined].filter(Boolean) as any;
+
     const filterConditions = [
-      ...contextConditions,
+      {
+        OR: contextConditions
+      },
       names?.length ? { name: { in: names } } : undefined,
-      ids?.length ? { id: { in: ids } } : undefined,
     ].filter(Boolean) as any[];
 
     if (filterConditions.length > 0) {
       this.logger.debug(`functions filterConditions: ${JSON.stringify(filterConditions)}`);
     }
 
-    return filterConditions.length > 0 ? { OR: filterConditions } : {};
+    return filterConditions.length > 0 ? [{ AND: filterConditions }, ...idConditions] : [];
   }
 
   private async resolveFunctionName(
