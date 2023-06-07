@@ -29,6 +29,7 @@ import {
   FunctionDetailsDto,
   Header,
   Method,
+  PostmanUrl,
   PostmanVariableEntry,
   PropertySpecification,
   PropertyType,
@@ -143,7 +144,7 @@ export class FunctionService implements OnModuleInit {
     statusCode: number,
     templateHeaders: Header[],
     method: Method,
-    templateUrl: string,
+    templateUrl: PostmanUrl,
     templateBody: Body,
     templateAuth?: Auth,
   ): Promise<ApiFunction> {
@@ -159,20 +160,23 @@ export class FunctionService implements OnModuleInit {
     const finalBody = JSON.stringify(this.getBodyWithContentFiltered(templateBody));
     const finalHeaders = JSON.stringify(this.filterDisabledValues(templateHeaders));
 
-    if (id === null) {
-      const urlObject = new URL(templateUrl);
+    const {
+      parsedTemplateUrlWithQs,
+      parsedTemplateUrlWithoutQs
+    } = this.parseTemplateUrl(templateUrl);
 
+    if (id === null) {
       const apiFunctions = await this.prisma.apiFunction.findMany({
         where: {
           environmentId,
           OR: [
             {
               url: {
-                startsWith: `${urlObject.origin}${urlObject.pathname}?`,
+                startsWith: `${parsedTemplateUrlWithoutQs}?`,
               },
             },
             {
-              url: templateUrl,
+              url: parsedTemplateUrlWithQs,
             },
           ],
           method,
@@ -184,7 +188,7 @@ export class FunctionService implements OnModuleInit {
           apiFunctions,
           finalBody,
           finalHeaders,
-          templateUrl,
+          parsedTemplateUrlWithQs,
           variables,
           finalAuth,
         );
@@ -273,7 +277,7 @@ export class FunctionService implements OnModuleInit {
       body: finalBody,
       headers: finalHeaders,
       auth: finalAuth,
-      url: templateUrl,
+      url: parsedTemplateUrlWithQs,
     };
 
     if (apiFunction && willRetrain) {
@@ -290,7 +294,7 @@ export class FunctionService implements OnModuleInit {
               auth: finalAuth,
               body: finalBody,
               headers: finalHeaders,
-              url: templateUrl,
+              url: parsedTemplateUrlWithQs,
               id: apiFunction.id,
             },
             variables,
@@ -311,7 +315,7 @@ export class FunctionService implements OnModuleInit {
         argumentsMetadata: await this.resolveArgumentsMetadata(
           {
             argumentsMetadata: null,
-            url: templateUrl,
+            url: parsedTemplateUrlWithQs,
             auth: finalAuth,
             body: finalBody,
             headers: finalHeaders,
@@ -1401,5 +1405,23 @@ export class FunctionService implements OnModuleInit {
     }
 
     return apiFunction;
+  }
+
+  private parseTemplateUrl(templateUrl: PostmanUrl): {
+    parsedTemplateUrlWithoutQs: string,
+    parsedTemplateUrlWithQs: string
+  } {
+    const parsedTemplateUrlWithoutQs = `${templateUrl.protocol ? `${templateUrl.protocol}://`: ''}${templateUrl.host.join('.')}/${templateUrl.path.join('/')}`;
+
+    const parsedTemplateUrlWithQs = `${parsedTemplateUrlWithoutQs}${
+      templateUrl.query.reduce<string>(((acum, value, index) => {
+        return `${acum}${index === 0 ? '?' : ''}${index > 0 ? '&' : ''}${value.key}=${value.value}`;
+      }), '')
+    }`;
+    
+    return {
+      parsedTemplateUrlWithoutQs,
+      parsedTemplateUrlWithQs
+    }
   }
 }

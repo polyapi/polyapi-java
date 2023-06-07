@@ -51,7 +51,7 @@ const postRequest = {
         ...pm.collectionVariables.toObject(),
       },
       statusCode: pm.response.code,
-      templateUrl: `${templateUrl.protocol ? `${templateUrl.protocol}://` : ''}${templateUrl.getRemote()}${templateUrl.getPathWithQuery()}`,
+      templateUrl,
       templateBody
     }),
   },

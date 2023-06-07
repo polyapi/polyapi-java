@@ -6,6 +6,16 @@ export type PostmanVariableEntry = {
   disabled?: boolean;
 };
 
+export type PostmanUrl = {
+  path: string[],
+  host: string[],
+  query: {
+    key: string,
+    value: string
+  }[],
+  protocol?: string
+}
+
 export type Header = PostmanVariableEntry;
 
 export type RawBody = {

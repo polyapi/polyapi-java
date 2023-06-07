@@ -1,5 +1,5 @@
-import { Body, Variables, Header, Auth, Method } from '../..';
-import { IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
+import { Body, Variables, Header, Auth, Method, PostmanUrl } from '../..';
+import { IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
 
 import { NotContainDots } from './../validators'
 
@@ -24,7 +24,8 @@ export class CreateApiFunctionDto {
   templateAuth?: Auth;
   method: Method;
   @IsNotEmpty()
-  templateUrl: string;
+  @IsObject()
+  templateUrl: PostmanUrl;
   templateBody: Body;
   @IsOptional()
   @IsString()
