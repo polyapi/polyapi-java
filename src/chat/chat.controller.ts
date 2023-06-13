@@ -1,9 +1,20 @@
-import { Req, Body, Controller, Logger, Post, UseGuards, InternalServerErrorException, Param, Get, Header, Query } from '@nestjs/common';
+import {
+  Req,
+  Body,
+  Controller,
+  Logger,
+  Post,
+  UseGuards,
+  InternalServerErrorException,
+  Param,
+  Get,
+  Header,
+  Query,
+} from '@nestjs/common';
 import {
   SendQuestionDto,
   SendQuestionResponseDto,
   SendCommandDto,
-  SendConfigureDto,
   TeachSystemPromptDto,
   TeachSystemPromptResponseDto,
   Role,
@@ -62,13 +73,6 @@ export class ChatController {
     await this.service.processCommand(environmentId, userId, body.command);
   }
 
-  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
-  @Post('/ai-configuration')
-  async aiConfiguration(@Req() req: AuthRequest, @Body() body: SendConfigureDto): Promise<string> {
-    await this.aiService.configure(body.name, body.value);
-    return 'chirp';
-  }
-
   @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))
   @Post('/system-prompt')
   async teachSystemPrompt(
@@ -88,10 +92,7 @@ export class ChatController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Get('/conversations')
-  public async conversationsList(
-    @Req() req: AuthRequest,
-    @Query('userId') userId: string,
-  ) {
+  public async conversationsList(@Req() req: AuthRequest, @Query('userId') userId: string) {
     const conversationIds = await this.service.getConversationIds(userId);
     return { conversationIds };
   }

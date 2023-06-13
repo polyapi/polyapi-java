@@ -12,10 +12,7 @@ type ApiKeyWithUser = ApiKey & { user: User | null };
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   toApiKeyDto(apiKey: ApiKeyWithUser): ApiKeyDto {
     return {
@@ -71,9 +68,17 @@ export class AuthService {
     });
   }
 
-  async createApiKey(environmentId: string, name: string, application: Application | null, user: User | null, permissions?: Permissions): Promise<ApiKey & {
+  async createApiKey(
+    environmentId: string,
+    name: string,
+    application: Application | null,
     user: User | null,
-  }> {
+    permissions?: Permissions,
+  ): Promise<
+    ApiKey & {
+      user: User | null;
+    }
+  > {
     return this.prisma.apiKey.create({
       data: {
         environmentId,
@@ -81,7 +86,9 @@ export class AuthService {
         key: crypto.randomUUID(),
         userId: user ? user.id : null,
         applicationId: application ? application.id : null,
-        permissions: JSON.stringify(this.pickPermissions(permissions || this.getDefaultApiKeyPermissions(application, user))),
+        permissions: JSON.stringify(
+          this.pickPermissions(permissions || this.getDefaultApiKeyPermissions(application, user)),
+        ),
       },
       include: {
         user: true,
@@ -140,22 +147,39 @@ export class AuthService {
   private fillPermissions(permissions: Permissions, user: User | null) {
     const isAdmin = user?.role === Role.SuperAdmin || user?.role === Role.Admin;
 
-    return Object.values(Permission)
-      .reduce(
-        (acc, permission) => ({
-          ...acc,
-          [permission]: isAdmin || permissions[permission] === true,
-        }),
-        {} as Permissions,
-      );
+    return Object.values(Permission).reduce(
+      (acc, permission) => ({
+        ...acc,
+        [permission]: isAdmin || permissions[permission] === true,
+      }),
+      {} as Permissions,
+    );
   }
 
-  public async checkTenantAccess(
-    tenantId: string,
+  public async checkEnvironmentAccess(
+    environmentId: string,
     authData: AuthData,
     roles?: Role[],
     ...permissions: Permission[]
   ) {
+    const { user, environment } = authData;
+    if (user?.role === Role.SuperAdmin) {
+      return true;
+    }
+    if (environment.id !== environmentId) {
+      throw new ForbiddenException('You do not have access to this environment');
+    }
+
+    if (roles && (!user || !roles.includes(user.role as Role))) {
+      throw new ForbiddenException('You do not have access to this entity');
+    }
+
+    await this.checkPermissions(authData, ...permissions);
+
+    return true;
+  }
+
+  public async checkTenantAccess(tenantId: string, authData: AuthData, roles?: Role[], ...permissions: Permission[]) {
     const { tenant, user } = authData;
     if (user?.role === Role.SuperAdmin) {
       return true;
@@ -174,7 +198,7 @@ export class AuthService {
   }
 
   public async checkEnvironmentEntityAccess(
-    environmentEntity: { environmentId: string, visibility: string },
+    environmentEntity: { environmentId: string; visibility: string },
     authData: AuthData,
     checkVisibility = false,
     ...permissions: Permission[]
@@ -189,7 +213,8 @@ export class AuthService {
 
     if (
       (checkVisibility && environmentEntity.visibility !== Visibility.Public && environmentsNotMatch) ||
-      (!checkVisibility && environmentsNotMatch)) {
+      (!checkVisibility && environmentsNotMatch)
+    ) {
       throw new ForbiddenException('You do not have access to this entity');
     }
 
@@ -207,7 +232,7 @@ export class AuthService {
       return true;
     }
 
-    permissionsToCheck.forEach(permission => {
+    permissionsToCheck.forEach((permission) => {
       if (!permissions[permission]) {
         throw new ForbiddenException(`Missing '${permission}' permission`);
       }

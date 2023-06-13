@@ -14,3 +14,4 @@ export * from './environment';
 export * from './team';
 export * from './user';
 export * from './application';
+export * from './config-variable';

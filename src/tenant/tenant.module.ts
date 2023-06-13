@@ -7,12 +7,20 @@ import { UserModule } from 'user/user.module';
 import { TeamModule } from 'team/team.module';
 import { AuthModule } from 'auth/auth.module';
 import { ApplicationModule } from 'application/application.module';
+import { ConfigVariableModule } from 'config-variable/config-variable.module';
 
 @Module({
-  imports: [PrismaModule, EnvironmentModule, ApplicationModule, TeamModule, UserModule, forwardRef(() => AuthModule)],
+  imports: [
+    PrismaModule,
+    EnvironmentModule,
+    ApplicationModule,
+    TeamModule,
+    UserModule,
+    forwardRef(() => AuthModule),
+    ConfigVariableModule,
+  ],
   providers: [TenantService],
   controllers: [TenantController],
   exports: [TenantService],
 })
-export class TenantModule {
-}
+export class TenantModule {}

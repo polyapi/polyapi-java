@@ -18,6 +18,7 @@ import { TenantModule } from 'tenant/tenant.module';
 import { TeamModule } from 'team/team.module';
 import { EnvironmentModule } from 'environment/environment.module';
 import { ApplicationModule } from 'application/application.module';
+import { ConfigVariableModule } from 'config-variable/config-variable.module';
 
 @Module({
   imports: [
@@ -42,8 +43,8 @@ import { ApplicationModule } from 'application/application.module';
     ChatModule,
     GptPluginModule,
     ApplicationModule,
+    ConfigVariableModule,
   ],
   exports: [ConfigModule],
 })
-export class AppModule {
-}
+export class AppModule {}
