@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require('../axios');
 const set = require('lodash/set');
 const merge = require('lodash/merge');
 
@@ -28,7 +28,7 @@ module.exports = (clientID, getSocket) => merge(
     {}
   ),
   subResourceFunctions.reduce(
-    (acc, [path, resource]) => set(acc, path, (token) => axios.post(`{{apiBaseUrl}}/auth-providers/${resource}`, { clientID, token }, { headers: { 'X-PolyApiKey': '{{apiKey}}' } }).then(({ data }) => data)),
+    (acc, [path, resource]) => set(acc, path, (token) => axios.post(`/auth-providers/${resource}`, { clientID, token }).then(({ data }) => data)),
     {}
   )
 );

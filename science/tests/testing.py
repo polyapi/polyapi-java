@@ -1,6 +1,7 @@
 import unittest
 from prisma import Prisma
 from app import create_app
+from werkzeug.test import TestResponse
 
 
 class DbTestCase(unittest.TestCase):
@@ -25,3 +26,6 @@ class DbTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.app_context.pop()
+
+    def assertStatus(self, resp: TestResponse, status: int) -> None:
+        self.assertEqual(resp.status_code, status, resp.data)

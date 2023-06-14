@@ -2,6 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
+    "allowJs": true,
     "strictNullChecks": true,
     "paths": {
       "*": ["./src/*"],
@@ -13,5 +14,5 @@
       "path": "./packages/common"
     }
   ],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test/**/*"]
 }

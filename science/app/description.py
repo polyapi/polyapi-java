@@ -2,7 +2,13 @@ from typing import Dict, Union
 import json
 import openai
 from app.typedefs import DescInputDto, DescOutputDto, ErrorDto
-from app.utils import log
+from app.utils import camel_case, log
+from app.constants import CHAT_GPT_MODEL
+
+# this needs to be 300 or less for the OpenAPI spec
+# however, OpenAI counts characters slightly differently than us (html escaped entities like `&29;`)
+# so we set this 290 just to be safe
+DESCRIPTION_LENGTH_LIMIT = 290
 
 
 NAME_CONTEXT_DESCRIPTION_PROMPT = """
@@ -26,7 +32,9 @@ For example, to create a new product on shopify the context should be "shopify.p
 
 Resources should be plural. For example, shopify.products, shopify.orders, shopify.customers, etc.
 
-The description should use keywords that makes search efficient. It can be a little redundant if that adds keywords but needs to remain human readable. It should be three to five sentences long.
+The description should use keywords that makes search efficient. It can be a little redundant if that adds keywords but
+needs to remain human readable. It should be limited to {description_length_limit} characters without losing meaning and also can be less than
+{description_length_limit} characters if it makes sense.
 
 Here is the {call_type}:
 
@@ -73,11 +81,13 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
         call_type="API call",
+        description_length_limit=DESCRIPTION_LENGTH_LIMIT,
         # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
+
     resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
+        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:
@@ -90,6 +100,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         log_error(data, completion, prompt)
     else:
         # for now log EVERYTHING
+        rv['description'] = rv['description'][:300]
         log("input:", str(data), "output:", completion, "prompt:", prompt, sep="\n")
 
     return rv
@@ -105,12 +116,13 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
         short_description=short,
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
-        call_type="Event handler"
+        call_type="Event handler",
+        description_length_limit=DESCRIPTION_LENGTH_LIMIT,
         # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
     resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", temperature=0.2, messages=[prompt_msg]
+        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:
@@ -123,6 +135,7 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
         log_error(data, completion, prompt)
     else:
         # for now log EVERYTHING
+        rv['description'] = rv['description'][:DESCRIPTION_LENGTH_LIMIT]
         log("input:", str(data), "output:", completion, "prompt:", prompt, sep="\n")
 
     return rv
@@ -153,6 +166,6 @@ def _parse_openai_response(completion: str) -> DescOutputDto:
     )
 
     # make sure there are no spaces or dashes in context or name
-    rv["name"] = rv["name"].replace(" ", "").replace("-", "")
-    rv["context"] = rv["context"].replace(" ", "").replace("-", "")
+    rv["name"] = camel_case(rv["name"])
+    rv["context"] = camel_case(rv["context"])
     return rv

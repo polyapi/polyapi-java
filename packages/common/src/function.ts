@@ -1,5 +1,13 @@
-export type Header = Record<string, string>;
 export type Variables = Record<string, string>;
+
+export type PostmanVariableEntry = {
+  key: string;
+  value: string;
+  disabled?: boolean;
+};
+
+export type Header = PostmanVariableEntry;
+
 export type RawBody = {
   mode: 'raw';
   raw: string;
@@ -7,20 +15,12 @@ export type RawBody = {
 
 export type UrlencodedBody = {
   mode: 'urlencoded';
-  urlencoded: {
-    key: string;
-    value: string;
-    disabled?: boolean;
-  }[];
+  urlencoded: PostmanVariableEntry[];
 };
 
 export type FormDataBody = {
   mode: 'formdata';
-  formdata: {
-    key: string;
-    value: string;
-    disabled?: boolean;
-  }[];
+  formdata: PostmanVariableEntry[];
 };
 
 export type EmptyBody = {

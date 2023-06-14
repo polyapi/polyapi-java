@@ -1,10 +1,9 @@
-import {join} from 'path';
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AuthModule } from 'auth/auth.module';
 import { UserModule } from 'user/user.module';
 import { FunctionModule } from 'function/function.module';
-import { TeachModule } from 'teach/teach.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { ChatModule } from 'chat/chat.module';
 import { EventModule } from 'event/event.module';
@@ -15,32 +14,36 @@ import { AiModule } from 'ai/ai.module';
 import { AuthProviderModule } from 'auth-provider/auth-provider.module';
 import { SpecsModule } from 'specs/specs.module';
 import { GptPluginModule } from 'gptplugin/gptplugin.module';
+import { TenantModule } from 'tenant/tenant.module';
+import { TeamModule } from 'team/team.module';
+import { EnvironmentModule } from 'environment/environment.module';
+import { ApplicationModule } from 'application/application.module';
 
 @Module({
   imports: [
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'public'),
-      renderPath: '/'
+      renderPath: '/',
     }),
-    AuthModule,
-    UserModule,
-
-    FunctionModule,
-    TeachModule,
     PrismaModule,
-    ChatModule,
-    EventModule,
-    WebhookModule,
+    ConfigModule,
     CommonModule,
-    ConfigModule,
-    AiModule,
-    GptPluginModule,
+    TenantModule,
+    EnvironmentModule,
+    TeamModule,
+    UserModule,
+    AuthModule,
+    FunctionModule,
+    WebhookModule,
     AuthProviderModule,
+    EventModule,
     SpecsModule,
+    AiModule,
+    ChatModule,
+    GptPluginModule,
+    ApplicationModule,
   ],
-  exports: [
-    ConfigModule,
-  ],
+  exports: [ConfigModule],
 })
 export class AppModule {
 }

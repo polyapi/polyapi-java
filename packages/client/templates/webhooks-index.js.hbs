@@ -1,0 +1,38 @@
+const set = require('lodash/set');
+const merge = require('lodash/merge');
+
+const webhookHandles = [
+{{#each specifications}}
+  {{#if context}}
+    ['{{context}}.{{name}}', '{{id}}'],
+  {{else}}
+    ['{{name}}', '{{id}}'],
+  {{/if}}
+{{/each}}
+];
+
+const registerWebhookEventListener = (clientID, getSocket, webhookHandleID, callback) => {
+  const socket = getSocket();
+  socket.emit('registerWebhookEventHandler', {
+    clientID,
+    webhookHandleID,
+    apiKey: '{{apiKey}}'
+  });
+  socket.on(`handleWebhookEvent:${webhookHandleID}`, callback);
+
+  return () => {
+    socket.emit('unregisterWebhookEventHandler', {
+      clientID,
+      webhookHandleID,
+      apiKey: '{{apiKey}}'
+    });
+  }
+};
+
+module.exports = (clientID, getSocket) => merge(
+  {},
+  webhookHandles.reduce(
+    (acc, [path, id]) => set(acc, path, (callback) => registerWebhookEventListener(clientID, getSocket, id, callback)),
+    {}
+  ),
+);

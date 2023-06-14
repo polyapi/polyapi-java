@@ -1,8 +1,16 @@
+import copy
 import json
 from unittest.mock import patch, Mock
-from app.keywords import extract_keywords, get_function_match_limit, keywords_similar, get_top_function_matches
+from app.keywords import (
+    extract_keywords,
+    get_function_match_limit,
+    keywords_similar,
+    get_top_function_matches,
+    filter_items_based_on_http_method,
+)
+from app.utils import create_new_conversation
+from load_fixtures import test_user_get_or_create, united_get_status_get_or_create
 from .testing import DbTestCase
-
 
 ACCUWEATHER = {
     "id": "f7588018-2364-4586-b60d-b08a285f1ea3",
@@ -33,6 +41,34 @@ SERVICE_NOW = {
         {"key": "impact", "name": "impact", "type": "string", "payload": True},
     ],
     "type": "url",
+}
+
+UNITED_GET_STATUS = {
+    "id": "TODO FILL IN",
+    "type": "apiFunction",
+    "context": "travel",
+    "name": "unitedAirlines.getStatus",
+    "description": "get the status of a specific flight, including airport of origin and arrival",
+    "function": {
+        "arguments": [
+            {
+                "name": "tenant",
+                "required": True,
+                "type": {"kind": "primitive", "type": "string"},
+            },
+            {
+                "name": "flightID",
+                "required": True,
+                "type": {"kind": "primitive", "type": "string"},
+            },
+            {
+                "name": "shopToken",
+                "required": True,
+                "type": {"kind": "primitive", "type": "string"},
+            },
+        ],
+        "returnType": {"kind": "void"},
+    },
 }
 
 
@@ -87,42 +123,58 @@ class T(DbTestCase):
         )
         self.assertEqual(top_5, [])
 
-    @patch("app.keywords.openai.ChatCompletion.create")
+    @patch("app.keywords.get_chat_completion")
     def test_extract_keywords(self, chat_create: Mock):
+        user = test_user_get_or_create()
+        conversation = create_new_conversation(user.id)
+
         mock_response = {
             "keywords": "foo bar",
-            "semantically_similar_keywords": "foo bar",
-            "http_methods": "get post",
         }
         chat_create.return_value = {
-            "choices": [{"message": {"content": json.dumps(mock_response)}}]
+            "choices": [{"message": {"content": json.dumps(mock_response), "role": "assistant"}}]
         }
-        keyword_data = extract_keywords("test")
+        keyword_data = extract_keywords(user.id, conversation.id, "test")
         assert keyword_data
         self.assertEqual(keyword_data["keywords"], "foo bar")
-        self.assertEqual(keyword_data["semantically_similar_keywords"], "foo bar")
-        self.assertEqual(keyword_data["http_methods"], "get post")
 
-    @patch("app.keywords.openai.ChatCompletion.create")
+    @patch("app.keywords.get_chat_completion")
     def test_extract_keywords_lists(self, chat_create: Mock):
+        user = test_user_get_or_create()
+        conversation = create_new_conversation(user.id)
+
         mock_response = {
             "keywords": ["foo", "bar"],
-            "semantically_similar_keywords": ["foo", "bar"],
-            "http_methods": ["get", "post"],
         }
         chat_create.return_value = {
-            "choices": [{"message": {"content": json.dumps(mock_response)}}]
+            "choices": [{"message": {"content": json.dumps(mock_response), "role": "assistant"}}]
         }
-        keyword_data = extract_keywords("test")
+        keyword_data = extract_keywords(user.id, conversation.id, "test")
         assert keyword_data
         self.assertEqual(keyword_data["keywords"], "foo bar")
-        self.assertEqual(keyword_data["semantically_similar_keywords"], "foo bar")
-        self.assertEqual(keyword_data["http_methods"], "get post")
 
     def test_get_function_match_limit(self):
         value = 6
         name = "function_match_limit"
         defaults = {"name": name, "value": str(value)}
-        self.db.configvariable.upsert(where={"name": name}, data={"update": defaults, "create": defaults})
+        self.db.configvariable.upsert(
+            where={"name": name}, data={"update": defaults, "create": defaults}
+        )
         limit = get_function_match_limit()
         self.assertEqual(limit, 6)
+
+    def test_filter_items_based_on_http_method(self):
+        user = test_user_get_or_create()
+        united = united_get_status_get_or_create(user)
+
+        item = copy.deepcopy(UNITED_GET_STATUS)
+        item['id'] = united.id
+        items = [item]
+
+        # PATCH should filter out united GET
+        filtered = filter_items_based_on_http_method(items, "PATCH")
+        self.assertEqual(filtered, [])
+
+        # GET should not filter out united GET
+        filtered = filter_items_based_on_http_method(items, "GET")
+        self.assertEqual(filtered, items)

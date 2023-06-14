@@ -1,5 +1,6 @@
 export * from './function.dto';
 export * from './execute-api-function.dto';
+export * from './create-api-function.dto';
 export * from './update-api-function.dto';
 export * from './update-custom-function.dto';
 export * from './delete-all-functions.dto';

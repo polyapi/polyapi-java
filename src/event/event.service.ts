@@ -112,20 +112,26 @@ export class EventService {
     });
   }
 
-  registerAuthFunctionEventHandler(client: Socket, clientID: string, authFunctionId: string) {
+  registerAuthFunctionEventHandler(client: Socket, clientID: string, authFunctionId: string): boolean {
     this.logger.debug(`Registering handler for auth function ${authFunctionId} on ${clientID}`);
     if (!this.authFunctionHandlers[clientID]) {
       this.authFunctionHandlers[clientID] = {};
     }
-    if (!this.authFunctionHandlers[clientID][authFunctionId]) {
-      this.authFunctionHandlers[clientID][authFunctionId] = [];
+    let handlers = this.authFunctionHandlers[clientID][authFunctionId];
+    if (!handlers) {
+      this.authFunctionHandlers[clientID][authFunctionId] = handlers = [];
     }
-    this.authFunctionHandlers[clientID][authFunctionId].push(client);
+    if (handlers.some(socket => socket.id === client.id)) {
+      return false;
+    }
+    handlers.push(client);
 
     client.on('disconnect', () => {
       this.logger.debug(`Client for auth function handler disconnected: ${clientID} '${authFunctionId}'`);
       this.unregisterAuthFunctionEventHandler(client, clientID, authFunctionId);
     });
+
+    return true;
   }
 
   unregisterAuthFunctionEventHandler(client: Socket, clientID: string, authFunctionId: string) {
@@ -138,11 +144,12 @@ export class EventService {
       .filter(socket => socket.id !== client.id);
   }
 
-  sendAuthFunctionEvent(authFunctionId: string, eventPayload: any) {
+  sendAuthFunctionEvent(authFunctionId: string, clientID: string | null, eventPayload: any) {
     this.logger.debug(`Sending auth function event: '${authFunctionId}'`, eventPayload);
 
-    Object.values(this.authFunctionHandlers).forEach(clientHandlers => {
-      if (!clientHandlers[authFunctionId]) {
+    const handlers = clientID ? [this.authFunctionHandlers[clientID]] : Object.values(this.authFunctionHandlers);
+    handlers.forEach(clientHandlers => {
+      if (!clientHandlers?.[authFunctionId]) {
         return;
       }
       clientHandlers[authFunctionId].forEach(socket => {

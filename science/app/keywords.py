@@ -1,24 +1,35 @@
 import json
-import openai
 from thefuzz import fuzz
 from typing import Optional, Tuple, List
 from app.constants import VarName
-from app.typedefs import StatsDict, ExtractKeywordDto, SpecificationDto
-from app.utils import func_path, get_config_variable, log, remove_punctuation
+from app.typedefs import MessageDict, StatsDict, ExtractKeywordDto, SpecificationDto
+from app.utils import (
+    func_path,
+    get_chat_completion,
+    get_config_variable,
+    insert_internal_step_info,
+    log,
+    remove_punctuation,
+    store_messages,
+)
+from prisma import get_client
 
 
-KEYWORD_PROMPT = """For the following prompt, give me back both the keywords from my prompt and semantically similar keywords.
+KEYWORD_PROMPT = """For the following prompt, give me back the keywords from my prompt
 This will be used to power an API discovery service.
 Each keyword must be a single word.
 Keep the list to the top 8 keywords relevant to APIs.
-Don't include "API" "resource" as keywords.
-Include all of the likely HTTP methods for this prompt, for example many times search is done using a POST.
+Don't include "API" or "resource" as keywords.
 
 Here is the prompt:
 
-{prompt}
+"%s"
 
+Return the keywords as a space separated list. Please return valid JSON in this format:
 
+```
+{"keywords": "foo bar"}
+```
 """
 
 
@@ -39,20 +50,26 @@ def get_extract_keywords_temperature() -> float:
     return float(var.value) if var else 0.01
 
 
-def extract_keywords(question: str) -> Optional[ExtractKeywordDto]:
-    prompt = KEYWORD_PROMPT.format(prompt=question)
-    resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+def extract_keywords(
+    user_id: str, conversation_id: str, question: str
+) -> Optional[ExtractKeywordDto]:
+    prompt = KEYWORD_PROMPT % question
+    messages = [
+        MessageDict(role="user", content=prompt),
+    ]
+    resp = get_chat_completion(
+        messages,
         temperature=get_extract_keywords_temperature(),
-        messages=[
-            {"role": "user", "content": prompt},
-            {
-                "role": "user",
-                "content": 'Return JSON with keys "keywords", "semantically_similar_keywords", and "http_methods". Each value should be a string and in English.',
-            },
-        ],
     )
-    content = resp["choices"][0]["message"]["content"]
+    answer = resp["choices"][0]["message"]
+
+    # store conversation
+    messages.append(answer)
+    insert_internal_step_info(messages, "STEP 1: GET KEYWORDS")
+    store_messages(user_id, conversation_id, messages)
+
+    # continue
+    content = answer["content"].replace("```", "")
     try:
         rv = json.loads(content)
     except Exception as e:
@@ -61,7 +78,7 @@ def extract_keywords(question: str) -> Optional[ExtractKeywordDto]:
 
     # sometimes OpenAI returns lists instead of strings
     # let's coerce them to strings
-    for key in ["keywords", "semantically_similar_keywords", "http_methods"]:
+    for key in ["keywords"]:
         if isinstance(rv[key], list):
             rv[key] = " ".join(rv[key])
             rv[key] = remove_punctuation(rv[key])
@@ -112,26 +129,13 @@ def get_top_function_matches(
     items: List[SpecificationDto], keyword_data: ExtractKeywordDto
 ) -> Tuple[List[SpecificationDto], StatsDict]:
     """get top function matches based on keywords"""
-    # for now ignore http_methods
     match_limit = get_function_match_limit()
+
+    # items = filter_items_based_on_http_method(items, keyword_data.get("http_methods"))
 
     keyword_matches, keyword_stats = _get_top(
         match_limit, items, keyword_data["keywords"]
     )
-
-    semantic_matches, semantic_stats = _get_top(
-        match_limit,
-        items,
-        keyword_data.get("semantically_similar_keywords", ""),
-    )
-
-    keyword_match_uuids = {x["id"] for x in keyword_matches}
-    for match in semantic_matches:
-        if len(keyword_matches) >= match_limit:
-            break
-
-        if match["id"] not in keyword_match_uuids:
-            keyword_matches.append(match)
 
     stats: StatsDict = {"keyword_extraction": keyword_data}
     stats["config"] = {
@@ -140,20 +144,37 @@ def get_top_function_matches(
         "extract_keywords_temperature": get_extract_keywords_temperature(),
     }
     stats["keyword_stats"] = keyword_stats
-    stats["semantically_similar_stats"] = semantic_stats
     stats["match_count"] = _generate_match_count(stats)
 
-    # TODO
     return keyword_matches, stats
 
 
+def filter_items_based_on_http_method(
+    items: List[SpecificationDto], http_methods: Optional[str]
+) -> List[SpecificationDto]:
+    if not http_methods:
+        return items
+
+    db = get_client()
+    ids = [item.get("id", "") for item in items]
+    result = db.apifunction.find_many(
+        where={
+            "id": {"in": ids},
+        }
+    )
+    http_methods_set = {http_method.strip() for http_method in http_methods.split(",")}
+    items_to_remove = {rs.id for rs in result if rs.method not in http_methods_set}
+    items = [item for item in items if item.get("id") not in items_to_remove]
+    return items
+
+
 def _generate_match_count(stats: StatsDict) -> int:
+    """ for keyword matches, we only return up to `match_limit` matches
+    this function counts how many potential matches crossed the similarity threshold
+    """
     threshold = get_similarity_threshold()
     matches = set()
     for name, score in stats["keyword_stats"]["scores"]:
-        if score > threshold:
-            matches.add(name)
-    for name, score in stats["semantically_similar_stats"]["scores"]:
         if score > threshold:
             matches.add(name)
     return len(matches)
@@ -181,9 +202,7 @@ def _get_top(
     return top_matches[:match_limit], stats
 
 
-def _get_stats(
-    items_with_scores: List[Tuple[SpecificationDto, int]]
-) -> StatsDict:
+def _get_stats(items_with_scores: List[Tuple[SpecificationDto, int]]) -> StatsDict:
     stats: StatsDict = {"total": len(items_with_scores)}
     match_count = 0
 

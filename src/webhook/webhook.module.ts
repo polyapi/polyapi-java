@@ -7,11 +7,13 @@ import { CommonModule } from 'common/common.module';
 import { EventModule } from 'event/event.module';
 import { UserModule } from 'user/user.module';
 import { SpecsModule } from 'specs/specs.module';
+import { AiModule } from 'ai/ai.module';
+import { AuthModule } from 'auth/auth.module';
 
 @Module({
   providers: [WebhookService],
   controllers: [WebhookController],
-  imports: [PrismaModule, HttpModule, EventModule, CommonModule, UserModule, forwardRef(() => SpecsModule)],
+  imports: [PrismaModule, HttpModule, EventModule, CommonModule, UserModule, AiModule, AuthModule, forwardRef(() => SpecsModule)],
   exports: [WebhookService],
 })
 export class WebhookModule {

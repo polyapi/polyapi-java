@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { UserModule } from 'user/user.module';
 import { EventGateway } from './event.gateway';
 import { EventService } from './event.service';
+import { AuthModule } from 'auth/auth.module';
 
 @Module({
-  imports: [UserModule],
+  imports: [AuthModule],
   providers: [EventGateway, EventService],
-  exports: [EventService]
+  exports: [EventService],
 })
 export class EventModule {}

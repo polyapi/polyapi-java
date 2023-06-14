@@ -3,7 +3,7 @@ import sys
 from prisma import Prisma, register, get_client
 
 
-def show_conversation(user_id: int):
+def show_conversation(user_id: str):
     db = get_client()
     msgs = list(
         db.conversationmessage.find_many(
@@ -21,4 +21,4 @@ if __name__ == "__main__":
     db = Prisma()
     db.connect()
     register(db)
-    show_conversation(int(sys.argv[1]))
+    show_conversation(sys.argv[1])

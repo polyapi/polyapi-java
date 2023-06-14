@@ -79,7 +79,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
 
     const es = new EventSource(`${apiBaseUrl}/chat/question?message=${message}`, {
       headers: {
-        'X-PolyApiKey': apiKey,
+        authorization: `Bearer ${apiKey}`,
       },
     });
 
@@ -153,7 +153,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         command,
       }, {
         headers: {
-          'X-PolyApiKey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
         } as RawAxiosRequestHeaders,
       });
     } catch (error) {

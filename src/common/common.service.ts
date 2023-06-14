@@ -3,10 +3,17 @@ import { InputData, jsonInputForTargetLanguage, quicktype } from 'quicktype-core
 import jsonpath from 'jsonpath';
 import { PathError } from './path-error';
 
+import {
+  NAME_ALLOWED_CHARACTERS_PATTERN,
+  CONTEXT_ALLOWED_CHARACTERS_PATTERN,
+  DOTS_AT_BEGINNING_PATTERN,
+  DOTS_AT_END_PATTERN,
+  NUMBERS_AT_BEGINNING_PATTERN, Visibility,
+} from '@poly/common';
+
 @Injectable()
 export class CommonService {
-
-  public async getJsonSchema(typeName: string, content: any): Promise<Record<string, any> | null> {
+  async getJsonSchema(typeName: string, content: any): Promise<Record<string, any> | null> {
     if (!content) {
       return null;
     }
@@ -14,9 +21,7 @@ export class CommonService {
     const jsonInput = jsonInputForTargetLanguage('json-schema');
     await jsonInput.addSource({
       name: typeName,
-      samples: [
-        typeof content === 'string' ? content : JSON.stringify(content),
-      ],
+      samples: [typeof content === 'string' ? content : JSON.stringify(content)],
     });
     const inputData = new InputData();
     inputData.addInput(jsonInput);
@@ -41,7 +46,7 @@ export class CommonService {
     return schema;
   }
 
-  public async generateTypeDeclaration(typeName: string, content: any, namespace: string) {
+  async generateTypeDeclaration(typeName: string, content: any, namespace: string) {
     const wrapToNamespace = (code: string) => `namespace ${namespace} {\n  ${code}\n}`;
 
     if (!content) {
@@ -52,9 +57,11 @@ export class CommonService {
     const jsonInput = jsonInputForTargetLanguage('ts');
     await jsonInput.addSource({
       name,
-      samples: [JSON.stringify({
-        content,
-      })],
+      samples: [
+        JSON.stringify({
+          content,
+        }),
+      ],
     });
     const inputData = new InputData();
     inputData.addInput(jsonInput);
@@ -88,7 +95,7 @@ export class CommonService {
     return wrapToNamespace(typeDeclaration);
   }
 
-  public getPathContent(content: any, path: string | null): any {
+  getPathContent(content: any, path: string | null): any {
     if (!path) {
       return content;
     }
@@ -107,7 +114,7 @@ export class CommonService {
     }
   }
 
-  public async resolveType(typeName: string, value: any): Promise<[string, Record<string, any>?]> {
+  async resolveType(typeName: string, value: any): Promise<[string, Record<string, any>?]> {
     const numberRegex = /^-?\d+\.?\d*$/;
     const booleanRegex = /^(true|false)$/;
 
@@ -130,7 +137,7 @@ export class CommonService {
     return ['string'];
   }
 
-  public trimDownObject(obj: any, maxArrayItems = 1): any {
+  trimDownObject(obj: any, maxArrayItems = 1): any {
     if (typeof obj !== 'object') {
       return obj;
     }
@@ -150,5 +157,32 @@ export class CommonService {
       }
     }
     return newObj;
+  }
+
+  sanitizeContextIdentifier(context: string) {
+    return context.trim()
+      .replace(CONTEXT_ALLOWED_CHARACTERS_PATTERN, '')
+      .replace(NUMBERS_AT_BEGINNING_PATTERN, '')
+      .replace(DOTS_AT_BEGINNING_PATTERN, '')
+      .replace(DOTS_AT_END_PATTERN, '');
+  }
+
+  sanitizeNameIdentifier(name: string) {
+    return name.trim().replace(NAME_ALLOWED_CHARACTERS_PATTERN, '').replace(NUMBERS_AT_BEGINNING_PATTERN, '');
+  }
+
+  getPublicVisibilityFilterCondition() {
+    return {
+      AND: [
+        { visibility: Visibility.Public },
+        {
+          environment: {
+            tenant: {
+              publicVisibilityAllowed: true,
+            },
+          },
+        },
+      ],
+    };
   }
 }

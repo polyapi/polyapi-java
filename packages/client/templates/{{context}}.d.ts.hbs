@@ -2,6 +2,11 @@ import poly = require("./index");
 
 type UnregisterWebhookEventListener = () => void;
 type AuthFunctionCallback = (token?: string, url?: string, error?: any) => any;
+interface Response<T> {
+  status: number;
+  data: T;
+  headers: Record<string, string>;
+}
 
 {{{typeDeclarations}}}
 declare module "./index" {
@@ -10,7 +15,12 @@ declare module "./index" {
       {{name}}: {{interfaceName}};
     {{/each}}
     {{#each functionDeclarations}}
-      {{name}}({{#each arguments}}{{name}}{{#unless required}}?{{/unless}}: {{{type}}}{{#unless @last}}, {{/unless}}{{/each}}): {{{returnType}}};
+      {{#if comment}}
+      /**
+      {{{comment}}}
+      */
+      {{/if}}
+      {{name}}({{#each arguments}}{{name}}{{#unless required}}?{{/unless}}: {{{type}}}{{#unless @last}}, {{/unless}}{{/each}}): {{#if synchronous}}Response<{{{returnType}}}>{{else}}Promise<Response<{{{returnType}}}>>{{/if}};
     {{/each}}
   }
 }

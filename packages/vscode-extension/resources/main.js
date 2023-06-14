@@ -94,8 +94,8 @@ const COMMANDS = ['clear'];
       }
       case 'setLoading': {
         const loadingContainer = document.querySelector('.loading-container');
+        messageInput.setAttribute('disabled', 'disabled');
 
-        console.log('%c setLoading', 'background: yellow; color: black', loadingContainer);
         if (!loadingContainer) {
           conversationList.innerHTML +=
             `<div class='loading-container p-4 self-end flex justify-between'>
@@ -109,9 +109,9 @@ const COMMANDS = ['clear'];
         break;
       }
       case 'removeLoading': {
-        console.log('%c REMOVING LOADING', 'background: yellow; color: black');
         const loadingContainer = document.querySelector('.loading-container');
         loadingContainer?.remove();
+        messageInput.removeAttribute('disabled');
         break;
       }
       case 'addMessage': {

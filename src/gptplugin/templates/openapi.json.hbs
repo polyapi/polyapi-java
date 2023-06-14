@@ -1,0 +1,59 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "version": "v1",
+    "title": "{{plugin.name}}",
+    "description": "Endpoints that allow users to execute functions on PolyAPI"
+  },
+  "servers": [
+    {
+      "url": "https://{{hostname}}"
+    }
+  ],
+  "paths": {
+    {{#each functions}}
+    "{{this.executePath}}": {
+      "post": {
+        "summary": "{{this.description}}",
+        "operationId": "{{this.operationId}}",
+        {{#if this.function.arguments}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/{{this.operationId}}Body"
+              }
+            }
+          }
+        },
+        {{/if}}
+        "responses": {
+          "201": {
+            "description": "{{this.description}}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/{{this.operationId}}Response"
+                }
+              }
+            }
+          }
+       }
+      }
+    }
+    {{#unless @last}},{{/unless}}
+    {{/each}}
+  },
+  "components": {
+    "schemas": {
+      {{#each bodySchemas}}
+        "{{this.name}}": {{{this.schema}}},
+      {{/each}}
+      {{#each responseSchemas}}
+        "{{this.name}}": {{{this.schema}}}
+        {{#unless @last}},{{/unless}}
+      {{/each}}
+    }
+  }
+}

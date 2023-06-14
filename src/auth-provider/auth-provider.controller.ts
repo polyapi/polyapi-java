@@ -15,82 +15,116 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ApiSecurity } from '@nestjs/swagger';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
 import {
   AuthTokenDto,
   CreateAuthProviderDto,
   ExecuteAuthProviderDto,
   ExecuteAuthProviderResponseDto,
+  Permission,
   UpdateAuthProviderDto,
 } from '@poly/common';
-import { ApiKeyGuard } from 'auth/api-key-auth-guard.service';
+import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
+import { AuthRequest } from 'common/types';
+import { AuthService } from 'auth/auth.service';
 
+@ApiSecurity('PolyApiKey')
 @Controller('auth-providers')
 export class AuthProviderController {
   private readonly logger = new Logger(AuthProviderController.name);
 
-  constructor(private readonly service: AuthProviderService) {
+  constructor(private readonly service: AuthProviderService, private readonly authService: AuthService) {
   }
 
+  @UseGuards(PolyAuthGuard)
   @Get()
-  @UseGuards(ApiKeyGuard)
-  async getAuthProviders(@Req() req) {
-    return (await this.service.getAuthProviders(req.user))
+  async getAuthProviders(@Req() req: AuthRequest) {
+    return (await this.service.getAuthProviders(req.user.environment.id))
       .map(authProvider => this.service.toAuthProviderDto(authProvider));
   }
 
+  @UseGuards(PolyAuthGuard)
   @Get(':id')
-  @UseGuards(ApiKeyGuard)
-  async getAuthProvider(@Req() req, @Param('id') id: string) {
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+  async getAuthProvider(@Req() req: AuthRequest, @Param('id') id: string) {
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException();
     }
+
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user);
     return this.service.toAuthProviderDto(authProvider);
   }
 
+  @UseGuards(PolyAuthGuard)
   @Post()
-  @UseGuards(ApiKeyGuard)
-  async createAuthProvider(@Req() req, @Body() data: CreateAuthProviderDto) {
-    const { context, authorizeUrl, tokenUrl, revokeUrl = null, introspectUrl = null, audienceRequired = false } = data;
+  async createAuthProvider(@Req() req: AuthRequest, @Body() data: CreateAuthProviderDto) {
+    const {
+      name = '',
+      context,
+      authorizeUrl,
+      tokenUrl,
+      revokeUrl = null,
+      introspectUrl = null,
+      audienceRequired = false,
+      refreshEnabled = false,
+    } = data;
+
+    await this.authService.checkPermissions(req.user, Permission.AuthConfig);
+
     return this.service.toAuthProviderDto(
-      await this.service.createAuthProvider(req.user, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired),
+      await this.service.createAuthProvider(req.user.environment.id, name, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
     );
   }
 
+  @UseGuards(PolyAuthGuard)
   @Patch(':id')
-  @UseGuards(ApiKeyGuard)
-  async updateAuthProvider(@Req() req, @Param('id') id: string, @Body() data: UpdateAuthProviderDto) {
-    const { context, authorizeUrl, tokenUrl, revokeUrl , introspectUrl, audienceRequired  } = data;
+  async updateAuthProvider(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateAuthProviderDto) {
+    const {
+      name,
+      context,
+      authorizeUrl,
+      tokenUrl,
+      revokeUrl,
+      introspectUrl,
+      audienceRequired,
+      refreshEnabled,
+      visibility,
+    } = data;
 
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException();
     }
 
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, false, Permission.AuthConfig);
+
     return this.service.toAuthProviderDto(
-      await this.service.updateAuthProvider(req.user, authProvider, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired),
+      await this.service.updateAuthProvider(authProvider, name, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled, visibility),
     );
   }
 
+  @UseGuards(PolyAuthGuard)
   @Delete(':id')
-  @UseGuards(ApiKeyGuard)
-  async deleteAuthProvider(@Req() req, @Param('id') id: string) {
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+  async deleteAuthProvider(@Req() req: AuthRequest, @Param('id') id: string) {
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException();
     }
 
-    await this.service.deleteAuthProvider(req.user, authProvider);
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, false, Permission.AuthConfig);
+    await this.service.deleteAuthProvider(authProvider);
   }
 
+  @UseGuards(PolyAuthGuard)
   @Post('/:id/execute')
-  @UseGuards(ApiKeyGuard)
-  async executeAuthProvider(@Req() req, @Param('id') id: string, @Body() executeAuthProvider: ExecuteAuthProviderDto): Promise<ExecuteAuthProviderResponseDto> {
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+  async executeAuthProvider(@Req() req: AuthRequest, @Param('id') id: string, @Body() executeAuthProvider: ExecuteAuthProviderDto): Promise<ExecuteAuthProviderResponseDto> {
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException(`Auth provider with id ${id} not found.`);
     }
+
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, true, Permission.Use);
 
     const {
       eventsClientId,
@@ -100,7 +134,7 @@ export class AuthProviderController {
       scopes = [],
       callbackUrl = null,
     } = executeAuthProvider;
-    return await this.service.executeAuthProvider(req.user, authProvider, eventsClientId, clientId, clientSecret, audience, scopes, callbackUrl);
+    return await this.service.executeAuthProvider(authProvider, eventsClientId, clientId, clientSecret, audience, scopes, callbackUrl);
   }
 
   @Get('/:id/callback')
@@ -114,48 +148,57 @@ export class AuthProviderController {
     }
   }
 
+  @UseGuards(PolyAuthGuard)
   @Post('/:id/revoke')
-  @UseGuards(ApiKeyGuard)
-  async revokeToken(@Req() req, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<void> {
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+  async revokeToken(@Req() req: AuthRequest, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<void> {
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException(`Auth provider with id ${id} not found.`);
     }
+
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, true, Permission.Use);
+
     if (!authProvider.revokeUrl) {
       throw new BadRequestException(`Auth provider with id ${id} does not support revocation.`);
     }
 
     const { token } = tokenDto;
-    await this.service.revokeAuthToken(req.user, authProvider, token);
+    await this.service.revokeAuthToken(authProvider, token);
   }
 
+  @UseGuards(PolyAuthGuard)
   @Post('/:id/introspect')
-  @UseGuards(ApiKeyGuard)
-  async introspectToken(@Req() req, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<any> {
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+  async introspectToken(@Req() req: AuthRequest, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<any> {
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException(`Auth provider with id ${id} not found.`);
     }
+
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, true, Permission.Use);
+
     if (!authProvider.introspectUrl) {
       throw new BadRequestException(`Auth provider with id ${id} does not support introspection.`);
     }
 
     const { token } = tokenDto;
-    return await this.service.introspectAuthToken(req.user, authProvider, token);
+    return await this.service.introspectAuthToken(authProvider, token);
   }
 
+  @UseGuards(PolyAuthGuard)
   @Post('/:id/refresh')
-  @UseGuards(ApiKeyGuard)
-  async refreshToken(@Req() req, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<any> {
-    const authProvider = await this.service.getAuthProvider(req.user, id);
+  async refreshToken(@Req() req: AuthRequest, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<any> {
+    const authProvider = await this.service.getAuthProvider(id);
     if (!authProvider) {
       throw new NotFoundException(`Auth provider with id ${id} not found.`);
     }
+
+    await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, true, Permission.Use);
+
     if (!authProvider.refreshEnabled) {
       throw new BadRequestException(`Auth provider with id ${id} does not support refresh.`);
     }
 
     const { token } = tokenDto;
-    return await this.service.refreshAuthToken(req.user, authProvider, token);
+    return await this.service.refreshAuthToken(authProvider, token);
   }
 }

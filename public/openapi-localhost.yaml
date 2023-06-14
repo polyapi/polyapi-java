@@ -1,0 +1,205 @@
+openapi: 3.0.1
+info:
+  title: Poly API
+  description: Endpoints that allow users to execute functions on PolyAPI
+  version: 'v1'
+servers:
+  - url: https://megatronical.pagekite.me
+paths:
+  /functions/custom/af6063f3-5cff-48ee-b0f9-6f077e5b5428/execute:
+    post:
+      operationId: operaReservation
+      summary: Get details about a guest and book a reservation at the hotel The Dreams Hotel In the Sands. The hotel is located on the Strip in Las Vegas Nevada. Make sure to collect the user's full details. Do not assume the user's name or phone number for example. All dates should be formatted YYYY-MM-DD.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/operaReservationArgs'
+      responses:
+        "201":
+          description: reservation ID of the newly created reservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/operaReservationResponse'
+  /functions/custom/c5f3630c-f751-4447-ac82-1971aaff0e6b/execute:
+    post:
+      operationId: operaAvailability
+      summary: takes details of a guests desired stay and checks availability for those dates, number of people, at our specific hotel The Dreams Hotel In the Sands. All dates should be passed in the form YYYY-MM-DD.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/operaAvailabilityArgs'
+      responses:
+        "201":
+          description: a list of availabilities with room codes and total costs before tax for their desired stay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/operaAvailabilityResponse'
+  /functions/api/ec66c324-80fe-4d9a-a5fa-2f7f38384155/execute:
+    post:
+      operationId: twilioSendSms
+      summary: Send an sms message to a phone number. When a user receives a confirmation, offer to send the details to the user's phone using this function.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/twilioSendSmsArgs'
+      responses:
+        "201":
+          description: details about the sms that was sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/twilioSendSmsResponse'
+  /functions/custom/33dd29b3-2380-4e45-9217-d0344ca2d5e6/execute:
+    post:
+      operationId: upsLocation
+      summary: Validate if an address is serviced by UPS. If the address is eligible, then you will get the same address back. If the address is not a valid pickup and delivery location, the API will return the nearest address within the search radius provided
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/upsLocationArgs'
+      responses:
+        "201":
+          description: The nearest address that is a valid UPS pickup or dropoff location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/upsLocationResponse'
+  /functions/custom/0b30e315-f4b3-43b8-8c02-c65c14d67a5b/execute:
+    post:
+      operationId: upsRateEstimate
+      summary: returns a rate estimate for a UPS shipment form our specific business Frontier Shoes. The user provides an address of where the shipment is to be made, a weight in pounds, a height, width and length in inches
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/upsRateEstimateArgs'
+      responses:
+        "201":
+          description: rate estimate for the UPS shipment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/upsRateEstimateResponse'
+  /functions/api/0ede78ac-124d-440f-be6a-65c86fd0275d/execute:
+    post:
+      operationId: shopifyGetProducts
+      summary: Get the products from a particular shopify store. If a store name is not specified, use 'darko-demo-store' for the store name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/storeNameArgs'
+      responses:
+        "201":
+          description: products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/shopifyGetProductsResponse'
+components:
+  schemas:
+    storeNameArgs:
+      type: object
+      properties:
+        args:
+          type: array
+          items:
+            type: string
+          description: store name
+    shopifyGetProductsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            type: object
+          description: The list of products.
+    twilioSendSmsArgs:
+      type: object
+      properties:
+        args:
+          type: object
+          properties:
+            My_Phone_Number:
+              type: string
+            message:
+              type: string
+          description: phone number to send the sms to and the message to send
+    twilioSendSmsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+    operaReservationArgs:
+      type: object
+      properties:
+        args:
+          type: array
+          items:
+            type: string
+          description: If an array of strings and numbers - firstName, lastName, arrivalDate, departureDate, numberAdults, numberChildren, roomType, numberRooms, phoneNumber
+    operaReservationResponse:
+      type: string
+      description: reservation ID as a string
+    operaAvailabilityArgs:
+      type: object
+      properties:
+        args:
+          type: array
+          items:
+            type: string
+          description: arrivalDate, departureDate, numAdults, numChildren, numRooms
+    operaAvailabilityResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          costBeforeTax:
+            type: number
+          currency:
+            type: string
+          roomType:
+            type: string
+          ratePlanCode:
+            type: string
+          numberOfUnits:
+            type: number
+    upsLocationArgs:
+      type: object
+      properties:
+        args:
+          type: array
+          items:
+            type: string
+          description: an array of strings and numbers - address, city, stateShort, zip, countryShort, searchRadiusMiles
+    upsLocationResponse:
+      type: string
+      description: The nearest address that is a valid UPS pickup or dropoff location
+    upsRateEstimateArgs:
+      type: object
+      properties:
+        args:
+          type: array
+          items:
+            type: string
+          description: an array of strings and numbers - name, city, stateShort, zipCode, countryShort, weight, l, w, h
+    upsRateEstimateResponse:
+      type: object
+      description: Rate estimate for the UPS shipment
+      properties:
+        CurrencyCode:
+          type: string
+        MonetaryValue:
+          type: number

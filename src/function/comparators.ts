@@ -8,4 +8,4 @@ export const compareArgumentsByRequired = (a: FunctionArgument, b: FunctionArgum
     return 1;
   }
   return 0;
-}
+};

@@ -6,6 +6,7 @@ import shell from 'shelljs';
 import { toCamelCase, toPascalCase } from '@guanghechen/helper-string';
 import prettier from 'prettier';
 import { compile } from 'json-schema-to-typescript';
+import { v4 as uuidv4 } from 'uuid';
 
 import {
   ApiFunctionSpecification,
@@ -41,9 +42,9 @@ const prepareDir = () => {
   fs.rmSync(POLY_LIB_PATH, { recursive: true, force: true });
   fs.mkdirSync(POLY_LIB_PATH, { recursive: true });
   fs.mkdirSync(`${POLY_LIB_PATH}/api`);
-  fs.mkdirSync(`${POLY_LIB_PATH}/custom`);
+  fs.mkdirSync(`${POLY_LIB_PATH}/client`);
   fs.mkdirSync(`${POLY_LIB_PATH}/auth`);
-  fs.mkdirSync(`${POLY_LIB_PATH}/webhook-handles`);
+  fs.mkdirSync(`${POLY_LIB_PATH}/webhooks`);
   fs.mkdirSync(`${POLY_LIB_PATH}/server`);
 };
 
@@ -57,9 +58,10 @@ const generateJSFiles = async (specs: Specification[]) => {
   const serverFunctions = specs.filter((spec) => spec.type === 'serverFunction') as ServerFunctionSpecification[];
 
   await generateIndexJSFile();
+  await generateAxiosJSFile();
   await generateApiFunctionJSFiles(apiFunctions);
   await generateCustomFunctionJSFiles(customFunctions);
-  await generateWebhookHandlesJSFiles(webhookHandles);
+  await generateWebhooksJSFiles(webhookHandles);
   await generateAuthFunctionJSFiles(authFunctions);
   await generateServerFunctionJSFiles(serverFunctions);
 };
@@ -69,6 +71,18 @@ const generateIndexJSFile = async () => {
   fs.writeFileSync(
     `${POLY_LIB_PATH}/index.js`,
     indexJSTemplate({
+      clientID: uuidv4(),
+      apiBaseUrl: getApiBaseUrl(),
+      apiKey: getApiKey(),
+    }),
+  );
+};
+
+const generateAxiosJSFile = async () => {
+  const axiosJSTemplate = handlebars.compile(await loadTemplate('axios.js.hbs'));
+  fs.writeFileSync(
+    `${POLY_LIB_PATH}/axios.js`,
+    axiosJSTemplate({
       apiBaseUrl: getApiBaseUrl(),
       apiKey: getApiKey(),
     }),
@@ -90,7 +104,7 @@ const generateApiFunctionJSFiles = async (specifications: ApiFunctionSpecificati
 const generateCustomFunctionJSFiles = async (specifications: CustomFunctionSpecification[]) => {
   const customIndexJSTemplate = handlebars.compile(await loadTemplate('custom-index.js.hbs'));
   fs.writeFileSync(
-    `${POLY_LIB_PATH}/custom/index.js`,
+    `${POLY_LIB_PATH}/client/index.js`,
     customIndexJSTemplate({
       specifications,
     }),
@@ -102,16 +116,16 @@ const generateCustomFunctionJSFiles = async (specifications: CustomFunctionSpeci
   const customFunctionJSTemplate = handlebars.compile(await loadTemplate('custom-function.js.hbs'));
   specifications.forEach((spec) => {
     fs.writeFileSync(
-      `${POLY_LIB_PATH}/custom/${spec.context ? `${spec.context}-` : ''}${spec.name}.js`,
+      `${POLY_LIB_PATH}/client/${spec.context ? `${spec.context}-` : ''}${spec.name}.js`,
       prettyPrint(customFunctionJSTemplate(spec), 'babel'),
     );
   });
 };
 
-const generateWebhookHandlesJSFiles = async (specifications: WebhookHandleSpecification[]) => {
-  const template = handlebars.compile(await loadTemplate('webhook-handles-index.js.hbs'));
+const generateWebhooksJSFiles = async (specifications: WebhookHandleSpecification[]) => {
+  const template = handlebars.compile(await loadTemplate('webhooks-index.js.hbs'));
   fs.writeFileSync(
-    `${POLY_LIB_PATH}/webhook-handles/index.js`,
+    `${POLY_LIB_PATH}/webhooks/index.js`,
     template({
       specifications,
       apiBaseUrl: getApiBaseUrl(),
@@ -156,6 +170,7 @@ const generateAuthFunctionJSFiles = async (specifications: AuthFunctionSpecifica
         prettyPrint(
           authFunctionJSTemplate({
             ...spec,
+            audienceRequired: spec.function.arguments.some((arg) => arg.name === 'audience'),
             apiBaseUrl: getApiBaseUrl(),
             apiKey: getApiKey(),
           }),
@@ -215,7 +230,6 @@ const generateTSDeclarationFiles = async (specs: Specification[]) => {
   );
 
   await generateTSIndexDeclarationFile(contexts);
-  await generateContextDataFile(contextData);
 };
 
 const generateTSIndexDeclarationFile = async (contexts: Context[]) => {
@@ -379,9 +393,11 @@ const generateTSContextDeclarationFile = async (
     });
 
     return {
-      name: toCamelCase(specification.name.split('.').pop() as string),
+      name: specification.name.split('.').pop(),
+      comment: getSpecificationComment(specification),
       arguments: specification.function.arguments.map(toArgumentDeclaration),
-      returnType: toTypeDeclaration(specification.function.returnType, specification.function.synchronous === true),
+      returnType: toTypeDeclaration(specification.function.returnType),
+      synchronous: specification.function.synchronous === true,
     };
   };
 
@@ -398,8 +414,18 @@ const generateTSContextDeclarationFile = async (
   );
 };
 
-const generateContextDataFile = async (contextData: Record<string, any>) => {
+const generateContextDataFile = (contextData: Record<string, any>) => {
   fs.writeFileSync(`${POLY_LIB_PATH}/specs.json`, JSON.stringify(contextData, null, 2));
+};
+
+const getContextDataFileContent = () => {
+  const contents = fs.readFileSync(`${POLY_LIB_PATH}/specs.json`, 'utf-8');
+
+  try {
+    return JSON.parse(contents) as Record<string, any>;
+  } catch (err) {
+    return {};
+  }
 };
 
 const getContextData = (specs: Specification[]) => {
@@ -411,12 +437,102 @@ const getContextData = (specs: Specification[]) => {
   return contextData;
 };
 
+const getSpecsFromContextData = (contextData) => {
+  const specs: Specification[] = [];
+
+  const traverseAndGetSpec = (data) => {
+    for (const key of Object.keys(data)) {
+      if (typeof data[key].context === 'string') {
+        specs.push(data[key]);
+      } else {
+        traverseAndGetSpec(data[key]);
+      }
+    }
+  };
+
+  traverseAndGetSpec(contextData);
+
+  return specs;
+};
+
 const prettyPrint = (code: string, parser = 'typescript') =>
   prettier.format(code, {
     parser,
     singleQuote: true,
     printWidth: 160,
   });
+
+const showErrGettingSpecs = (error: any) => {
+  shell.echo(chalk.red('ERROR'));
+  shell.echo('Error while getting data from Poly server. Make sure the version of library/server is up to date.');
+  shell.echo(chalk.red(error.message), chalk.red(JSON.stringify(error.response?.data)));
+};
+
+const showErrGeneratingFiles = (error: any) => {
+  shell.echo(chalk.red('ERROR'));
+  shell.echo('Error while generating code files. Make sure the version of library/server is up to date.');
+  shell.echo(chalk.red(error.message));
+  shell.echo(chalk.red(error.stack));
+};
+
+const generateSingleCustomFunction = async (functionId: string) => {
+  shell.echo('-n', chalk.rgb(255, 255, 255)(`Generating new custom function...`));
+
+  let contextData: Record<string, any> = {};
+
+  try {
+    contextData = getContextDataFileContent();
+  } catch (error) {
+    shell.echo(chalk.red('ERROR'));
+    shell.echo('Error while fetching local context data.');
+    shell.echo(chalk.red(error.message));
+    shell.echo(chalk.red(error.stack));
+    return;
+  }
+
+  const prevSpecs = getSpecsFromContextData(contextData);
+
+  let specs: Specification[] = [];
+
+  try {
+    specs = await getSpecs([], [], [functionId]);
+  } catch (error) {
+    showErrGettingSpecs(error);
+    return;
+  }
+
+  const [customFunction] = specs;
+
+  if (prevSpecs.some((prevSpec) => prevSpec.id === customFunction.id)) {
+    specs = prevSpecs.map((prevSpec) => {
+      if (prevSpec.id === customFunction.id) {
+        return customFunction;
+      }
+      return prevSpec;
+    });
+  } else {
+    prevSpecs.push(customFunction);
+    specs = prevSpecs;
+  }
+
+  await generateSpecs(specs);
+
+  shell.echo(chalk.green('DONE'));
+};
+
+const getSpecificationComment = (specification: Specification) => {
+  switch (specification.type) {
+    case 'customFunction':
+      if (!specification.requirements.length) {
+        return null;
+      }
+      return `This function requires you to have the following libraries installed:\n- ${specification.requirements.join(
+        '\n- ',
+      )}`;
+    default:
+      return null;
+  }
+};
 
 const generate = async (contexts?: string[], names?: string[], functionIds?: string[]) => {
   let specs: Specification[] = [];
@@ -427,29 +543,26 @@ const generate = async (contexts?: string[], names?: string[], functionIds?: str
   loadConfig();
 
   try {
-    // functions = await getFunctions(contexts, names, functionIds);
-    // webhookHandles = await getWebhookHandles();
     specs = await getSpecs(contexts, names, functionIds);
   } catch (error) {
-    shell.echo(chalk.red('ERROR'));
-    shell.echo('Error while getting data from Poly server. Make sure the version of library/server is up to date.');
-    shell.echo(chalk.red(error.message), chalk.red(JSON.stringify(error.response?.data)));
+    showErrGettingSpecs(error);
     return;
   }
 
+  await generateSpecs(specs);
+
+  shell.echo(chalk.green('DONE'));
+};
+
+const generateSpecs = async (specs: Specification[]) => {
   try {
     await generateJSFiles(specs);
     await generateTSDeclarationFiles(specs);
+    generateContextDataFile(getContextData(specs));
   } catch (error) {
-    shell.echo(chalk.red('ERROR'));
-    shell.echo('Error while generating code files. Make sure the version of library/server is up to date.');
-    shell.echo(chalk.red(error.message));
-    shell.echo(chalk.red(error.stack));
+    showErrGeneratingFiles(error);
     return;
   }
-
-  shell.echo(chalk.green('DONE'));
-  shell.echo(chalk.rgb(255, 255, 255)(`\nPlease, restart your TS server to see the changes.`));
 };
 
-export default generate;
+export { generate, generateSingleCustomFunction };

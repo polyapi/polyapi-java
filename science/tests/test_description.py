@@ -25,7 +25,7 @@ class T(DbTestCase):
         )
         self.assertEqual(mock_chat.call_count, 1)
         self.assertEqual(output["name"], "foo")
-        self.assertEqual(output["context"], "bar")
+        self.assertEqual(output["context"], "baR")
         self.assertEqual(output["description"], "foobar")
 
     @patch("app.description.openai.ChatCompletion.create")
@@ -43,7 +43,7 @@ class T(DbTestCase):
         )
         self.assertEqual(mock_chat.call_count, 1)
         self.assertEqual(output["name"], "foo")
-        self.assertEqual(output["context"], "bar")
+        self.assertEqual(output["context"], "baR")
         self.assertEqual(output["description"], "foobar")
 
     @unittest.skip("Old approach not asking OpenAI to return JSON")

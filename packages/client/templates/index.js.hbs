@@ -1,14 +1,13 @@
 const set = require('lodash/set');
 const merge = require('lodash/merge');
 const { io } = require("socket.io-client");
-const { v4: uuidv4 } = require('uuid');
 const apiFunctions = require('./api');
-const customFunctions = require('./custom');
-const webhookHandles = require('./webhook-handles');
+const clientFunctions = require('./client');
+const webhooks = require('./webhooks');
 const authFunctions = require('./auth');
 const serverFunctions = require('./server');
 
-const clientID = uuidv4();
+const clientID = '{{clientID}}';
 let socket = null;
 const getSocket = () => {
   if (!socket) {
@@ -41,10 +40,10 @@ const poly = {};
 module.exports = merge(
   poly,
   apiFunctions(clientID),
-  customFunctions(poly),
+  clientFunctions(poly),
   serverFunctions(clientID),
   authFunctions(clientID, getSocket),
-  webhookHandles(clientID, getSocket),
+  webhooks(clientID, getSocket),
   {
     errorHandler
   }

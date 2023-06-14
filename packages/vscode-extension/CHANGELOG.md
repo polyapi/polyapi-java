@@ -1,5 +1,29 @@
-### 0.1.19
+### 0.1.27
 * Poly chat using event stream
+
+### 0.1.26
+* Added tenant name information to public functions
+
+### 0.1.25
+* Updated Authorization
+
+### 0.1.24
+* Set textarea disabled when sending a question through chat.
+
+### 0.1.23
+* Removed "Copy selection to Poly" button due a vscode issue on Windows plattform.
+
+### 0.1.22
+* Added webhook description
+
+### 0.1.21
+* Fixed publisher name
+
+### 0.1.20
+* Fixed tree label
+
+### 0.1.19
+* Fixed auth function copy action
 
 ### 0.1.18
 * Updated tooltips and copied code for changed specifications

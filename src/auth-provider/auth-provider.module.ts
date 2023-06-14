@@ -5,9 +5,11 @@ import { AuthProviderService } from './auth-provider.service';
 import { PrismaModule } from 'prisma/prisma.module';
 import { EventModule } from 'event/event.module';
 import { SpecsModule } from 'specs/specs.module';
+import { AuthModule } from 'auth/auth.module';
+import { CommonModule } from 'common/common.module';
 
 @Module({
-  imports: [PrismaModule, EventModule, HttpModule, forwardRef(() => SpecsModule)],
+  imports: [PrismaModule, EventModule, HttpModule, AuthModule, forwardRef(() => SpecsModule), CommonModule],
   controllers: [AuthProviderController],
   providers: [AuthProviderService],
   exports: [AuthProviderService],

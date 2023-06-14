@@ -1,12 +1,16 @@
-import { Module } from '@nestjs/common';
+import { PrismaModule } from 'prisma/prisma.module';
+import { forwardRef, Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { ApiKeyStrategy } from 'auth/api-key.strategy';
+import { PolyAuthStrategy } from 'auth/poly-auth-strategy.service';
 import { UserModule } from 'user/user.module';
-import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { EnvironmentModule } from 'environment/environment.module';
+import { TenantModule } from 'tenant/tenant.module';
 
 @Module({
-  imports: [PassportModule, UserModule],
-  providers: [ApiKeyStrategy],
-  controllers: [AuthController],
+  imports: [PrismaModule, PassportModule, forwardRef(() => TenantModule), EnvironmentModule, UserModule],
+  providers: [PolyAuthStrategy, AuthService],
+  exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule {
+}

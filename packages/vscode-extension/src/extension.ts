@@ -42,9 +42,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('poly.focusMessageInput', () => {
       chatViewProvider.focusMessageInput();
     }),
-    vscode.commands.registerCommand('poly.copySelection', () => {
-      vscode.commands.executeCommand('editor.action.clipboardCopyAction');
-    }),
     vscode.commands.registerCommand('poly.copyLibraryItem', LibraryIndexViewProvider.copyLibraryItem),
     vscode.window.registerWebviewViewProvider(
       'poly.ai-view',

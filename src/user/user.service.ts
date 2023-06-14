@@ -1,111 +1,89 @@
-import crypto from 'crypto';
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConfigService } from 'config/config.service';
-import { Role } from '@poly/common';
-
-const PUBLIC_USER_NAME = 'publicUser';
+import { Role, UserDto } from '@poly/common';
+import { User } from '@prisma/client';
 
 @Injectable()
-export class UserService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  constructor(private readonly prisma: PrismaService) {
   }
 
-  async onModuleInit() {
-    await this.checkAdmin();
+  toUserDto(user: User): UserDto {
+    return {
+      id: user.id,
+      name: user.name,
+      role: user.role as Role,
+    };
   }
 
-  private async checkAdmin() {
-    const admin = await this.prisma.user.findFirst({
-      where: {
-        role: 'ADMIN',
-      },
-    });
-
-    if (!admin) {
-      await this.prisma.user.create({
-        data: {
-          name: 'admin',
-          role: Role.Admin,
-          apiKey: this.config.adminApiKey,
-        },
-      });
-    } else if (admin.apiKey !== this.config.adminApiKey) {
-      await this.prisma.user.update({
-        where: {
-          id: admin.id,
-        },
-        data: {
-          apiKey: this.config.adminApiKey,
-        },
-      });
-    }
-  }
-
-  async createUser(name: string) {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        name,
-      },
-    });
-    if (existingUser) {
-      throw new BadRequestException('User with such name already exists.');
-    }
-
-    return this.prisma.user.create({
-      data: {
-        name,
-        role: Role.User,
-        apiKey: crypto.randomBytes(16).toString('hex'),
-      },
-    });
-  }
-
-  public async findByApiKey(apiKey: string): Promise<User | null> {
-    if (!apiKey) {
-      return null;
-    }
-
-    return this.prisma.user.findFirst({
-      where: {
-        apiKey,
-      },
-    });
-  }
-
-  async deleteUserByApiKey(apiKey: string) {
-    await this.prisma.user.delete({
-      where: {
-        apiKey,
-      },
-    });
-  }
-
-  public async getPublicUser(): Promise<User> {
-    const publicUser = await this.prisma.user.findFirst({
-      where: {
-        apiKey: '',
-      },
-    });
-    if (publicUser) {
-      return publicUser;
-    }
-
-    return this.prisma.user.create({
-      data: {
-        apiKey: '',
-        name: PUBLIC_USER_NAME,
-      },
-    });
-  }
-
-  async getUsers() {
+  async getAllUsersByTenant(tenantId: string) {
     return this.prisma.user.findMany({
       where: {
-        name: {
-          not: PUBLIC_USER_NAME,
+        tenantId,
+      },
+    });
+  }
+
+  async findUserById(id: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async findAdminUserByEnvironmentId(environmentId: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        tenant: {
+          environments: {
+            some: {
+              id: environmentId,
+            },
+          },
         },
+        role: {
+          in: [Role.SuperAdmin, Role.Admin],
+        },
+      },
+    });
+  }
+
+  async createUser(tenantId: string, name: string, role: Role) {
+    this.logger.debug(`Creating user ${name} with role ${role}...`);
+    return this.prisma.user.create({
+      data: {
+        tenant: {
+          connect: {
+            id: tenantId,
+          },
+        },
+        name,
+        role,
+      },
+    });
+  }
+
+  async updateUser(user: User, name: string | undefined, role: Role | undefined) {
+    this.logger.debug(`Updating user ${user.id}...`);
+    return this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        name,
+        role,
+      },
+    });
+  }
+
+  async deleteUser(id: string) {
+    this.logger.debug(`Deleting user ${id}...`);
+    return this.prisma.user.delete({
+      where: {
+        id,
       },
     });
   }

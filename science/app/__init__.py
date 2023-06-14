@@ -28,7 +28,7 @@ def create_app(testing=False):
         app.config["NODE_API_URL"] = "http://localhost:8000"
     else:
         print("DEBUG OFF")
-        app.config["NODE_API_URL"] = "http://localhost:80"
+        app.config["NODE_API_URL"] = "http://localhost:8000"
 
         rollbar.init("d31f5efb15034e86b11fa6cf82d8cef0", socket.gethostname())
         got_request_exception.connect(report_exception, app)

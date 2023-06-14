@@ -1,59 +1,65 @@
 import { Controller, Logger, Get, Post, UseGuards, Req, Body, Param } from '@nestjs/common';
+import { ApiSecurity } from '@nestjs/swagger';
+import { Request } from 'express';
 import { CreatePluginDto } from '@poly/common';
-import { ApiKeyGuard } from 'auth/api-key-auth-guard.service';
 import { GptPluginService } from 'gptplugin/gptplugin.service';
-import { ConfigService } from 'config/config.service';
+import { AuthRequest } from 'common/types';
+import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 
-
-// HACK
-function _capitalize(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-
+@ApiSecurity('PolyApiKey')
 @Controller()
 export class GptPluginController {
   private readonly logger = new Logger(GptPluginController.name);
-  constructor(private readonly service: GptPluginService, private readonly config: ConfigService) {}
+
+  constructor(private readonly service: GptPluginService) {}
 
   @Get('.well-known/ai-plugin.json')
-  public async aiPluginJson(): Promise<unknown> {
-    const env = this.config.env
-    const host = this.config.hostUrl
-    return {
-      schema_version: 'v1',
-      name_for_human: `Poly API ${_capitalize(env)}`,
-      name_for_model: 'poly_api',
-      description_for_human: 'Ask ChatGPT to compose and execute chains of tasks on Poly API',
-      description_for_model: 'Ask ChatGPT to compose and execute chains of tasks on Poly API',
-      auth: {
-        type: 'none',
-      },
-      api: {
-        type: 'openapi',
-        url: this.service.getOpenApiUrl(env, host),
-        is_user_authenticated: false,
-      },
-      logo_url: 'https://polyapi.io/wp-content/uploads/2023/03/poly-block-logo-mark.png',
-      contact_email: 'darko@polyapi.io',
-      legal_info_url: 'https://polyapi.io/legal',
-    };
+  public async aiPluginJson(@Req() req: Request): Promise<unknown> {
+    return this.service.getManifest(req);
   }
 
-  @Get('plugin/:name/openapi')
-  public async pluginOpenApi(@Param('name') name: string): Promise<unknown> {
-    // TODO move over existing openapi.yaml to openapi.yaml.hbs?
-    // and pass in the name and functions to the hbs?
-    const spec = await this.service.getOpenApiSpec(name);
+  @Get('plugins/:slug/openapi')
+  public async pluginOpenApi(@Req() req: Request, @Param('slug') slug: string): Promise<unknown> {
+    const spec = await this.service.getOpenApiSpec(req.hostname, slug);
     return spec;
   }
 
-  @UseGuards(ApiKeyGuard)
-  @Post('plugin/create')
-  public async pluginCreate(@Req() req, @Body() body: CreatePluginDto): Promise<unknown> {
-    const domain = await this.service.createPlugin(body.slug, body.functionIds);
+  @UseGuards(PolyAuthGuard)
+  @Get('plugins/:slug')
+  public async pluginGet(@Req() req: AuthRequest, @Param('slug') slug): Promise<unknown> {
+    slug = slug.toLowerCase();
+    const plugin = await this.service.getPlugin(slug);
     return {
-      domain: domain,
+      plugin,
+      plugin_url: `https://${plugin.slug}-${req.user.environment.subdomain}.${req.hostname}`,
     };
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Post('plugins')
+  public async pluginCreateOrUpdate(@Req() req: AuthRequest, @Body() body: CreatePluginDto): Promise<unknown> {
+    const plugin = await this.service.createOrUpdatePlugin(req.user.environment, body);
+    return {
+      plugin,
+      plugin_url: `https://${plugin.slug}-${req.user.environment.subdomain}.${req.hostname}`,
+    };
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('whoami')
+  public async whoami(@Req() req: AuthRequest): Promise<unknown> {
+    const user = req.user.user;
+    if (user) {
+      return {
+        userId: user.id,
+        tenantId: user.tenantId,
+        environmentId: req.user.environment.id,
+        environmentSubdomain: req.user.environment.subdomain,
+      };
+    } else {
+      return {
+        userId: null,
+      };
+    }
   }
 }
