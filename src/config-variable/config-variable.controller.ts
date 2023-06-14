@@ -11,7 +11,7 @@ export class ConfigVariableController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch('')
-  public async createOrUpdateConfigVariable(@Body() body: CreateConfigVariableDto): Promise<void> {
-    this.configVariableService.configure(body.name, body.value);
+  public async createOrUpdateConfigVariable(@Body() body: CreateConfigVariableDto) {
+    return this.configVariableService.configure(body.name, body.value);
   }
 }
