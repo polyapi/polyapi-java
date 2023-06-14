@@ -194,13 +194,18 @@ export class KNativeFaasService implements FaasService {
 
   private async cleanUpFunction(id: string, functionPath: string) {
     try {
-      await exec(`${KNATIVE_EXEC_FILE} delete ${id}`);
+      const knativeId = this.getFunctionName(id);
+      await exec(`${KNATIVE_EXEC_FILE} delete ${knativeId}`);
+      this.logger.debug(`Removed function ${id} from knative with id ${knativeId}`);
     } catch (e) {
       this.logger.error(`Error while deleting KNative function: ${e.message}`);
     }
 
     if (fs.existsSync(functionPath)) {
       fs.rmSync(functionPath, { recursive: true });
+      this.logger.debug(`Removed function folder (${functionPath})`);
+    } else {
+      this.logger.debug(`Didn't remove function folder, functionPath (${functionPath}) doesn't exist.`);
     }
   }
 
