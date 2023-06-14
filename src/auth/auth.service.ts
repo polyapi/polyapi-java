@@ -156,29 +156,6 @@ export class AuthService {
     );
   }
 
-  public async checkEnvironmentAccess(
-    environmentId: string,
-    authData: AuthData,
-    roles?: Role[],
-    ...permissions: Permission[]
-  ) {
-    const { user, environment } = authData;
-    if (user?.role === Role.SuperAdmin) {
-      return true;
-    }
-    if (environment.id !== environmentId) {
-      throw new ForbiddenException('You do not have access to this environment');
-    }
-
-    if (roles && (!user || !roles.includes(user.role as Role))) {
-      throw new ForbiddenException('You do not have access to this entity');
-    }
-
-    await this.checkPermissions(authData, ...permissions);
-
-    return true;
-  }
-
   public async checkTenantAccess(tenantId: string, authData: AuthData, roles?: Role[], ...permissions: Permission[]) {
     const { tenant, user } = authData;
     if (user?.role === Role.SuperAdmin) {
