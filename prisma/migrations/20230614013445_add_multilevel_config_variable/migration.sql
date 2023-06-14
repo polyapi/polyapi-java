@@ -13,6 +13,5 @@ CREATE TABLE "new_config_variable" (
 INSERT INTO "new_config_variable" ("created_at", "id", "name", "value") SELECT "created_at", "id", "name", "value" FROM "config_variable";
 DROP TABLE "config_variable";
 ALTER TABLE "new_config_variable" RENAME TO "config_variable";
-CREATE UNIQUE INDEX "config_variable_name_key" ON "config_variable"("name");
 PRAGMA foreign_key_check;
 PRAGMA foreign_keys=ON;

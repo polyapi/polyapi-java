@@ -122,7 +122,8 @@ export class TenantController {
     @Param('tenant') tenant: string,
   ) {
     await this.authService.checkTenantAccess(tenant, req.user, [Role.Admin]);
-    await this.configVariableService.configure(body.name, body.value, tenant);
+
+    return this.configVariableService.toDto(await this.configVariableService.configure(body.name, body.value, tenant));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -134,7 +135,10 @@ export class TenantController {
     @Param('environment') environment: string,
   ) {
     await this.authService.checkEnvironmentAccess(environment, req.user, [Role.Admin]);
-    await this.configVariableService.configure(body.name, body.value, tenant, environment);
+
+    return this.configVariableService.toDto(
+      await this.configVariableService.configure(body.name, body.value, tenant, environment),
+    );
   }
 
   @UseGuards(PolyAuthGuard)

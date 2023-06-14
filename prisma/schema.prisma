@@ -240,7 +240,7 @@ model AuthToken {
 model ConfigVariable {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
-  name      String   @unique // "keyword_similarity_threshold" | "function_match_limit"
+  name      String
   value     String
   tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId  String?

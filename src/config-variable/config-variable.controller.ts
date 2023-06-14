@@ -7,11 +7,11 @@ import { ConfigVariableService } from './config-varirable.service';
 @ApiSecurity('PolyApiKey')
 @Controller('config-variable')
 export class ConfigVariableController {
-  constructor(private readonly configVariableService: ConfigVariableService) {}
+  constructor(private readonly service: ConfigVariableService) {}
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch('')
   public async createOrUpdateConfigVariable(@Body() body: CreateConfigVariableDto) {
-    return this.configVariableService.configure(body.name, body.value);
+    return this.service.toDto(await this.service.configure(body.name, body.value));
   }
 }

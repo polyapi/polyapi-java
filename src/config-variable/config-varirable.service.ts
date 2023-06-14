@@ -1,9 +1,21 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+
+import { ConfigVariableDto } from '@poly/common';
 
 @Injectable()
 export class ConfigVariableService {
   constructor(private readonly prisma: PrismaService) {}
+
+  toDto(data: ConfigVariable): ConfigVariableDto {
+    return {
+      name: data.name,
+      value: data.value,
+      environmentId: data.environmentId,
+      tenantId: data.tenantId,
+    };
+  }
 
   private create({
     name,
