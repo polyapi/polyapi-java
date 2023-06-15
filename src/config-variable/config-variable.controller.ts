@@ -1,4 +1,4 @@
-import { Body, Controller, UseGuards, Patch, Get, Param } from '@nestjs/common';
+import { Body, Controller, UseGuards, Patch, Get, Param, Delete } from '@nestjs/common';
 import { Role, SetConfigVariableDto } from '@poly/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -19,5 +19,11 @@ export class ConfigVariableController {
   @Get('/:name')
   public async getConfigVariable(@Param('name') name: string) {
     return this.service.toDto(await this.service.get(name));
+  }
+
+  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
+  @Delete('/:name')
+  public async deleteConfigVariable(@Param('name') name: string) {
+    return this.service.toDto(await this.service.delete(name));
   }
 }

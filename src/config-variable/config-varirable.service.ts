@@ -38,16 +38,27 @@ export class ConfigVariableService {
     });
   }
 
+  private getTenantAndEnvironmentFilter(tenantId: string, environmentId: string) {
+    return (configVariable: ConfigVariable) =>
+      configVariable.tenantId === tenantId && configVariable.environmentId === environmentId;
+  }
+
+  private getTenantFilter(tenantId: string) {
+    return (configVariable: ConfigVariable) =>
+      configVariable.tenantId === tenantId && configVariable.environmentId === null;
+  }
+
+  private getInstanceFilter() {
+    return (configVariable: ConfigVariable) =>
+      configVariable.tenantId === null && configVariable.environmentId === null;
+  }
+
   private async getVariableByPriority(
     name: string,
     tenantId: string | null = null,
     environmentId: string | null = null,
   ) {
-    console.log({
-      tenantId,
-      environmentId,
-    });
-    let configVarfiable: ConfigVariable | null = null;
+    let configVariable: ConfigVariable | null = null;
 
     const list = await this.prisma.configVariable.findMany({
       where: {
@@ -60,19 +71,30 @@ export class ConfigVariableService {
     }
 
     if (tenantId && environmentId) {
-      configVarfiable =
-        list.find((current) => current.tenantId === tenantId && current.environmentId === environmentId) || null;
+      configVariable = list.find(this.getTenantAndEnvironmentFilter(tenantId, environmentId)) || null;
+
+      if (!configVariable) {
+        configVariable = list.find(this.getTenantFilter(tenantId)) || null;
+      }
+
+      if (!configVariable) {
+        return list.find(this.getInstanceFilter()) || null;
+      }
+
+      return configVariable;
     }
 
-    if (!configVarfiable && tenantId && !environmentId) {
-      configVarfiable = list.find((current) => current.tenantId === tenantId && current.environmentId === null) || null;
+    if (tenantId && !environmentId) {
+      configVariable = list.find(this.getTenantFilter(tenantId)) || null;
+
+      if (!configVariable) {
+        return list.find(this.getInstanceFilter()) || null;
+      }
+
+      return configVariable;
     }
 
-    if (!configVarfiable) {
-      return list.find((current) => current.tenantId === null && current.environmentId === null) || null;
-    }
-
-    return configVarfiable;
+    return list.find(this.getInstanceFilter()) || null;
   }
 
   async configure(name: string, value: string, tenantId: string | null = null, environmentId: string | null = null) {
@@ -111,5 +133,25 @@ export class ConfigVariableService {
     }
 
     return configVarfiable;
+  }
+
+  async delete(name: string, tenantId: string | null = null, environmentId: string | null = null) {
+    const configVarfiable = await this.prisma.configVariable.findFirst({
+      where: {
+        name,
+        tenantId,
+        environmentId,
+      },
+    });
+
+    if (!configVarfiable) {
+      throw new NotFoundException('Config variable not found');
+    }
+
+    return this.prisma.configVariable.delete({
+      where: {
+        id: configVarfiable.id,
+      },
+    });
   }
 }

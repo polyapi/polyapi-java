@@ -115,6 +115,17 @@ export class TenantController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @Get('/:id/config-variables/:name')
+  async getConfigVariableUnderTenant(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('name') name: string,
+  ) {
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+    return this.configVariableService.toDto(await this.configVariableService.get(name, tenantId));
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Patch('/:id/config-variables')
   async setConfigVariableUnderTenant(
     @Req() req: AuthRequest,
@@ -126,6 +137,34 @@ export class TenantController {
     return this.configVariableService.toDto(
       await this.configVariableService.configure(body.name, body.value, tenantId),
     );
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Delete('/:id/config-variables/:name')
+  async deleteConfigVariableUnderTenant(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('name') name: string,
+  ) {
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.configVariableService.toDto(await this.configVariableService.delete(name, tenantId));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/:id/environments/:environment/config-variables/:name')
+  async getConfigVariableUnderEnvironment(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('name') name: string,
+    @Param('environment') environmentId: string,
+  ) {
+    await Promise.all([
+      this.findEnvironment(tenantId, environmentId),
+      this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
+    ]);
+
+    return this.configVariableService.toDto(await this.configVariableService.get(name, tenantId, environmentId));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -147,30 +186,19 @@ export class TenantController {
   }
 
   @UseGuards(PolyAuthGuard)
-  @Get('/:id/config-variables/:name')
-  async getConfigVariableUnderTenant(
+  @Delete('/:id/environments/:environment/config-variables/:name')
+  async deleteConfigVariableUnderEnvironment(
     @Req() req: AuthRequest,
     @Param('id') tenantId: string,
-    @Param('name') name: string,
-  ) {
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-    return this.configVariableService.toDto(await this.configVariableService.get(name, tenantId));
-  }
-
-  @UseGuards(PolyAuthGuard)
-  @Get('/:id/environments/:environment/config-variables/:name')
-  async getConfigVariableUnderEnvironment(
-    @Req() req: AuthRequest,
-    @Param('id') tenantId: string,
-    @Param('name') name: string,
     @Param('environment') environmentId: string,
+    @Param('name') name: string,
   ) {
     await Promise.all([
       this.findEnvironment(tenantId, environmentId),
       this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
     ]);
 
-    return this.configVariableService.toDto(await this.configVariableService.get(name, tenantId, environmentId));
+    return this.configVariableService.toDto(await this.configVariableService.delete(name, tenantId, environmentId));
   }
 
   @UseGuards(PolyAuthGuard)
