@@ -18,6 +18,7 @@ model Tenant {
   environments            Environment[]
   applications            Application[]
   publicVisibilityAllowed Boolean       @default(false) @map("public_visibility_allowed")
+  configVariables ConfigVariable[]
 
   @@map("tenant")
 }
@@ -74,6 +75,7 @@ model Environment {
   systemPrompts   SystemPrompt[]
   apiKeys         ApiKey[]
   gptPlugins      GptPlugin[]
+  configVariables ConfigVariable[]
 
   @@map("environment")
 }
@@ -241,8 +243,12 @@ model AuthToken {
 model ConfigVariable {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
-  name      String   @unique // "keyword_similarity_threshold" | "function_match_limit"
+  name      String
   value     String
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId  String?
+  environment Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environmentId String?
 
   @@map("config_variable")
 }
