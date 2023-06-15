@@ -64,8 +64,8 @@ export class ConfigVariableService {
         list.find((current) => current.tenantId === tenantId && current.environmentId === environmentId) || null;
     }
 
-    if (!configVarfiable && tenantId) {
-      configVarfiable = list.find((current) => current.tenantId === tenantId) || null;
+    if (!configVarfiable && tenantId && !environmentId) {
+      configVarfiable = list.find((current) => current.tenantId === tenantId && current.environmentId === null) || null;
     }
 
     if (!configVarfiable) {
