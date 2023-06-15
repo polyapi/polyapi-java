@@ -14,7 +14,7 @@ if __name__ == "__main__":
     functions = [
         {
             "name": "return_results",
-            "description": "first try to answer the users question. then call this function to return the results",
+            "description": "first try to answer the user's question. then call this function to return the results",
             "parameters": {
                 "type": "object",
                 "properties": {
