@@ -8,7 +8,7 @@ if __name__ == "__main__":
     messages = [
         {
             "role": "user",
-            "content": "what is the capitol of sweden? when was it founded?",
+            "content": "what is the capitol of slovakia? when was it founded?",
         }
     ]
     functions = [
