@@ -1,5 +1,5 @@
 import { Body, Controller, UseGuards, Patch, Get, Param } from '@nestjs/common';
-import { Role, CreateConfigVariableDto } from '@poly/common';
+import { Role, SetConfigVariableDto } from '@poly/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { ConfigVariableService } from './config-varirable.service';
@@ -11,7 +11,7 @@ export class ConfigVariableController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch('')
-  public async createOrUpdateConfigVariable(@Body() body: CreateConfigVariableDto) {
+  public async createOrUpdateConfigVariable(@Body() body: SetConfigVariableDto) {
     return this.service.toDto(await this.service.configure(body.name, body.value));
   }
 

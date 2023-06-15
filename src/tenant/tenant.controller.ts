@@ -39,7 +39,7 @@ import {
   UpdateTenantDto,
   UpdateUserDto,
   UserDto,
-  CreateConfigVariableDto,
+  SetConfigVariableDto,
 } from '@poly/common';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
@@ -118,7 +118,7 @@ export class TenantController {
   @Patch('/:id/config-variables')
   async setConfigVariableUnderTenant(
     @Req() req: AuthRequest,
-    @Body() body: CreateConfigVariableDto,
+    @Body() body: SetConfigVariableDto,
     @Param('id') tenantId: string,
   ) {
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
@@ -132,7 +132,7 @@ export class TenantController {
   @Patch('/:id/environments/:environment/config-variables')
   async setConfigVariableUnderEnvironment(
     @Req() req: AuthRequest,
-    @Body() body: CreateConfigVariableDto,
+    @Body() body: SetConfigVariableDto,
     @Param('id') tenantId: string,
     @Param('environment') environmentId: string,
   ) {

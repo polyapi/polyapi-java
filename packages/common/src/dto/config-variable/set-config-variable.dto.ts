@@ -6,7 +6,7 @@ export enum ConfigVariableName {
   openai_extract_keywords_temperature = 'openai_extract_keywords_temperature',
 }
 
-export class CreateConfigVariableDto {
+export class SetConfigVariableDto {
   @IsNotEmpty()
   @IsEnum(ConfigVariableName)
   name: string;
