@@ -17,15 +17,23 @@ jobs:
       
     steps:
     - uses: actions/checkout@v3
+
+    - name: Read docker image tag
+      id: package
+      uses: juliangruber/read-file-action@v1
+      with:
+        path: ./docker/dockerimage-tag-develop.yaml
     
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ghcr.io/polyapi/polyapi-dev:1.0.5 -f docker/Dockerfile .
-        docker push ghcr.io/polyapi/polyapi-dev:1.0.5
+        dockerimage=${{ steps.package.outputs.content }}
+        dockerimageclean=${dockerimage//[[:space:]]/}
+        docker build -t $dockerimageclean -f docker/Dockerfile .
+        docker push $dockerimageclean
 
   main:
-    name: Staging docker build and push.
+    name: Main docker build and push.
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -35,9 +43,17 @@ jobs:
       
     steps:
     - uses: actions/checkout@v3
-    
+
+    - name: Read docker image tag
+      id: package
+      uses: juliangruber/read-file-action@v1
+      with:
+        path: ./docker/dockerimage-tag-main.yaml
+
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ghcr.io/polyapi/polyapi-main:1.0.0 -f docker/Dockerfile .
-        docker push ghcr.io/polyapi/polyapi-main:1.0.0
+        dockerimage=${{ steps.package.outputs.content }}
+        dockerimageclean=${dockerimage//[[:space:]]/}
+        docker build -t $dockerimageclean -f docker/Dockerfile .
+        docker push $dockerimageclean

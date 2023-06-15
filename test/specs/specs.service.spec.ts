@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { SpecsService } from 'specs/specs.service';
 import { FunctionService } from 'function/function.service';
-import { getFnMock, mockedAuthData, TypedMock } from '../utils/test-utils';
+import { mockedAuthData } from '../utils/test-utils';
 import { WebhookService } from 'webhook/webhook.service';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
 import { ApiFunction, AuthProvider, CustomFunction, WebhookHandle } from '@prisma/client';
@@ -15,18 +15,11 @@ import {
   WebhookHandleSpecification,
 } from '@poly/common';
 
+import { functionServiceMock, webhookServiceMock, authProviderServiceMock } from '../mocks';
+import { resetMocks } from '../mocks/utils';
+
 describe('SpecsService', () => {
   let specsService: SpecsService;
-
-  const getApiFunctions = getFnMock<FunctionService['getApiFunctions']>();
-  const getCustomFunctions = getFnMock<FunctionService['getCustomFunctions']>();
-  const getWebhookHandles = getFnMock<WebhookService['getWebhookHandles']>();
-  const getAuthProviders = getFnMock<AuthProviderService['getAuthProviders']>();
-
-  const toApiFunctionSpecification = getFnMock<FunctionService['toApiFunctionSpecification']>();
-  const toCustomFunctionSpecification = getFnMock<FunctionService['toCustomFunctionSpecification']>();
-  const toWebhookHandleSpecification = getFnMock<WebhookService['toWebhookHandleSpecification']>();
-  const toAuthFunctionSpecifications = getFnMock<AuthProviderService['toAuthFunctionSpecifications']>();
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -34,31 +27,22 @@ describe('SpecsService', () => {
         SpecsService,
         {
           provide: FunctionService,
-          useValue: {
-            getApiFunctions,
-            getCustomFunctions,
-            toApiFunctionSpecification,
-            toCustomFunctionSpecification,
-          } as TypedMock<FunctionService>,
+          useValue: functionServiceMock,
         },
         {
           provide: WebhookService,
-          useValue: {
-            getWebhookHandles,
-            toWebhookHandleSpecification,
-          } as TypedMock<WebhookService>,
+          useValue: webhookServiceMock,
         },
         {
           provide: AuthProviderService,
-          useValue: {
-            getAuthProviders,
-            toAuthFunctionSpecifications,
-          } as TypedMock<AuthProviderService>,
+          useValue: authProviderServiceMock,
         },
       ],
     }).compile();
 
     specsService = moduleRef.get(SpecsService);
+
+    resetMocks(functionServiceMock, webhookServiceMock, authProviderServiceMock);
   });
 
   describe('getSpecifications()', () => {
@@ -93,10 +77,11 @@ describe('SpecsService', () => {
         },
       ]);
 
-      getApiFunctions.mockResolvedValue(apiFunctions);
-      getCustomFunctions.mockResolvedValue(customFunctions);
-      getWebhookHandles.mockResolvedValue(webhookHandles);
-      getAuthProviders.mockResolvedValue(authProviders);
+      functionServiceMock.getApiFunctions?.mockResolvedValue(apiFunctions);
+      functionServiceMock.getCustomFunctions?.mockResolvedValue(customFunctions);
+      webhookServiceMock.getWebhookHandles?.mockResolvedValue(webhookHandles);
+
+      authProviderServiceMock.getAuthProviders?.mockResolvedValue(authProviders);
 
       const apiFunctionSpecification = createMock<ApiFunctionSpecification>({
         context: apiFunctions[0].context,
@@ -128,13 +113,13 @@ describe('SpecsService', () => {
         },
       ]);
 
-      toApiFunctionSpecification.mockResolvedValue(apiFunctionSpecification);
+      functionServiceMock.toApiFunctionSpecification?.mockResolvedValue(apiFunctionSpecification);
 
-      toCustomFunctionSpecification.mockResolvedValue(customFunctionSpecification);
+      functionServiceMock.toCustomFunctionSpecification?.mockResolvedValue(customFunctionSpecification);
 
-      toWebhookHandleSpecification.mockResolvedValue(webhookHandleSpecification);
+      webhookServiceMock.toWebhookHandleSpecification?.mockResolvedValue(webhookHandleSpecification);
 
-      toAuthFunctionSpecifications.mockResolvedValue(authFunctionSpecifications);
+      authProviderServiceMock.toAuthFunctionSpecifications?.mockResolvedValue(authFunctionSpecifications);
 
       // Action
       const result = await specsService.getSpecifications(mockedAuthData.environment.id, mockedAuthData.tenant.id, contexts, names, ids);
@@ -177,7 +162,8 @@ describe('SpecsService', () => {
         {
           id: firstId,
           path: 'fooBar',
-        }, {
+        },
+        {
           id: secondId,
           path: 'store.fooBar',
         },

@@ -1,14 +1,11 @@
 import re
-import copy
 import json
-import openai
 from typing import List, Dict, Optional, Tuple
 from prisma import get_client
 from prisma.models import SystemPrompt
 
 # TODO change to relative imports
 from app.typedefs import (
-    ChatCompletionResponse,
     ChatGptChoice,
     ExtractKeywordDto,
     StatsDict,
@@ -20,15 +17,15 @@ from app.typedefs import (
 )
 from app.utils import (
     create_new_conversation,
+    filter_to_real_public_ids,
     insert_internal_step_info,
-    public_id_to_spec,
-    get_public_id,
     log,
     func_path_with_args,
+    public_ids_to_specs,
     query_node_server,
     store_messages,
+    get_chat_completion,
 )
-from app.constants import CHAT_GPT_MODEL
 
 UUID_REGEX = re.compile(
     r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}"
@@ -54,10 +51,6 @@ def answer_processing(choice: ChatGptChoice) -> Tuple[str, bool]:
         return content, True
 
     return content, False
-
-
-def log_matches(question: str, type: str, matches: int, total: int):
-    log(f"{type}: {matches} out of {total} matched: {question}")
 
 
 def get_function_options_prompt(
@@ -117,22 +110,6 @@ def spec_prompt(match: SpecificationDto) -> str:
         func_path_with_args(match),
     ]
     return "\n".join(parts)
-
-
-def get_chat_completion(
-    messages: List[MessageDict], *, temperature=1.0
-) -> ChatCompletionResponse:
-    """send the messages to OpenAI and get a response"""
-    stripped = copy.deepcopy(messages)
-    for s in stripped:
-        # remove our internal-use-only fields
-        s.pop("type", None)
-    resp: ChatCompletionResponse = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL,
-        messages=stripped,
-        temperature=temperature,
-    )
-    return resp
 
 
 BEST_FUNCTION_CHOICE_TEMPLATE = """
@@ -209,11 +186,7 @@ def get_best_functions(
     public_ids = _extract_ids_from_completion(answer_msg["content"])
     if public_ids:
         # valid public id, send it back!
-        rv = []
-        for public_id in set(public_ids):
-            if get_public_id(public_id):
-                rv.append(public_id)
-
+        rv = filter_to_real_public_ids(public_ids)
         return rv, stats
     else:
         # we received invalid public id, just send back nothing
@@ -275,18 +248,14 @@ def get_best_function_example(
 ) -> ChatGptChoice:
     """take in the best function and get OpenAI to return an example of how to use that function"""
 
-    specs = [
-        public_id_to_spec(user_id, environment_id, public_id)
-        for public_id in public_ids
-    ]
-    valid_specs = [spec for spec in specs if spec]
-    if len(specs) != len(valid_specs):
+    specs = public_ids_to_specs(user_id, environment_id, public_ids)
+    if len(specs) != len(public_ids):
         raise NotImplementedError(
             f"spec doesnt exist for {public_ids}? was one somehow deleted?"
         )
 
     best_function_prompt = BEST_FUNCTION_DETAILS_TEMPLATE.format(
-        spec_str="\n\n".join(spec_prompt(spec) for spec in valid_specs)
+        spec_str="\n\n".join(spec_prompt(spec) for spec in specs)
     )
     question_prompt = BEST_FUNCTION_QUESTION_TEMPLATE.format(question=question)
     messages = [

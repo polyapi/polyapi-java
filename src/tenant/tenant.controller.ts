@@ -182,6 +182,10 @@ export class TenantController {
   ): Promise<UserDto> {
     const { name, role = Role.User } = data;
 
+    if (role === Role.SuperAdmin) {
+      throw new BadRequestException('SuperAdmin role is not allowed to be set');
+    }
+
     await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 

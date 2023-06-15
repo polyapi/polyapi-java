@@ -17,7 +17,9 @@ export type ExtractMethods<Type> = {
 /**
  * Utility type for using among with `useValue` when mock a provider to get full instellisense about provider methods.
  */
-export type TypedMock<T> = Partial<ExtractMethods<T>>;
+export type TypedMock<T> = Partial<{
+  [Key in keyof ExtractMethods<T>]: ExtractMethods<T>[Key] & ExtractMethods<T>[Key] extends (...args: any[]) => any ? ReturnType<typeof getFnMock<ExtractMethods<T>[Key]>> : object;
+}>;
 
 const tenantId = '2a918df0-dffd-4773-b2b4-2b5cd3182c5f';
 /**
@@ -64,10 +66,10 @@ export const mockedAuthData: AuthData = {
  */
 export function getMockedPolyAuthGuard(user: AuthData = mockedAuthData): TypedMock<PolyAuthGuard> {
   return {
-    async canActivate(context: ExecutionContext): Promise<any> {
+    canActivate: getFnMock<PolyAuthGuard['canActivate']>().mockImplementation(async (context: ExecutionContext) => {
       context.switchToHttp().getRequest().user = user;
       return true;
-    },
+    }),
   };
 }
 

@@ -188,6 +188,13 @@ function _getProperties(props: PropertySpecification[]) {
   return rv;
 }
 
+function _validateName(name: string): string {
+  if (name.length > 30) {
+    throw new BadRequestException('Name too long. Max name length is 30 characters!');
+  }
+  return name;
+}
+
 @Injectable()
 export class GptPluginService {
   private readonly logger = new Logger(GptPluginService.name);
@@ -309,10 +316,13 @@ export class GptPluginService {
     // ok lets go ahead and create or update!
     const update = {};
     if (body.name) {
-      if (body.name.length > 30) {
-        throw new BadRequestException('Name too long. Max name length is 30 characters!');
-      }
-      update['name'] = body.name;
+      update['name'] = _validateName(body.name);
+    }
+    if (body.contactEmail) {
+      update['contactEmail'] = body.contactEmail;
+    }
+    if (body.legalUrl) {
+      update['legalUrl'] = body.legalUrl;
     }
     if (body.descriptionForMarketplace) {
       update['descriptionForMarketplace'] = body.descriptionForMarketplace;
@@ -334,7 +344,9 @@ export class GptPluginService {
       update: { ...update },
       create: {
         slug: body.slug,
-        name: body.name ? body.name : body.slug,
+        name: _validateName(body.name ? body.name : body.slug),
+        contactEmail: body.contactEmail ? body.contactEmail : 'info@polyapi.io',
+        legalUrl: body.legalUrl ? body.legalUrl : 'https://polyapi.io/legal',
         descriptionForMarketplace: body.descriptionForMarketplace || '',
         descriptionForModel: body.descriptionForModel || '',
         iconUrl: body.iconUrl ? body.iconUrl : POLY_DEFAULT_ICON_URL,

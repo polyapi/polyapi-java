@@ -1,6 +1,12 @@
 FROM node:18
 RUN apt-get update && apt-get install -y \
     python3-pip sqlite3
+
+ENV DOCKER_VERSION=20.10.9
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz -C /tmp && \
+    mv /tmp/docker/docker /usr/local/bin && \
+    rm -rf /tmp/docker
+
 # Install Knative CLI (needed for server side functions)
 RUN mkdir -p /poly/funcs/bin && \
     mkdir -p /poly/funcs/serverfx && \

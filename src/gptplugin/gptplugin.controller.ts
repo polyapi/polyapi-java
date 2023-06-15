@@ -27,10 +27,11 @@ export class GptPluginController {
   @UseGuards(PolyAuthGuard)
   @Get('plugins/:slug')
   public async pluginGet(@Req() req: AuthRequest, @Param('slug') slug): Promise<unknown> {
+    slug = slug.toLowerCase();
     const plugin = await this.service.getPlugin(slug);
     return {
       plugin,
-      plugin_url: `https://${plugin.slug}.${req.hostname}`,
+      plugin_url: `https://${plugin.slug}-${req.user.environment.subdomain}.${req.hostname}`,
     };
   }
 
@@ -40,7 +41,7 @@ export class GptPluginController {
     const plugin = await this.service.createOrUpdatePlugin(req.user.environment, body);
     return {
       plugin,
-      plugin_url: `https://${plugin.slug}.${req.hostname}`,
+      plugin_url: `https://${plugin.slug}-${req.user.environment.subdomain}.${req.hostname}`,
     };
   }
 

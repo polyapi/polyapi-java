@@ -8,6 +8,7 @@ from load_fixtures import (
 from app.utils import (
     camel_case,
     create_new_conversation,
+    filter_to_real_public_ids,
     func_args,
     func_path,
     func_path_with_args,
@@ -136,3 +137,9 @@ class T(DbTestCase):
         )
         messages = get_conversations_for_user(user.id)
         self.assertEqual(messages, [msg])
+
+    def test_filter_to_real_public_ids(self):
+        func = self.db.apifunction.find_first()
+        assert func
+        real = filter_to_real_public_ids([func.id, "fakeid"])
+        self.assertEqual(real, [func.id])

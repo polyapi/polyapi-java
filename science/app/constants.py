@@ -16,4 +16,4 @@ class MessageType(IntEnum):
     internal = 3  # totally internal messages for our own logging
 
 
-CHAT_GPT_MODEL = "gpt-4-0314"
+CHAT_GPT_MODEL = "gpt-4-0613"

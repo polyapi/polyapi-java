@@ -1,11 +1,11 @@
 import json
-import openai
 from thefuzz import fuzz
 from typing import Optional, Tuple, List
-from app.constants import CHAT_GPT_MODEL, VarName
+from app.constants import VarName
 from app.typedefs import MessageDict, StatsDict, ExtractKeywordDto, SpecificationDto
 from app.utils import (
     func_path,
+    get_chat_completion,
     get_config_variable,
     insert_internal_step_info,
     log,
@@ -15,18 +15,21 @@ from app.utils import (
 from prisma import get_client
 
 
-KEYWORD_PROMPT = """For the following prompt, give me back both the keywords from my prompt and semantically similar keywords.
+KEYWORD_PROMPT = """For the following prompt, give me back the keywords from my prompt
 This will be used to power an API discovery service.
 Each keyword must be a single word.
 Keep the list to the top 8 keywords relevant to APIs.
-Don't include "API" "resource" as keywords.
-Include all of the likely HTTP methods for this prompt, for example many times search is done using a POST.
+Don't include "API" or "resource" as keywords.
 
 Here is the prompt:
 
-{prompt}
+"%s"
 
+Return the keywords as a space separated list. Please return valid JSON in this format:
 
+```
+{"keywords": "foo bar"}
+```
 """
 
 
@@ -50,18 +53,13 @@ def get_extract_keywords_temperature() -> float:
 def extract_keywords(
     user_id: str, conversation_id: str, question: str
 ) -> Optional[ExtractKeywordDto]:
-    prompt = KEYWORD_PROMPT.format(prompt=question)
+    prompt = KEYWORD_PROMPT % question
     messages = [
         MessageDict(role="user", content=prompt),
-        MessageDict(
-            role="user",
-            content='Return JSON with keys "keywords", "semantically_similar_keywords", and "http_methods". Each value should be a string and in English.',
-        ),
     ]
-    resp = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL,
+    resp = get_chat_completion(
+        messages,
         temperature=get_extract_keywords_temperature(),
-        messages=messages,
     )
     answer = resp["choices"][0]["message"]
 
@@ -71,7 +69,7 @@ def extract_keywords(
     store_messages(user_id, conversation_id, messages)
 
     # continue
-    content = answer["content"]
+    content = answer["content"].replace("```", "")
     try:
         rv = json.loads(content)
     except Exception as e:
@@ -80,7 +78,7 @@ def extract_keywords(
 
     # sometimes OpenAI returns lists instead of strings
     # let's coerce them to strings
-    for key in ["keywords", "semantically_similar_keywords", "http_methods"]:
+    for key in ["keywords"]:
         if isinstance(rv[key], list):
             rv[key] = " ".join(rv[key])
             rv[key] = remove_punctuation(rv[key])
@@ -139,20 +137,6 @@ def get_top_function_matches(
         match_limit, items, keyword_data["keywords"]
     )
 
-    semantic_matches, semantic_stats = _get_top(
-        match_limit,
-        items,
-        keyword_data.get("semantically_similar_keywords", ""),
-    )
-
-    keyword_match_uuids = {x["id"] for x in keyword_matches}
-    for match in semantic_matches:
-        if len(keyword_matches) >= match_limit:
-            break
-
-        if match["id"] not in keyword_match_uuids:
-            keyword_matches.append(match)
-
     stats: StatsDict = {"keyword_extraction": keyword_data}
     stats["config"] = {
         "function_match_limit": match_limit,
@@ -160,10 +144,8 @@ def get_top_function_matches(
         "extract_keywords_temperature": get_extract_keywords_temperature(),
     }
     stats["keyword_stats"] = keyword_stats
-    stats["semantically_similar_stats"] = semantic_stats
     stats["match_count"] = _generate_match_count(stats)
 
-    # TODO
     return keyword_matches, stats
 
 
@@ -187,12 +169,12 @@ def filter_items_based_on_http_method(
 
 
 def _generate_match_count(stats: StatsDict) -> int:
+    """ for keyword matches, we only return up to `match_limit` matches
+    this function counts how many potential matches crossed the similarity threshold
+    """
     threshold = get_similarity_threshold()
     matches = set()
     for name, score in stats["keyword_stats"]["scores"]:
-        if score > threshold:
-            matches.add(name)
-    for name, score in stats["semantically_similar_stats"]["scores"]:
         if score > threshold:
             matches.add(name)
     return len(matches)

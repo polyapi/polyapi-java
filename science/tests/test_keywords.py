@@ -123,15 +123,13 @@ class T(DbTestCase):
         )
         self.assertEqual(top_5, [])
 
-    @patch("app.keywords.openai.ChatCompletion.create")
+    @patch("app.keywords.get_chat_completion")
     def test_extract_keywords(self, chat_create: Mock):
         user = test_user_get_or_create()
         conversation = create_new_conversation(user.id)
 
         mock_response = {
             "keywords": "foo bar",
-            "semantically_similar_keywords": "foo bar",
-            "http_methods": "get post",
         }
         chat_create.return_value = {
             "choices": [{"message": {"content": json.dumps(mock_response), "role": "assistant"}}]
@@ -139,18 +137,14 @@ class T(DbTestCase):
         keyword_data = extract_keywords(user.id, conversation.id, "test")
         assert keyword_data
         self.assertEqual(keyword_data["keywords"], "foo bar")
-        self.assertEqual(keyword_data["semantically_similar_keywords"], "foo bar")
-        self.assertEqual(keyword_data["http_methods"], "get post")
 
-    @patch("app.keywords.openai.ChatCompletion.create")
+    @patch("app.keywords.get_chat_completion")
     def test_extract_keywords_lists(self, chat_create: Mock):
         user = test_user_get_or_create()
         conversation = create_new_conversation(user.id)
 
         mock_response = {
             "keywords": ["foo", "bar"],
-            "semantically_similar_keywords": ["foo", "bar"],
-            "http_methods": ["get", "post"],
         }
         chat_create.return_value = {
             "choices": [{"message": {"content": json.dumps(mock_response), "role": "assistant"}}]
@@ -158,8 +152,6 @@ class T(DbTestCase):
         keyword_data = extract_keywords(user.id, conversation.id, "test")
         assert keyword_data
         self.assertEqual(keyword_data["keywords"], "foo bar")
-        self.assertEqual(keyword_data["semantically_similar_keywords"], "foo bar")
-        self.assertEqual(keyword_data["http_methods"], "get post")
 
     def test_get_function_match_limit(self):
         value = 6
