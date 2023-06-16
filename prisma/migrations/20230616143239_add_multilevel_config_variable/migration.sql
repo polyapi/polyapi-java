@@ -32,8 +32,8 @@ PRAGMA foreign_key_check;
 PRAGMA foreign_keys = ON;
 
 UPDATE
-    config_variable SET name = 'OpenAIKeywordSimilarityThreshold' where name = 'keyword_similarity_threshold'
+    config_variable SET name = 'OpenAIKeywordSimilarityThreshold' where name = 'keyword_similarity_threshold';
 UPDATE
-    config_variable SET name = 'OpenAIFunctionMatchLimit' where name = 'function_match_limit'
+    config_variable SET name = 'OpenAIFunctionMatchLimit' where name = 'function_match_limit';
 UPDATE
-    config_variable SET name = 'OpenAIExtractKeywordsTemperature' where name = 'extract_keywords_temperature'
+    config_variable SET name = 'OpenAIExtractKeywordsTemperature' where name = 'extract_keywords_temperature';
