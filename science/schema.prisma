@@ -246,9 +246,9 @@ model ConfigVariable {
   name      String
   value     String
   tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantId  String?
+  tenantId  String? @map("tenant_id")
   environment Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String?
+  environmentId String? @map("environment_id")
 
   @@map("config_variable")
 }

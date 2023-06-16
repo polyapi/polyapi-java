@@ -6,10 +6,10 @@ CREATE TABLE "new_config_variable" (
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT NOT NULL,
     "value" TEXT NOT NULL,
-    "tenantId" TEXT,
-    "environmentId" TEXT,
-    CONSTRAINT "config_variable_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenant" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "config_variable_environmentId_fkey" FOREIGN KEY ("environmentId") REFERENCES "environment" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "tenant_id" TEXT,
+    "environment_id" TEXT,
+    CONSTRAINT "config_variable_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenant" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "config_variable_environment_id_fkey" FOREIGN KEY ("environment_id") REFERENCES "environment" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 INSERT INTO
