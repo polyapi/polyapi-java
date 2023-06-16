@@ -316,7 +316,6 @@ HARDCODED_FUNCTIONS = [
             "properties": {
                 "My_Phone_Number": {"type": "string"},
                 "message": {"type": "string"},
-                "description": "phone number to send the sms to and the message to send",
             },
         },
     }

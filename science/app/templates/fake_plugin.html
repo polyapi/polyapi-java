@@ -30,8 +30,8 @@
       "environment_id": "93cbd391-b206-4ad9-9e6f-9cf7be86462f"
     });
     if (data.function_call) {
-      preExecute.textContent = data.function_call
-      var execute_results = await postData("/function-execute", data.function_call)
+      preExecute.textContent = "Executing " + JSON.stringify(data.function_call);
+      var execute_results = await postData("/fake-function-execute", data.function_call)
       postExecute.textContent = data.answer;
     } else {
       answer.textContent = data.answer;

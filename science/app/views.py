@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from typing import Dict, Optional, Tuple
-from flask import Blueprint, Response, request, jsonify
+from flask import Blueprint, Response, render_template, request, jsonify
 from openai.error import OpenAIError, RateLimitError
 from app.completion import get_completion_answer
 from app.description import get_function_description, get_webhook_description
@@ -83,3 +83,15 @@ def handle_open_ai_error(e):
         msg = f"Sadly, OpenAI appears to be down. Please try again later. ({e.__class__.__name__})"
     current_app.log_exception(msg)
     return msg, 500
+
+
+@bp.route("/fake-plugin")
+def fake_plugin():
+    return render_template('fake_plugin.html')
+
+
+@bp.route("/fake-function-execute", methods=["POST"])
+def fake_function_execute():
+    data = request.get_json(force=True)
+    print(data)
+    return jsonify({"response": "Message sent!"})
