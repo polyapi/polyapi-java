@@ -277,8 +277,14 @@ def get_best_function_example(
     return rv
 
 
-def get_completion_answer(user_id: str, environment_id: str, question: str) -> Dict:
-    choice = simple_chatgpt_question(question)
+def get_completion_answer(
+    user_id: str,
+    environment_id: str,
+    question: str,
+    function_call: Optional[Dict] = None,
+    function_results: Optional[Dict] = None,
+) -> Dict:
+    choice = simple_chatgpt_question(question, function_call, function_results)
     function_call = choice["message"].get("function_call")
 
     answer, hit_token_limit = answer_processing(choice)
@@ -322,7 +328,24 @@ HARDCODED_FUNCTIONS = [
 ]
 
 
-def simple_chatgpt_question(question: str) -> ChatGptChoice:
+def simple_chatgpt_question(
+    question: str,
+    function_call: Optional[Dict] = None,
+    function_results: Optional[Dict] = None,
+) -> ChatGptChoice:
     messages: List[MessageDict] = [{"role": "user", "content": question}]
-    resp = get_chat_completion(messages, functions=HARDCODED_FUNCTIONS)
+    if function_call:
+        messages.append(
+            {"role": "assistant", "content": "", "function_call": function_call}
+        )
+    if function_results:
+        messages.append(
+            {
+                "role": "function",
+                "name": function_call["name"],
+                "content": json.dumps(function_results),
+            }
+        )
+    print(messages)
+    resp = get_chat_completion(messages, functions=HARDCODED_FUNCTIONS, temperature=0.2)
     return resp["choices"][0]

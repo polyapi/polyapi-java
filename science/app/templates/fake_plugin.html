@@ -31,8 +31,20 @@
     });
     if (data.function_call) {
       preExecute.textContent = "Executing " + JSON.stringify(data.function_call);
-      var execute_results = await postData("/fake-function-execute", data.function_call)
-      postExecute.textContent = data.answer;
+      var execute_resp = await postData("/fake-function-execute", data.function_call)
+      postExecute.textContent = "Execute results " + JSON.stringify(execute_resp.content);
+
+      // TODO we will actually introspect on the server side for this state
+      // to generate this state
+      // we don't want to make the FE track all this stuff
+      var summarize_resp = await postData("/function-completion", {
+        "question": question,
+        "function_call": data.function_call,
+        "function_results": execute_resp.results,
+        "user_id": "d91a21b7-b134-45f0-9bee-cadce83ce08b",
+        "environment_id": "93cbd391-b206-4ad9-9e6f-9cf7be86462f"
+      })
+      answer.textContent = summarize_resp.answer;
     } else {
       answer.textContent = data.answer;
     }

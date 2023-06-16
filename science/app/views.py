@@ -25,7 +25,13 @@ def function_completion() -> Dict:
     assert user_id
     assert environment_id
 
-    resp = get_completion_answer(user_id, environment_id, question)
+    resp = get_completion_answer(
+        user_id,
+        environment_id,
+        question,
+        data.get("function_call"),
+        data.get("function_results"),
+    )
 
     if is_vip_user(user_id):
         log(f"VIP USER {user_id}", resp, sep="\n")
@@ -87,11 +93,59 @@ def handle_open_ai_error(e):
 
 @bp.route("/fake-plugin")
 def fake_plugin():
-    return render_template('fake_plugin.html')
+    return render_template("fake_plugin.html")
 
 
 @bp.route("/fake-function-execute", methods=["POST"])
 def fake_function_execute():
     data = request.get_json(force=True)
-    print(data)
-    return jsonify({"response": "Message sent!"})
+    name = data["name"]
+
+    FAKE_EXECUTE = {
+        "status": 201,
+        "headers": {
+            "date": "Fri, 16 Jun 2023 17:29:30 GMT",
+            "content-type": "application/json",
+            "content-length": "771",
+            "connection": "close",
+            "twilio-request-id": "RQ633584430a755b4123460a5bb2bbe048",
+            "twilio-request-duration": "0.213",
+            "access-control-allow-origin": "*",
+            "access-control-allow-headers": "Accept, Authorization, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, Idempotency-Key",
+            "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+            "access-control-expose-headers": "ETag",
+            "access-control-allow-credentials": "true",
+            "x-powered-by": "AT-5000",
+            "strict-transport-security": "max-age=31536000",
+            "twilio-concurrent-requests": "1",
+            "x-shenanigans": "none",
+            "x-home-region": "us1",
+            "x-api-domain": "api.twilio.com",
+        },
+        "data": {
+            "body": "unicorn",
+            "num_segments": "1",
+            "direction": "outbound-api",
+            "from": "+17622396902",
+            "date_updated": "Fri, 16 Jun 2023 17:29:30 +0000",
+            "price": None,
+            "error_message": None,
+            "uri": "/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages/SM633584430a755b4123460a5bb2bbe048.json",
+            "account_sid": "ACe562bccbc410295451a07d40747eb10b",
+            "num_media": "0",
+            "to": "+15032670612",
+            "date_created": "Fri, 16 Jun 2023 17:29:30 +0000",
+            "status": "queued",
+            "sid": "SM633584430a755b4123460a5bb2bbe048",
+            "date_sent": None,
+            "messaging_service_sid": None,
+            "error_code": None,
+            "price_unit": "USD",
+            "api_version": "2010-04-01",
+            "subresource_uris": {
+                "media": "/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages/SM633584430a755b4123460a5bb2bbe048/Media.json"
+            },
+        },
+    }
+
+    return jsonify({"name": name, "content": FAKE_EXECUTE})
