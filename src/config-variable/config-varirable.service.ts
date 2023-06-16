@@ -60,41 +60,41 @@ export class ConfigVariableService {
   ) {
     let configVariable: ConfigVariable | null = null;
 
-    const list = await this.prisma.configVariable.findMany({
+    const configVariables = await this.prisma.configVariable.findMany({
       where: {
         name,
       },
     });
 
-    if (!list.length) {
+    if (!configVariables.length) {
       return null;
     }
 
     if (tenantId && environmentId) {
-      configVariable = list.find(this.getTenantAndEnvironmentFilter(tenantId, environmentId)) || null;
+      configVariable = configVariables.find(this.getTenantAndEnvironmentFilter(tenantId, environmentId)) || null;
 
       if (!configVariable) {
-        configVariable = list.find(this.getTenantFilter(tenantId)) || null;
+        configVariable = configVariables.find(this.getTenantFilter(tenantId)) || null;
       }
 
       if (!configVariable) {
-        return list.find(this.getInstanceFilter()) || null;
+        return configVariables.find(this.getInstanceFilter()) || null;
       }
 
       return configVariable;
     }
 
     if (tenantId && !environmentId) {
-      configVariable = list.find(this.getTenantFilter(tenantId)) || null;
+      configVariable = configVariables.find(this.getTenantFilter(tenantId)) || null;
 
       if (!configVariable) {
-        return list.find(this.getInstanceFilter()) || null;
+        return configVariables.find(this.getInstanceFilter()) || null;
       }
 
       return configVariable;
     }
 
-    return list.find(this.getInstanceFilter()) || null;
+    return configVariables.find(this.getInstanceFilter()) || null;
   }
 
   async configure(name: string, value: string, tenantId: string | null = null, environmentId: string | null = null) {
@@ -126,13 +126,13 @@ export class ConfigVariableService {
   }
 
   async get(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const configVarfiable = await this.getVariableByPriority(name, tenantId, environmentId);
+    const configVariable = await this.getVariableByPriority(name, tenantId, environmentId);
 
-    if (!configVarfiable) {
+    if (!configVariable) {
       throw new NotFoundException('Config variable not found');
     }
 
-    return configVarfiable;
+    return configVariable;
   }
 
   async delete(name: string, tenantId: string | null = null, environmentId: string | null = null) {
