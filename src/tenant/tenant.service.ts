@@ -5,7 +5,7 @@ import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
-import { Role, TenantDto, TenantFullDto } from '@poly/common';
+import { Role, TenantDto, TenantFullDto } from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';

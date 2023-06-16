@@ -15,16 +15,18 @@ import {
   FunctionPropertyType,
   ObjectPropertyType,
   PropertySpecification,
-  PropertyType,
   ServerFunctionSpecification,
   Specification,
   WebhookHandleSpecification,
-} from '@poly/common';
+} from '@poly/model';
+import {
+  toTypeDeclaration,
+} from '@poly/common/utils';
 import { getSpecs } from '../api';
 import { POLY_USER_FOLDER_NAME } from '../constants';
 import { loadConfig } from '../config';
 
-const POLY_LIB_PATH = `${__dirname}/../../../${POLY_USER_FOLDER_NAME}/lib`;
+const POLY_LIB_PATH = `${__dirname}/../../../../../${POLY_USER_FOLDER_NAME}/lib`;
 
 interface Context {
   name: string;
@@ -256,46 +258,6 @@ const schemaToDeclarations = async (namespace: string, typeName: string, schema:
     bannerComment: '',
   });
   return wrapToNamespace(result);
-};
-
-const toTypeDeclaration = (type: PropertyType, synchronous = true) => {
-  const wrapInPromiseIfNeeded = (code: string) => (synchronous ? code : `Promise<${code}>`);
-
-  switch (type.kind) {
-    case 'plain':
-      return type.value;
-    case 'primitive':
-      return wrapInPromiseIfNeeded(type.type);
-    case 'void':
-      return wrapInPromiseIfNeeded('void');
-    case 'array':
-      return wrapInPromiseIfNeeded(`${toTypeDeclaration(type.items)}[]`);
-    case 'object':
-      if (type.typeName) {
-        return wrapInPromiseIfNeeded(type.typeName);
-      } else if (type.properties) {
-        return wrapInPromiseIfNeeded(
-          `{ ${type.properties
-            .map((prop) => `'${prop.name}'${prop.required === false ? '?' : ''}: ${toTypeDeclaration(prop.type)}`)
-            .join(';\n')} }`,
-        );
-      } else {
-        return wrapInPromiseIfNeeded('any');
-      }
-    case 'function':
-      if (type.name) {
-        return type.name;
-      }
-      const toArgument = (arg: PropertySpecification) =>
-        `${arg.name}${arg.required === false ? '?' : ''}: ${toTypeDeclaration(arg.type)}${
-          arg.nullable === true ? ' | null' : ''
-        }`;
-
-      return `(${type.spec.arguments.map(toArgument).join(', ')}) => ${toTypeDeclaration(
-        type.spec.returnType,
-        type.spec.synchronous === true,
-      )}`;
-  }
 };
 
 const getReturnTypeDeclarations = async (

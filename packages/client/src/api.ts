@@ -3,7 +3,7 @@ import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import https from 'https';
 import dotenv from 'dotenv';
-import { FunctionDetailsDto, Specification } from '@poly/common';
+import { FunctionDetailsDto, Specification } from '@poly/model';
 
 dotenv.config();
 

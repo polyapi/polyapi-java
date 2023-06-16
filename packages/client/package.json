@@ -1,6 +1,6 @@
 {
   "name": "polyapi",
-  "version": "0.1.48",
+  "version": "0.1.49",
   "description": "Poly is a CLI tool to help create and manage your Poly definitions.",
   "license": "MIT",
   "repository": {
@@ -15,13 +15,13 @@
   ],
   "main": "index.js",
   "bin": {
-    "poly": "build/cli.js"
+    "poly": "build/client/src/cli.js"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "prebuild": "rimraf build",
     "postbuild": "npm run copy-templates",
-    "copy-templates": "copyfiles \"templates/*.hbs\" build",
+    "copy-templates": "copyfiles \"templates/*.hbs\" build/client/src",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "prepare": "npm run build",
@@ -33,6 +33,7 @@
     "@types/lodash": "^4.14.192",
     "copyfiles": "^2.4.1",
     "rimraf": "^4.4.1",
+    "tsc-alias": "^1.8.6",
     "tslint": "^6.1.3",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^5.0.2"

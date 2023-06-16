@@ -11,6 +11,7 @@
     "src"
   ],
   "moduleNameMapper": {
-    "@poly/common": "<rootDir>/../packages/common/src"
+    "@poly/model": "<rootDir>/../packages/model/src",
+    "^@poly/common/(.+)$": "<rootDir>/../packages/common/src/$1"
   }
 }

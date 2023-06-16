@@ -1,4 +1,4 @@
-import { FunctionArgument } from '@poly/common';
+import { FunctionArgument } from '@poly/model';
 
 export const compareArgumentsByRequired = (a: FunctionArgument, b: FunctionArgument) => {
   if (a.required && !b.required) {

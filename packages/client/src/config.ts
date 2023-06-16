@@ -2,7 +2,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { POLY_USER_FOLDER_NAME } from './constants';
 
-const POLY_USER_FOLDER_PATH = `${__dirname}/../../${POLY_USER_FOLDER_NAME}`;
+const POLY_USER_FOLDER_PATH = `${__dirname}/../../../../${POLY_USER_FOLDER_NAME}`;
 const POLY_CONFIG_FILE_PATH = `${POLY_USER_FOLDER_PATH}/.config.env`;
 
 export const loadConfig = () => {

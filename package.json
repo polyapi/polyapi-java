@@ -20,6 +20,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:all": "npm run test && npm run test:e2e",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -99,7 +100,8 @@
       "src"
     ],
     "moduleNameMapper": {
-      "@poly/common": "<rootDir>/../packages/common/src"
+      "@poly/model": "<rootDir>/../packages/model/src",
+      "^@poly/common/(.+)$": "<rootDir>/../packages/common/src/$1"
     },
     "verbose": true
   },

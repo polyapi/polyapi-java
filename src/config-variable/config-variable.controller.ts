@@ -1,5 +1,5 @@
 import { Body, Controller, UseGuards, Patch, Get, Param, Delete } from '@nestjs/common';
-import { Role, SetConfigVariableDto } from '@poly/common';
+import { Role, SetConfigVariableDto } from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { ConfigVariableService } from './config-varirable.service';

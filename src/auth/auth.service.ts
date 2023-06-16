@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { AuthData } from 'common/types';
-import { ApiKeyDto, Permission, Permissions, Role, Visibility } from '@poly/common';
+import { ApiKeyDto, Permission, Permissions, Role, Visibility } from '@poly/model';
 import { ApiKey, Application, Environment, Tenant, User } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import crypto from 'crypto';

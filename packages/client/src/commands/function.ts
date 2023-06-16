@@ -4,7 +4,7 @@ import shell from 'shelljs';
 import { createServerFunction, createClientFunction } from '../api';
 import { loadConfig } from '../config';
 import { generateSingleCustomFunction } from './generate';
-import { FunctionDetailsDto } from '@poly/common';
+import { FunctionDetailsDto } from '@poly/model';
 
 export const addCustomFunction = async (
   context: string | null,

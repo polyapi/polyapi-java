@@ -40,7 +40,7 @@ import {
   UpdateUserDto,
   UserDto,
   SetConfigVariableDto,
-} from '@poly/common';
+} from '@poly/model';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { AuthService } from 'auth/auth.service';

@@ -1,0 +1,9 @@
+{
+  "name": "@poly/model",
+  "version": "0.1.0",
+  "description": "The package containing common shared code",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  }
+}

@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { Environment } from '@prisma/client';
-import { EnvironmentDto } from '@poly/common';
+import { EnvironmentDto } from '@poly/model';
 
 @Injectable()
 export class EnvironmentService {

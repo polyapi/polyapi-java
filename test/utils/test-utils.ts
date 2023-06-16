@@ -1,9 +1,9 @@
 import { ExecutionContext } from '@nestjs/common';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 
-import { Role } from '@poly/common';
+import { Role } from '@poly/model';
 import { AuthData } from 'common/types';
-import { Permission } from '@poly/common';
+import { Permission } from '@poly/model';
 
 const currentDate = new Date();
 
@@ -36,14 +36,14 @@ export const mockedAuthData: AuthData = {
   },
   environment: {
     createdAt: currentDate,
-    id: '',
+    id: '8f095786-e032-48f3-8790-d3eb30865db7',
     name: '',
     subdomain: '',
     tenantId: '',
   },
   tenant: {
     createdAt: currentDate,
-    id: '',
+    id: 'fbabafff-f506-47fd-8cf3-509d711fcde3',
     name: '',
     publicVisibilityAllowed: true,
   },

@@ -13,7 +13,7 @@ import {
   Specification,
   Visibility,
   WebhookHandleSpecification,
-} from '@poly/common';
+} from '@poly/model';
 
 import { functionServiceMock, webhookServiceMock, authProviderServiceMock } from '../mocks';
 import { resetMocks } from '../mocks/utils';

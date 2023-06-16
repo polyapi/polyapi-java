@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { Role, UserDto } from '@poly/common';
+import { Role, UserDto } from '@poly/model';
 import { User } from '@prisma/client';
 
 @Injectable()

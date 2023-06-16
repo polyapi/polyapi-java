@@ -15,7 +15,7 @@ import {
 import { ApiSecurity } from '@nestjs/swagger';
 import { WebhookService } from 'webhook/webhook.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
-import { CreateWebhookHandleDto, Permission, UpdateWebhookHandleDto } from '@poly/common';
+import { CreateWebhookHandleDto, Permission, UpdateWebhookHandleDto } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 

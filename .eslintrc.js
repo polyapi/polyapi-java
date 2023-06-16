@@ -22,6 +22,7 @@ module.exports = {
 
     'accessor-pairs': ['error', { setWithoutGet: true, enforceForClassMembers: true }],
     'array-bracket-spacing': ['error', 'never'],
+    'array-bracket-newline': ['error', { multiline: true }],
     'array-callback-return': ['error', {
       allowImplicit: false,
       checkForEach: false,
@@ -65,7 +66,23 @@ module.exports = {
       ImportDeclaration: 1,
       flatTernaryExpressions: false,
       ignoreComments: false,
-      ignoredNodes: ['TemplateLiteral *', 'JSXElement', 'JSXElement > *', 'JSXAttribute', 'JSXIdentifier', 'JSXNamespacedName', 'JSXMemberExpression', 'JSXSpreadAttribute', 'JSXExpressionContainer', 'JSXOpeningElement', 'JSXClosingElement', 'JSXFragment', 'JSXOpeningFragment', 'JSXClosingFragment', 'JSXText', 'JSXEmptyExpression', 'JSXSpreadChild'],
+      ignoredNodes: ['TemplateLiteral *',
+        'JSXElement',
+        'JSXElement > *',
+        'JSXAttribute',
+        'JSXIdentifier',
+        'JSXNamespacedName',
+        'JSXMemberExpression',
+        'JSXSpreadAttribute',
+        'JSXExpressionContainer',
+        'JSXOpeningElement',
+        'JSXClosingElement',
+        'JSXFragment',
+        'JSXOpeningFragment',
+        'JSXClosingFragment',
+        'JSXText',
+        'JSXEmptyExpression',
+        'JSXSpreadChild'],
       offsetTernaryExpressions: true,
     }],
     'key-spacing': ['error', { beforeColon: false, afterColon: true }],
@@ -191,10 +208,10 @@ module.exports = {
     'semi': ['error', 'always'],
     'semi-spacing': ['error', { before: false, after: true }],
     'space-before-blocks': ['error', 'always'],
-    'space-before-function-paren': ["error", {
-      "anonymous": "always",
-      "named": "never",
-      "asyncArrow": "always"
+    'space-before-function-paren': ['error', {
+      'anonymous': 'always',
+      'named': 'never',
+      'asyncArrow': 'always',
     }],
     'space-in-parens': ['error', 'never'],
     'space-infix-ops': 'error',
@@ -225,7 +242,7 @@ module.exports = {
       0,
       {
         'endOfLine': 'auto',
-      }
+      },
     ],
   },
 };

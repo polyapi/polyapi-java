@@ -1,49 +1,8 @@
 import * as vscode from 'vscode';
 import { ProviderResult, TreeItem } from 'vscode';
-import { PropertySpecification, PropertyType } from '@poly/common';
+import { PropertySpecification } from '@poly/model';
+import { toTypeDeclaration } from '@poly/common/utils';
 import { toCamelCase } from '@guanghechen/helper-string';
-
-// duplicate from packages/client/src/commands/generate.ts
-// find a way how to extract it to common package
-const toTypeDeclaration = (type: PropertyType, synchronous = true) => {
-  const wrapInPromiseIfNeeded = (code: string) => (synchronous ? code : `Promise<${code}>`);
-
-  switch (type.kind) {
-    case 'plain':
-      return type.value;
-    case 'primitive':
-      return wrapInPromiseIfNeeded(type.type);
-    case 'void':
-      return wrapInPromiseIfNeeded('void');
-    case 'array':
-      return wrapInPromiseIfNeeded(`${toTypeDeclaration(type.items)}[]`);
-    case 'object':
-      if (type.typeName) {
-        return wrapInPromiseIfNeeded(type.typeName);
-      } else if (type.properties) {
-        return wrapInPromiseIfNeeded(
-          `{ ${type.properties
-            .map((prop) => `${prop.name}${prop.required === false ? '?' : ''}: ${toTypeDeclaration(prop.type)}`)
-            .join(';\n')} }`,
-        );
-      } else {
-        return wrapInPromiseIfNeeded('any');
-      }
-    case 'function':
-      if (type.name) {
-        return type.name;
-      }
-      const toArgument = (arg: PropertySpecification) =>
-        `${arg.name}${arg.required === false ? '?' : ''}: ${toTypeDeclaration(arg.type)}${
-          arg.nullable === true ? ' | null' : ''
-        }`;
-
-      return `(${type.spec.arguments.map(toArgument).join(', ')}) => ${toTypeDeclaration(
-        type.spec.returnType,
-        type.spec.synchronous === true,
-      )}`;
-  }
-};
 
 class LibraryTreeItem extends vscode.TreeItem {
   constructor(

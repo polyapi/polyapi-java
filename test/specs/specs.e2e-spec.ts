@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Test } from '@nestjs/testing';
 import { SpecsService } from 'specs/specs.service';
-import { Specification, Visibility } from '@poly/common';
+import { Specification, Visibility } from '@poly/model';
 import { SpecsModule } from 'specs/specs.module';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { getMockedPolyAuthGuard, mockedAuthData, TypedMock } from '../utils/test-utils';
@@ -57,8 +57,11 @@ describe('SpecsController (e2e)', () => {
     getSpecifications.mockResolvedValue(specifications);
 
     // action and expect
-    return request(app.getHttpServer()).get('/specs').query(query).expect(200).expect(specifications).expect(() => {
-      expect(getSpecifications).toHaveBeenCalledWith(mockedAuthData.environment.id, query.contexts, query.names, query.ids);
-    });
+    return request(app.getHttpServer()).get('/specs').query(query)
+      .expect(200)
+      .expect(specifications)
+      .expect(() => {
+        expect(getSpecifications).toHaveBeenCalledWith(mockedAuthData.environment.id, mockedAuthData.tenant.id, query.contexts, query.names, query.ids);
+      });
   });
 });

@@ -1,6 +1,6 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Role } from '@poly/common';
+import { Role } from '@poly/model';
 import { AuthData } from 'common/types';
 
 @Injectable()

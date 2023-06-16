@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import { Application, Environment, Tenant, User } from '@prisma/client';
-import { Permissions } from '@poly/common';
+import { Permissions } from '@poly/model';
 
 export interface AuthData {
   key: string;

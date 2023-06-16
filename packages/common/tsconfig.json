@@ -2,7 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "./build"
+    "outDir": "./build",
+    "baseUrl": "./src",
+    "rootDir": "./src",
+    "paths": {
+      "@poly/model": ["../model/src"]
+    }
   },
-  "include": ["src"]
+  "include": ["src/**/*"]
 }

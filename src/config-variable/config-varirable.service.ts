@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 
-import { ConfigVariableDto } from '@poly/common';
+import { ConfigVariableDto } from '@poly/model';
 
 @Injectable()
 export class ConfigVariableService {

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatText } from '@poly/common';
+import { ChatText } from '@poly/model';
 import { PrismaService } from 'prisma/prisma.service';
 import { AiService } from 'ai/ai.service';
 

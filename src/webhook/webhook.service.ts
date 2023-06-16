@@ -6,7 +6,12 @@ import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
 import { EventService } from 'event/event.service';
 import { UserService } from 'user/user.service';
 import { AiService } from 'ai/ai.service';
-import { PropertySpecification, Visibility, WebhookHandleDto, WebhookHandleSpecification } from '@poly/common';
+import {
+  PropertySpecification,
+  Visibility,
+  WebhookHandleDto,
+  WebhookHandleSpecification,
+} from '@poly/model';
 import { ConfigService } from 'config/config.service';
 import { SpecsService } from 'specs/specs.service';
 import { toCamelCase } from '@guanghechen/helper-string';
@@ -68,8 +73,10 @@ export class WebhookService {
       names?.length ? { name: { in: names } } : undefined,
     ].filter(Boolean) as any[];
 
-    this.logger.debug(`webhookHandles filter conditions: ${JSON.stringify([{ AND: filterConditions },
-      ...idConditions])}`);
+    this.logger.debug(`webhookHandles filter conditions: ${JSON.stringify([
+{ AND: filterConditions },
+      ...idConditions,
+])}`);
 
     return [{ AND: filterConditions }, ...idConditions];
   }

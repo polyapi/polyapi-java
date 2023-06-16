@@ -3,7 +3,7 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "publisher": "PolyAPICorp",
   "engines": {
     "vscode": "^1.75.0"
@@ -19,7 +19,7 @@
   "activationEvents": [
     "onStartupFinished"
   ],
-  "main": "./build/extension.js",
+  "main": "./build/vscode-extension/src/extension.js",
   "contributes": {
     "menus": {},
     "commands": [
@@ -93,11 +93,10 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && tsc-alias -p tsconfig.json",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",
-    "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "lint": "eslint src --ext ts"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
@@ -109,7 +108,8 @@
     "@vscode/test-electron": "^2.2.3",
     "eslint": "^8.34.0",
     "glob": "^8.1.0",
-    "mocha": "^10.2.0"
+    "mocha": "^10.2.0",
+    "tsc-alias": "^1.8.6"
   },
   "dependencies": {
     "@guanghechen/helper-string": "4.7.1",
