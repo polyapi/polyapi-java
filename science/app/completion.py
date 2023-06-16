@@ -152,7 +152,7 @@ def get_best_function_messages(
 
     messages = [
         options,
-        MessageDict(role="user", content=BEST_FUNCTION_CHOICE_TEMPLATE % question)
+        MessageDict(role="user", content=BEST_FUNCTION_CHOICE_TEMPLATE % question),
     ]
     insert_system_prompt(environment_id, messages)
     return messages, stats
@@ -169,7 +169,9 @@ def get_system_prompt() -> Optional[SystemPrompt]:
 def get_best_functions(
     user_id: str, conversation_id: str, environment_id: str, question: str
 ) -> Tuple[List[str], StatsDict]:
-    messages, stats = get_best_function_messages(user_id, conversation_id, environment_id, question)
+    messages, stats = get_best_function_messages(
+        user_id, conversation_id, environment_id, question
+    )
     if not messages:
         # we have no candidate functions whatsoever, abort!
         return [], stats
@@ -277,7 +279,7 @@ def get_best_function_example(
 
 def get_completion_answer(user_id: str, environment_id: str, question: str) -> Dict:
     choice = simple_chatgpt_question(question)
-    function_call = choice['message'].get("function_call")
+    function_call = choice["message"].get("function_call")
 
     answer, hit_token_limit = answer_processing(choice)
     return {"answer": answer, "function_call": function_call, "stats": {}}
@@ -296,7 +298,7 @@ def get_completion_answer(user_id: str, environment_id: str, question: str) -> D
         choice = simple_chatgpt_question(question)
 
         # store conversation
-        messages = [MessageDict(role="user", content=question), choice['message']]
+        messages = [MessageDict(role="user", content=question), choice["message"]]
         insert_internal_step_info(messages, "FALLBACK")
         store_messages(user_id, conversation.id, messages)
 
@@ -306,18 +308,18 @@ def get_completion_answer(user_id: str, environment_id: str, question: str) -> D
 
 
 HARDCODED_FUNCTIONS = [
-    "twilioSendSms": {
-      "type": "object",
-      "properties": {
-        "My_Phone_Number": {
-            "type": "string"
+    {
+        "name": "twilioSendSms",
+        "description": "send an sms through twilio",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "My_Phone_Number": {"type": "string"},
+                "message": {"type": "string"},
+                "description": "phone number to send the sms to and the message to send",
+            },
         },
-        "message": {
-            "type": "string"
-        },
-        "description": "phone number to send the sms to and the message to send",
-      }
-      }
+    }
 ]
 
 
