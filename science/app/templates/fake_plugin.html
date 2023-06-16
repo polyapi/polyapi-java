@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="description" content="foo">
+  <meta name="keywords" content="foo">
+  <title>Fake Plugin</title>
+</head>
+<script>
+  async function postData(url = "", data = {}) {
+    const response = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(data), // body data type must match "Content-Type" header
+    });
+    return response.json(); // parses JSON response into native JavaScript objects
+  }
+
+  async function sendToScience() {
+    var question = document.getElementById("question").value;
+    var answer = document.getElementById("answer");
+    var preExecute = document.getElementById("preExecute");
+    var postExecute = document.getElementById("postExecute");
+
+    answer.textContent = "loading...";
+
+    var data = await postData("/function-completion", {
+      "question": question,
+      "user_id": "d91a21b7-b134-45f0-9bee-cadce83ce08b",
+      "environment_id": "93cbd391-b206-4ad9-9e6f-9cf7be86462f"
+    });
+    if (data.function_call) {
+      preExecute.textContent = data.function_call
+      var execute_results = await postData("/function-execute", data.function_call)
+      postExecute.textContent = data.answer;
+    } else {
+      answer.textContent = data.answer;
+    }
+  }
+</script>
+
+<body style="max-width: 800px; margin: auto">
+  <h1>Fake Plugin</h1>
+  <div>
+    <textarea id="question" name="question" type="text" cols="50" rows="4"></textarea>
+  </div>
+  <div>
+    <button onclick="sendToScience()">Submit</button>
+  </div>
+  <div id="preExecute" style="margin-top: 20px;">
+  </div>
+  <div id="postExecute" style="margin-top: 20px;">
+  </div>
+  <div id="answer" style="margin-top: 20px;">
+  </div>
+</body>
+
+</html>

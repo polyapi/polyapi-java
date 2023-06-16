@@ -276,6 +276,12 @@ def get_best_function_example(
 
 
 def get_completion_answer(user_id: str, environment_id: str, question: str) -> Dict:
+    choice = simple_chatgpt_question(question)
+    function_call = choice['message'].get("function_call")
+
+    answer, hit_token_limit = answer_processing(choice)
+    return {"answer": answer, "function_call": function_call, "stats": {}}
+
     conversation = create_new_conversation(user_id)
     best_function_ids, stats = get_best_functions(
         user_id, conversation.id, environment_id, question
@@ -299,7 +305,23 @@ def get_completion_answer(user_id: str, environment_id: str, question: str) -> D
     return {"answer": answer, "stats": stats}
 
 
+HARDCODED_FUNCTIONS = [
+    "twilioSendSms": {
+      "type": "object",
+      "properties": {
+        "My_Phone_Number": {
+            "type": "string"
+        },
+        "message": {
+            "type": "string"
+        },
+        "description": "phone number to send the sms to and the message to send",
+      }
+      }
+]
+
+
 def simple_chatgpt_question(question: str) -> ChatGptChoice:
     messages: List[MessageDict] = [{"role": "user", "content": question}]
-    resp = get_chat_completion(messages)
+    resp = get_chat_completion(messages, functions=HARDCODED_FUNCTIONS)
     return resp["choices"][0]

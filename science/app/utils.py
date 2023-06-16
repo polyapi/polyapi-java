@@ -268,7 +268,7 @@ def camel_case(text: str) -> str:
 
 
 def get_chat_completion(
-    messages: List[MessageDict], *, temperature=1.0
+    messages: List[MessageDict], *, temperature=1.0, functions=None
 ) -> ChatCompletionResponse:
     """send the messages to OpenAI and get a response"""
     stripped = copy.deepcopy(messages)
@@ -278,6 +278,7 @@ def get_chat_completion(
     resp: ChatCompletionResponse = openai.ChatCompletion.create(
         model=CHAT_GPT_MODEL,
         messages=stripped,
+        functions=functions,
         temperature=temperature,
     )
     return resp
