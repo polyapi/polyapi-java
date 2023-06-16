@@ -262,3 +262,8 @@ model GptPlugin {
 
   @@map("gpt_plugin")
 }
+
+// model FunctionEmbedding {
+// id        String            @id // same as the function id
+// embedding String            // json dumped list of floats
+// }
