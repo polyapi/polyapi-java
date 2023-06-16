@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 
@@ -53,7 +53,17 @@ export class ConfigVariableService {
       configVariable.tenantId === null && configVariable.environmentId === null;
   }
 
-  private async getVariableByPriority(
+  find(name: string, tenantId: string | null = null, environmentId: string | null = null) {
+    return this.prisma.configVariable.findFirst({
+      where: {
+        name,
+        tenantId,
+        environmentId,
+      },
+    });
+  }
+
+  async getClosestChild(
     name: string,
     tenantId: string | null = null,
     environmentId: string | null = null,
@@ -98,13 +108,7 @@ export class ConfigVariableService {
   }
 
   async configure(name: string, value: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const foundConfigVariable = await this.prisma.configVariable.findFirst({
-      where: {
-        name,
-        tenantId,
-        environmentId,
-      },
-    });
+    const foundConfigVariable = await this.find(name, tenantId, environmentId);
 
     if (foundConfigVariable) {
       return this.prisma.configVariable.update({
@@ -125,32 +129,10 @@ export class ConfigVariableService {
     });
   }
 
-  async get(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const configVariable = await this.getVariableByPriority(name, tenantId, environmentId);
-
-    if (!configVariable) {
-      throw new NotFoundException('Config variable not found');
-    }
-
-    return configVariable;
-  }
-
-  async delete(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const configVarfiable = await this.prisma.configVariable.findFirst({
-      where: {
-        name,
-        tenantId,
-        environmentId,
-      },
-    });
-
-    if (!configVarfiable) {
-      throw new NotFoundException('Config variable not found');
-    }
-
+  async delete(configVariable: ConfigVariable) {
     return this.prisma.configVariable.delete({
       where: {
-        id: configVarfiable.id,
+        id: configVariable.id,
       },
     });
   }

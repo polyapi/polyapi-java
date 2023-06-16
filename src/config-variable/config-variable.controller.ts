@@ -1,4 +1,4 @@
-import { Body, Controller, UseGuards, Patch, Get, Param, Delete } from '@nestjs/common';
+import { Body, Controller, UseGuards, Patch, Get, Param, Delete, NotFoundException } from '@nestjs/common';
 import { Role, SetConfigVariableDto } from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -18,12 +18,28 @@ export class ConfigVariableController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Get('/:name')
   public async getConfigVariable(@Param('name') name: string) {
-    return this.service.toDto(await this.service.get(name));
+    const configVariable = await this.findConfigVariable(name);
+    return this.service.toDto(configVariable);
   }
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Delete('/:name')
   public async deleteConfigVariable(@Param('name') name: string) {
-    return this.service.toDto(await this.service.delete(name));
+    const configVariable = await this.findConfigVariable(name);
+
+    return this.service.toDto(await this.service.delete(configVariable));
+  }
+
+  /**
+   * Find config variable by instance level, leaving tenantId = null and environmentId = null on `this.service.find()` call.
+   */
+  private async findConfigVariable(name: string) {
+    const configVariable = await this.service.find(name);
+
+    if (!configVariable) {
+      throw new NotFoundException('Config variable not found.');
+    }
+
+    return configVariable;
   }
 }

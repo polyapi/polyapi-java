@@ -122,7 +122,10 @@ export class TenantController {
     @Param('name') name: string,
   ) {
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
-    return this.configVariableService.toDto(await this.configVariableService.get(name, tenantId));
+
+    const configVariable = await this.findClosestChildConfigVariable(name, tenantId);
+
+    return this.configVariableService.toDto(configVariable);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -148,7 +151,9 @@ export class TenantController {
   ) {
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
-    return this.configVariableService.toDto(await this.configVariableService.delete(name, tenantId));
+    const configVariable = await this.findConfigVariable(name, tenantId);
+
+    return this.configVariableService.toDto(await this.configVariableService.delete(configVariable));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -164,7 +169,9 @@ export class TenantController {
       this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
     ]);
 
-    return this.configVariableService.toDto(await this.configVariableService.get(name, tenantId, environmentId));
+    const configVariable = await this.findClosestChildConfigVariable(name, tenantId, environmentId);
+
+    return this.configVariableService.toDto(configVariable);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -198,7 +205,9 @@ export class TenantController {
       this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
     ]);
 
-    return this.configVariableService.toDto(await this.configVariableService.delete(name, tenantId, environmentId));
+    const configVariable = await this.findConfigVariable(name, tenantId, environmentId);
+
+    return this.configVariableService.toDto(await this.configVariableService.delete(configVariable));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -684,5 +693,25 @@ export class TenantController {
       throw new NotFoundException(`Application with id ${applicationId} not found`);
     }
     return application;
+  }
+
+  private async findConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
+    const configVariable = await this.configVariableService.find(name, tenantId, environmentId);
+
+    if (!configVariable) {
+      throw new NotFoundException('Config variable not found.');
+    }
+
+    return configVariable;
+  }
+
+  private async findClosestChildConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
+    const configVariable = await this.configVariableService.getClosestChild(name, tenantId, environmentId);
+
+    if (!configVariable) {
+      throw new NotFoundException('Closest config variable not found.');
+    }
+
+    return configVariable;
   }
 }
