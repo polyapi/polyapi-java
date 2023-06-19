@@ -22,7 +22,7 @@ import {
   TeachSystemPromptResponseDto,
   Role,
   Permission,
-} from '@poly/common';
+} from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { ChatService } from 'chat/chat.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';

@@ -4,13 +4,9 @@
     "outDir": "build",
     "paths": {
       "*": ["./src/*"],
-      "@poly/common": ["../common/src"],
+      "@poly/model": ["../model/src"],
+      "@poly/common/*": ["../common/src/*"],
     }
   },
-  "references": [
-    {
-      "path": "../common"
-    }
-  ],
   "include": ["src/**/*"]
 }

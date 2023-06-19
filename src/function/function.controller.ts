@@ -27,7 +27,7 @@ import {
   Role,
   UpdateApiFunctionDto,
   UpdateCustomFunctionDto,
-} from '@poly/common';
+} from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 

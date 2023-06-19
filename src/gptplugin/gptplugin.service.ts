@@ -5,7 +5,7 @@ import convert from '@openapi-contrib/json-schema-to-openapi-schema';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from 'prisma/prisma.service';
-import { CreatePluginDto, PropertySpecification, PropertyType, Specification } from '@poly/common';
+import { CreatePluginDto, PropertySpecification, PropertyType, Specification } from '@poly/model';
 import { FunctionService } from 'function/function.service';
 import { ApiFunction, CustomFunction, GptPlugin, Environment } from '@prisma/client';
 import { Request } from 'express';

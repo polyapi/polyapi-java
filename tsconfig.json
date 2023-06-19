@@ -5,11 +5,15 @@
     "allowJs": true,
     "strictNullChecks": true,
     "paths": {
-      "*": ["./src/*"],
-      "@poly/common": ["./packages/common/src"]
+      "*": ["./src/*", "./test/*"],
+      "@poly/model": ["./packages/model/src"],
+      "@poly/common/*": ["./packages/common/src/*"],
     }
   },
   "references": [
+    {
+      "path": "./packages/model"
+    },
     {
       "path": "./packages/common"
     }

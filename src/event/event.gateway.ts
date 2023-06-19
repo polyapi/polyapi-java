@@ -1,5 +1,5 @@
 import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { AuthFunctionEventHandlerDto, ErrorHandlerDto, WebhookEventHandlerDto } from '@poly/common';
+import { AuthFunctionEventHandlerDto, ErrorHandlerDto, WebhookEventHandlerDto } from '@poly/model';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { EventService } from 'event/event.service';

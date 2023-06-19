@@ -35,7 +35,7 @@ import {
   Specification,
   Variables,
   Visibility,
-} from '@poly/common';
+} from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
 import { CommonService } from 'common/common.service';
@@ -48,7 +48,7 @@ import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
-import { uniqBy, mergeWith, omit } from 'lodash';
+import { mergeWith, omit, uniqBy } from 'lodash';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
@@ -910,12 +910,10 @@ export class FunctionService implements OnModuleInit {
       location: 'auth',
     })) || []));
 
-    const bodyArgs = (apiFunction.body?.match(ARGUMENT_PATTERN)?.map<FunctionArgument>(arg => ({
+    args.push(...((apiFunction.body?.match(ARGUMENT_PATTERN)?.map<FunctionArgument>(arg => ({
       ...toArgument(arg),
       location: 'body',
-    })) || []).filter(bodyArg => !args.some(arg => arg.key === bodyArg.key));
-
-    args.push(...bodyArgs);
+    })) || []).filter(bodyArg => !args.some(arg => arg.key === bodyArg.key))));
 
     args.sort(compareArgumentsByRequired);
 

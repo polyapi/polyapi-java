@@ -1,7 +1,7 @@
 import { Controller, Get, Logger, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { SpecsService } from 'specs/specs.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
-import { GetSpecsDto, Permission } from '@poly/common';
+import { GetSpecsDto, Permission } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 

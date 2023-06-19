@@ -1,4 +1,4 @@
-import { FunctionArgument } from '@poly/common';
+import { FunctionArgument } from '@poly/model';
 import ts, { factory } from 'typescript';
 
 export interface TranspileResult {

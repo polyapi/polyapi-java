@@ -5,7 +5,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { SystemPrompt } from '@prisma/client';
-import { FunctionDescriptionDto } from '@poly/common';
+import { FunctionDescriptionDto } from '@poly/model';
 
 @Injectable()
 export class AiService {

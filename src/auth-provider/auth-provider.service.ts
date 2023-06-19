@@ -17,7 +17,7 @@ import {
   AuthProviderDto,
   ExecuteAuthProviderResponseDto,
   PropertySpecification, Visibility,
-} from '@poly/common';
+} from '@poly/model';
 import { ConfigService } from 'config/config.service';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';

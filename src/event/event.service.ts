@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { ErrorEvent } from '@poly/common';
+import { ErrorEvent } from '@poly/model';
 import { AxiosError } from 'axios';
 
 type ClientID = string;

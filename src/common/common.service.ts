@@ -9,7 +9,7 @@ import {
   DOTS_AT_BEGINNING_PATTERN,
   DOTS_AT_END_PATTERN,
   NUMBERS_AT_BEGINNING_PATTERN, Visibility,
-} from '@poly/common';
+} from '@poly/model';
 
 @Injectable()
 export class CommonService {

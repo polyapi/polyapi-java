@@ -1,5 +1,8 @@
-### 0.1.27
+### 0.1.28
 * Poly chat using event stream
+
+### 0.1.27
+* Added common module
 
 ### 0.1.26
 * Added tenant name information to public functions
@@ -11,7 +14,7 @@
 * Set textarea disabled when sending a question through chat.
 
 ### 0.1.23
-* Removed "Copy selection to Poly" button due a vscode issue on Windows plattform.
+* Removed "Copy selection to Poly" button due a vscode issue on Windows platform.
 
 ### 0.1.22
 * Added webhook description

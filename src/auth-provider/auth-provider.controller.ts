@@ -24,7 +24,7 @@ import {
   ExecuteAuthProviderResponseDto,
   Permission,
   UpdateAuthProviderDto,
-} from '@poly/common';
+} from '@poly/model';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
