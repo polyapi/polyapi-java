@@ -35,6 +35,7 @@ export type ArgumentType = string;
 export type ArgumentsMetadata = {
   [key: string]: {
     name?: string;
+    description?: string;
     required?: boolean;
     secure?: boolean;
     type?: ArgumentType;

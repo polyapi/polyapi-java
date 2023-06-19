@@ -29,6 +29,7 @@ export interface FunctionSpecification {
 
 export interface PropertySpecification {
   name: string;
+  description?: string;
   type: PropertyType;
   required: boolean;
   nullable?: boolean;

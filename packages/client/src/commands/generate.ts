@@ -381,9 +381,8 @@ const generateContextDataFile = (contextData: Record<string, any>) => {
 };
 
 const getContextDataFileContent = () => {
-  const contents = fs.readFileSync(`${POLY_LIB_PATH}/specs.json`, 'utf-8');
-
   try {
+    const contents = fs.readFileSync(`${POLY_LIB_PATH}/specs.json`, 'utf-8');
     return JSON.parse(contents) as Record<string, any>;
   } catch (err) {
     return {};
@@ -477,12 +476,30 @@ const generateSingleCustomFunction = async (functionId: string) => {
     specs = prevSpecs;
   }
 
+  prepareDir();
+
   await generateSpecs(specs);
 
   shell.echo(chalk.green('DONE'));
 };
 
 const getSpecificationComment = (specification: Specification) => {
+  const descriptionComment = specification.description
+    ? specification.description
+      .split('\n')
+      .map((line) => `* ${line}`)
+      .join('\n')
+    : null;
+  const argumentsComment = specification.function.arguments
+    .filter((arg) => !!arg.description)
+    .map((arg) => `* @param ${toCamelCase(arg.name)} ${arg.description}`)
+    .join('\n');
+  const additionalComments = getAdditionalComments(specification);
+
+  return `${descriptionComment ? `${descriptionComment}\n` : ''}${argumentsComment ? `${argumentsComment}\n` : ''}${additionalComments ? `${additionalComments}\n` : ''}`;
+};
+
+const getAdditionalComments = (specification: Specification) => {
   switch (specification.type) {
     case 'customFunction':
       if (!specification.requirements.length) {
@@ -494,7 +511,7 @@ const getSpecificationComment = (specification: Specification) => {
     default:
       return null;
   }
-};
+}
 
 const generate = async (contexts?: string[], names?: string[], functionIds?: string[]) => {
   let specs: Specification[] = [];

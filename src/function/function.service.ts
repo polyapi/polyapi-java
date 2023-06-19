@@ -501,6 +501,7 @@ export class FunctionService implements OnModuleInit {
 
     const toPropertySpecification = async (arg: FunctionArgument): Promise<PropertySpecification> => ({
       name: arg.name,
+      description: arg.description,
       required: arg.required == null ? true : arg.required,
       type: await this.toPropertyType(arg.name, arg.type, arg.typeObject),
     });
@@ -924,6 +925,7 @@ export class FunctionService implements OnModuleInit {
     return {
       key: argument,
       name: argumentsMetadata[argument]?.name || argument,
+      description: argumentsMetadata[argument]?.description || '',
       type: argumentsMetadata[argument]?.type || 'string',
       typeObject: argumentsMetadata[argument]?.typeObject,
       payload: argumentsMetadata[argument]?.payload || false,

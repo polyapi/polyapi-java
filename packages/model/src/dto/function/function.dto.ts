@@ -3,6 +3,7 @@ import { ArgumentType, Visibility } from '../..';
 export interface FunctionArgument {
   key: string;
   name: string;
+  description?: string;
   required?: boolean;
   secure?: boolean;
   type: ArgumentType;
