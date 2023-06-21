@@ -1,5 +1,5 @@
 ### 0.1.28
-* Preserve newlines, line breaks and whitespace in question box.
+* Preserve newlines, line breaks and whitespace in question's box.
 
 ### 0.1.27
 * Added common module
