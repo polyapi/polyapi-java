@@ -58,3 +58,7 @@
     opacity: 0;
   }
 }
+
+.question-box {
+  white-space: pre-wrap;
+}

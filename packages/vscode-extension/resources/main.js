@@ -87,7 +87,7 @@ const COMMANDS = ['clear'];
         conversationList.innerHTML +=
           `<div class='p-4 self-end relative' style='background: var(--vscode-input-background)'>
             <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
-            <div class='overflow-y-auto'>${message.value}</div>
+            <div class='overflow-y-auto question-box'>${message.value}</div>
           </div>`;
         scrollToLastMessage();
         break;
