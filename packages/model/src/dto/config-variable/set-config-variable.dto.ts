@@ -11,6 +11,5 @@ export class SetConfigVariableDto {
   @IsEnum(ConfigVariableName)
   name: string;
   @IsNotEmpty()
-  @IsString()
-  value: string;
+  value: unknown;
 }

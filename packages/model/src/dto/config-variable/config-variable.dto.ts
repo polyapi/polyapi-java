@@ -1,6 +1,6 @@
 export class ConfigVariableDto {
   name: string;
-  value: string;
+  value: unknown;
   tenantId: string | null;
   environmentId: string | null;
 }

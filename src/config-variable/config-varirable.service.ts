@@ -9,9 +9,17 @@ export class ConfigVariableService {
   constructor(private readonly prisma: PrismaService) {}
 
   toDto(data: ConfigVariable): ConfigVariableDto {
+    let parsedValue: unknown;
+
+    try {
+      parsedValue = JSON.parse(data.value);
+    } catch (err) {
+      parsedValue = data.value;
+    }
+
     return {
       name: data.name,
-      value: data.value,
+      value: parsedValue,
       environmentId: data.environmentId,
       tenantId: data.tenantId,
     };
@@ -24,14 +32,14 @@ export class ConfigVariableService {
     value,
   }: {
     name: string;
-    value: string;
+    value: unknown;
     tenantId: string | null;
     environmentId: string | null;
   }) {
     return this.prisma.configVariable.create({
       data: {
         name,
-        value,
+        value: JSON.stringify(value),
         environmentId,
         tenantId,
       },
@@ -68,7 +76,7 @@ export class ConfigVariableService {
     tenantId: string | null = null,
     environmentId: string | null = null,
   ) {
-    let configVariable: ConfigVariable | null = null;
+    let configVariable: ConfigVariable | null | undefined = null;
 
     const configVariables = await this.prisma.configVariable.findMany({
       where: {
@@ -81,33 +89,33 @@ export class ConfigVariableService {
     }
 
     if (tenantId && environmentId) {
-      configVariable = configVariables.find(this.getTenantAndEnvironmentFilter(tenantId, environmentId)) || null;
+      configVariable = configVariables.find(this.getTenantAndEnvironmentFilter(tenantId, environmentId));
 
       if (!configVariable) {
-        configVariable = configVariables.find(this.getTenantFilter(tenantId)) || null;
+        configVariable = configVariables.find(this.getTenantFilter(tenantId));
       }
 
       if (!configVariable) {
-        return configVariables.find(this.getInstanceFilter()) || null;
+        configVariable = configVariables.find(this.getInstanceFilter());
       }
 
-      return configVariable;
+      return configVariable || null;
     }
 
     if (tenantId && !environmentId) {
-      configVariable = configVariables.find(this.getTenantFilter(tenantId)) || null;
+      configVariable = configVariables.find(this.getTenantFilter(tenantId));
 
       if (!configVariable) {
-        return configVariables.find(this.getInstanceFilter()) || null;
+        configVariable = configVariables.find(this.getInstanceFilter());
       }
 
-      return configVariable;
+      return configVariable || null;
     }
 
     return configVariables.find(this.getInstanceFilter()) || null;
   }
 
-  async configure(name: string, value: string, tenantId: string | null = null, environmentId: string | null = null) {
+  async configure(name: string, value: unknown, tenantId: string | null = null, environmentId: string | null = null) {
     const foundConfigVariable = await this.find(name, tenantId, environmentId);
 
     if (foundConfigVariable) {
@@ -116,7 +124,7 @@ export class ConfigVariableService {
           id: foundConfigVariable.id,
         },
         data: {
-          value,
+          value: JSON.stringify(value),
         },
       });
     }
