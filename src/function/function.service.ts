@@ -236,11 +236,9 @@ export class FunctionService implements OnModuleInit {
     response = this.commonService.trimDownObject(response, 1);
 
     if ((!name || !context || !description) && !willRetrain) {
-      const trainingDataCfgVariable = await this.configVariableService.get(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+      const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-      const trainingDataCfg = trainingDataCfgVariable ? JSON.parse(trainingDataCfgVariable?.value) as TrainingDataGeneration : null;
-
-      if (trainingDataCfg?.apiFunctions) {
+      if (trainingDataCfgVariable?.value.apiFunctions) {
         const {
           name: aiName,
           description: aiDescription,

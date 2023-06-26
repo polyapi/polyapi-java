@@ -1,5 +1,5 @@
 import { ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
-import { Prisma, WebhookHandle } from '@prisma/client';
+import { Environment, Prisma, WebhookHandle } from '@prisma/client';
 import { HttpService } from '@nestjs/axios';
 import { CommonService } from 'common/common.service';
 import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
@@ -7,7 +7,9 @@ import { EventService } from 'event/event.service';
 import { UserService } from 'user/user.service';
 import { AiService } from 'ai/ai.service';
 import {
+  ConfigVariableName,
   PropertySpecification,
+  TrainingDataGeneration,
   Visibility,
   WebhookHandleDto,
   WebhookHandleSpecification,
@@ -15,6 +17,7 @@ import {
 import { ConfigService } from 'config/config.service';
 import { SpecsService } from 'specs/specs.service';
 import { toCamelCase } from '@guanghechen/helper-string';
+import { ConfigVariableService } from 'config-variable/config-varirable.service';
 
 @Injectable()
 export class WebhookService {
@@ -30,6 +33,7 @@ export class WebhookService {
     private readonly userService: UserService,
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
+    private readonly configVariableService: ConfigVariableService,
   ) {
   }
 
@@ -141,7 +145,7 @@ export class WebhookService {
   }
 
   public async createOrUpdateWebhookHandle(
-    environmentId: string,
+    environment: Environment,
     context: string | null,
     name: string,
     eventPayload: any,
@@ -156,7 +160,7 @@ export class WebhookService {
         : {
             name,
             context,
-            environmentId,
+            environmentId: environment.id,
           },
     });
 
@@ -164,7 +168,7 @@ export class WebhookService {
     context = this.normalizeContext(context, webhookHandle);
 
     if (!(await this.checkContextAndNameDuplicates(
-      environmentId,
+      environment.id,
       context,
       name,
       webhookHandle ? [webhookHandle.id] : [])
@@ -176,19 +180,23 @@ export class WebhookService {
       this.logger.debug(`Webhook handle found for ${context}/${name} - updating...`);
 
       if (!name || !context || !description) {
-        const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
+        const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-        return this.prisma.webhookHandle.update({
-          where: {
-            id: webhookHandle.id,
-          },
-          data: {
-            eventPayload: JSON.stringify(eventPayload),
-            context: context || this.commonService.sanitizeContextIdentifier(aiResponse.context),
-            description: description || aiResponse.description,
-            name: name || this.commonService.sanitizeNameIdentifier(aiResponse.name),
-          },
-        });
+        if (trainingDataCfgVariable?.value.webhooks) {
+          const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
+
+          return this.prisma.webhookHandle.update({
+            where: {
+              id: webhookHandle.id,
+            },
+            data: {
+              eventPayload: JSON.stringify(eventPayload),
+              context: context || this.commonService.sanitizeContextIdentifier(aiResponse.context),
+              description: description || aiResponse.description,
+              name: name || this.commonService.sanitizeNameIdentifier(aiResponse.name),
+            },
+          });
+        }
       }
 
       return this.prisma.webhookHandle.update({
@@ -203,7 +211,7 @@ export class WebhookService {
         },
       });
     } else {
-      this.logger.debug(`Creating new webhook handle in environment ${environmentId} for ${context}/${name}...`);
+      this.logger.debug(`Creating new webhook handle in environment ${environment.id} for ${context}/${name}...`);
 
       return this.prisma.$transaction(
         async (tx) => {
@@ -211,7 +219,7 @@ export class WebhookService {
             {
               environment: {
                 connect: {
-                  id: environmentId,
+                  id: environment.id,
                 },
               },
               name,
@@ -223,19 +231,23 @@ export class WebhookService {
           );
 
           if (!name || !description || !context) {
-            const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
+            const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-            webhookHandle = await tx.webhookHandle.update({
-              where: {
-                id: webhookHandle.id,
-              },
-              data: {
-                eventPayload: JSON.stringify(eventPayload),
-                context: context || this.commonService.sanitizeContextIdentifier(aiResponse.context),
-                description: description || aiResponse.description,
-                name: name || this.commonService.sanitizeNameIdentifier(aiResponse.name),
-              },
-            });
+            if (trainingDataCfgVariable?.value.webhooks) {
+              const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
+
+              webhookHandle = await tx.webhookHandle.update({
+                where: {
+                  id: webhookHandle.id,
+                },
+                data: {
+                  eventPayload: JSON.stringify(eventPayload),
+                  context: context || this.commonService.sanitizeContextIdentifier(aiResponse.context),
+                  description: description || aiResponse.description,
+                  name: name || this.commonService.sanitizeNameIdentifier(aiResponse.name),
+                },
+              });
+            }
           }
 
           return webhookHandle;

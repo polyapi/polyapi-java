@@ -14,9 +14,9 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
     const sortedConfigVariables = configVariables.sort(this.getSortHandler());
 
     const configVariable: ConfigVariable = sortedConfigVariables[sortedConfigVariables.length - 1];
-    let parentValue = this.getConfigVariableWithParsedValue<TrainingDataGeneration>(configVariables[0]).value;
+    let parentValue = this.commonService.getConfigVariableWithParsedValue<TrainingDataGeneration>(configVariables[0]).value;
 
-    const parsedConfigVariables = configVariables.slice(1).map(this.getConfigVariableWithParsedValue<TrainingDataGeneration>);
+    const parsedConfigVariables = configVariables.slice(1).map(this.commonService.getConfigVariableWithParsedValue<TrainingDataGeneration>);
 
     for (const currentConfigVariable of parsedConfigVariables) {
       parentValue = this.mergeParentValueWithChild(parentValue, currentConfigVariable.value);
@@ -33,7 +33,7 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
 
     const configVariables = await this.findMany(name, tenantId, environmentId);
 
-    const sortedConfigVariables = configVariables.sort(this.getSortHandler()).map(this.getConfigVariableWithParsedValue<TrainingDataGeneration>);
+    const sortedConfigVariables = configVariables.sort(this.getSortHandler()).map(this.commonService.getConfigVariableWithParsedValue<TrainingDataGeneration>);
 
     if (tenantId && environmentId) {
       const foundVariable = sortedConfigVariables.find(this.getTenantAndEnvironmentFilter(tenantId, environmentId));

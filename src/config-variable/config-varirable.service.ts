@@ -5,17 +5,20 @@ import { PrismaService } from 'prisma/prisma.service';
 import { ConfigVariableDto, ConfigVariableName } from '@poly/model';
 
 import { ConfigVariableStrategy, DefaultConfigVariableStrategy, TrainingDataGenerationStrategy } from './strategy';
+import { CommonService } from 'common/common.service';
 @Injectable()
 export class ConfigVariableService {
   private readonly prisma: PrismaService;
+  private readonly commonService: CommonService;
 
   private defaultConfigVariableStrategy: ConfigVariableStrategy;
   private trainingDataStrategy: ConfigVariableStrategy;
 
-  constructor(prisma: PrismaService) {
+  constructor(prisma: PrismaService, commonService: CommonService) {
     this.prisma = prisma;
-    this.defaultConfigVariableStrategy = new DefaultConfigVariableStrategy(prisma);
-    this.trainingDataStrategy = new TrainingDataGenerationStrategy(prisma);
+    this.commonService = commonService;
+    this.defaultConfigVariableStrategy = new DefaultConfigVariableStrategy(prisma, commonService);
+    this.trainingDataStrategy = new TrainingDataGenerationStrategy(prisma, commonService);
   }
 
   toDto(data: ConfigVariable): ConfigVariableDto {
@@ -51,6 +54,16 @@ export class ConfigVariableService {
     }
 
     return this.defaultConfigVariableStrategy;
+  }
+
+  async getParsed<T>(
+    name: string,
+    tenantId: string | null = null,
+    environmentId: string | null = null,
+  ) {
+    const configVariable = await this.get(name, tenantId, environmentId);
+
+    return configVariable ? this.commonService.getConfigVariableWithParsedValue<T>(configVariable) : null;
   }
 
   get(

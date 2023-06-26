@@ -8,8 +8,9 @@ import {
   CONTEXT_ALLOWED_CHARACTERS_PATTERN,
   DOTS_AT_BEGINNING_PATTERN,
   DOTS_AT_END_PATTERN,
-  NUMBERS_AT_BEGINNING_PATTERN, Visibility,
+  NUMBERS_AT_BEGINNING_PATTERN, Visibility, ParsedConfigVariable,
 } from '@poly/model';
+import { ConfigVariable } from '@prisma/client';
 
 @Injectable()
 export class CommonService {
@@ -183,6 +184,13 @@ export class CommonService {
           },
         },
       ],
+    };
+  }
+
+  getConfigVariableWithParsedValue<T = any>(configVariable: ConfigVariable): ParsedConfigVariable<T> {
+    return {
+      ...configVariable,
+      value: JSON.parse(configVariable.value),
     };
   }
 }
