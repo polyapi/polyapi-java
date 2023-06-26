@@ -1,7 +1,11 @@
 import { PrismaService } from 'prisma/prisma.service';
-import { Strategy } from './interface';
 import { ConfigVariable } from '@prisma/client';
 import { ParsedConfigVariable } from '../../../packages/model/src/dto';
+
+interface Strategy {
+  get(name: string, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable | null>;
+  configure(name: string, value: unknown, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable>;
+}
 
 export abstract class ConfigVariableStrategy implements Strategy {
   constructor(protected prisma: PrismaService) {}
