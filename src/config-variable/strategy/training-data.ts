@@ -34,11 +34,7 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
 
     const configVariables = await this.findMany(name, tenantId, environmentId);
 
-    console.log('configVariables: ', configVariables);
-
     const sortedConfigVariables = configVariables.sort(this.getSortHandler()).map(this.getConfigVariableWithParsedValue<TrainingDataGeneration>);
-
-    console.log('sortedConfigVariables: ', sortedConfigVariables);
 
     if (tenantId && environmentId) {
       for (const configVariable of sortedConfigVariables) {
