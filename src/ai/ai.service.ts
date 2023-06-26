@@ -53,6 +53,7 @@ export class AiService {
     description: string,
     body: string,
     response: string,
+    code?: string,
   ): Promise<FunctionDescriptionDto> {
     this.logger.debug(`Getting description for function: ${url} ${method}`);
     return await lastValueFrom(
@@ -63,6 +64,7 @@ export class AiService {
           short_description: description,
           payload: body,
           response,
+          code,
         })
         .pipe(map((response) => response.data))
         .pipe(catchError(this.processScienceServerError())),

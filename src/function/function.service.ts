@@ -638,6 +638,25 @@ export class FunctionService implements OnModuleInit {
       },
     });
 
+    if (!context || !description) {
+      const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+
+      if ((trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction)) {
+        const {
+          description: aiDescription,
+          context: aiContext,
+
+        } = await this.getCustomFunctionAIData(description, code);
+
+        if (!context && !customFunction?.context) {
+          context = this.commonService.sanitizeContextIdentifier(aiContext);
+        }
+        if (!description && !customFunction?.description) {
+          description = aiDescription;
+        }
+      }
+    }
+
     if (customFunction) {
       this.logger.debug(`Updating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
       const serverSide = customFunction.serverSide;
@@ -662,6 +681,7 @@ export class FunctionService implements OnModuleInit {
       }
     } else {
       this.logger.debug(`Creating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
+
       customFunction = await this.prisma.customFunction.create({
         data: {
           environment: {
@@ -1441,5 +1461,24 @@ export class FunctionService implements OnModuleInit {
     }
 
     return apiFunction;
+  }
+
+  private async getCustomFunctionAIData(description: string, code: string) {
+    const {
+      description: aiDescription,
+      context,
+    } = await this.aiService.getFunctionDescription(
+      '',
+      '',
+      description,
+      '',
+      '',
+      code,
+    );
+
+    return {
+      description: aiDescription,
+      context,
+    };
   }
 }
