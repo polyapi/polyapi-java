@@ -19,6 +19,7 @@ from app.typedefs import (
 from app.utils import (
     create_new_conversation,
     filter_to_real_public_ids,
+    get_return_type_properties,
     get_variables,
     insert_internal_step_info,
     log,
@@ -114,19 +115,29 @@ def _join_content(
     return "\n\n".join(parts)
 
 
-def spec_prompt(match: SpecificationDto) -> str:
-    desc = match.get("description", "")
-    if match["type"] == "variable":
-        path = f"vari.{match['context']}.{match['name']}"
+def spec_prompt(spec: SpecificationDto, *, include_return_type=False) -> str:
+    desc = spec.get("description", "")
+    if spec["type"] == "variable":
+        path = f"vari.{spec['context']}.{spec['name']}"
     else:
-        path = func_path_with_args(match)
+        path = func_path_with_args(spec)
 
     parts = [
-        f"// id: {match['id']}",
-        f"// type: {match['type']}",
+        f"// id: {spec['id']}",
+        f"// type: {spec['type']}",
         f"// description: {desc}",
-        path,
     ]
+    if include_return_type:
+        return_props = get_return_type_properties(spec)
+        if return_props:
+            if type(return_props) == str:
+                return_type = return_props
+            else:
+                return_type = json.dumps(return_props)  # type: ignore
+            return_type = return_type.replace("\n", " ")
+            parts.append(f"// returns {return_type}")
+
+    parts.append(path)
     return "\n".join(parts)
 
 
@@ -277,7 +288,9 @@ def get_best_function_example(
     specs = public_ids_to_specs(user_id, environment_id, public_ids)
 
     best_functions_prompt = BEST_FUNCTION_DETAILS_TEMPLATE.format(
-        spec_str="\n\n".join(spec_prompt(spec) for spec in specs)
+        spec_str="\n\n".join(
+            spec_prompt(spec, include_return_type=True) for spec in specs
+        )
     )
     question_prompt = BEST_FUNCTION_QUESTION_TEMPLATE.format(question=question)
     messages = [MessageDict(role="user", content=best_functions_prompt)]

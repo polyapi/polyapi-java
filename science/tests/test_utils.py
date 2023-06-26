@@ -14,6 +14,7 @@ from app.utils import (
     func_path,
     func_path_with_args,
     get_public_id,
+    get_return_type_properties,
     get_variables,
     store_message,
 )
@@ -135,16 +136,63 @@ class T(DbTestCase):
                 "context": "bar",
                 "environmentId": environment.id,
                 "description": "baz",
-                "visibility": "ENVIRONMENT"
+                "visibility": "ENVIRONMENT",
             }
         )
         variables = get_variables("badId")
         self.assertEqual(variables, [])
 
         variables = get_variables(environment.id)
-        self.assertEqual(variables[0]['name'], var.name)
+        self.assertEqual(variables[0]["name"], var.name)
 
         # now lets make the variable public and try it!
-        self.db.variable.update_many(where={"name": "foo"}, data={"visibility": "PUBLIC"})
+        self.db.variable.update_many(
+            where={"name": "foo"}, data={"visibility": "PUBLIC"}
+        )
         variables = get_variables("badId")
-        self.assertEqual(variables[0]['name'], var.name)
+        self.assertEqual(variables[0]["name"], var.name)
+
+    def test_get_return_properties_string(self):
+        spec = {
+            "function": {
+                "returnType": {
+                    "kind": "string",
+                    "schema": {
+                        "title": "foobar",
+                    },
+                }
+            }
+        }
+        props = get_return_type_properties(spec)
+        self.assertEqual(props, "string")
+
+    def test_get_return_properties_object(self):
+        spec = {
+            "function": {
+                "returnType": {
+                    "kind": "object",
+                    "schema": {
+                        "$schema": "http://json-schema.org/draft-06/schema#",
+                        "definitions": {
+                            "SubresourceUris": {
+                                "type": "object",
+                                "properties": {"media": {"type": "string"}},
+                                "required": ["media"],
+                                "title": "SubresourceUris",
+                            }
+                        },
+                        "type": "object",
+                        "properties": {
+                            "account_sid": {"type": "string"},
+                            "uri": {
+                                "type": "string",
+                            },
+                        },
+                        "required": ["account_sid", "uri"],
+                        "title": "ReturnType",
+                    },
+                }
+            }
+        }
+        properties = get_return_type_properties(spec)
+        self.assertIn("account_sid", properties)

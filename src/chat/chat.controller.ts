@@ -87,7 +87,7 @@ export class ChatController {
     }
 
     await this.aiService.setSystemPrompt(environmentId, userId, body.prompt);
-    return { response: 'Conversation cleared and new system prompt set!' };
+    return { response: 'New system prompt set!' };
   }
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))

@@ -19,6 +19,13 @@ $ cp .env.template .env
 $ ./after_pull.sh
 ```
 
+## Running Hashicorp Vault Locally
+
+Run `vault server -dev -dev-root-token-id root`
+
+To setup initially, see here: https://github.com/polyapi/poly-alpha/issues/516#issuecomment-1607810143
+
+
 ## Running the Node Server
 
 This will run the Node server on port 8000:

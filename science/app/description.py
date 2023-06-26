@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 import json
 import openai
 from app.typedefs import DescInputDto, DescOutputDto, ErrorDto, MessageDict, VarDescInputDto
@@ -47,6 +47,8 @@ Request Payload:
 Response Payload:
 {response}
 
+{code}
+
 Please return JSON with three keys: context, name, description
 """
 
@@ -88,6 +90,7 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         short_description=short,
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
+        code=_get_code_prompt(data.get("code")),
         call_type="API call",
         description_length_limit=DESCRIPTION_LENGTH_LIMIT,
         # contexts="\n".join(contexts),
@@ -114,6 +117,13 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
     return rv
 
 
+def _get_code_prompt(code: Optional[str]) -> str:
+    if code:
+        return f"Code:\n{code}"
+    else:
+        return ""
+
+
 def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto]:
     # contexts = _get_context_and_names()
     short = data.get("short_description", "")
@@ -124,6 +134,7 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
         short_description=short,
         payload=data.get("payload", "None"),
         response=data.get("response", "None"),
+        code="",  # no code for webhooks
         call_type="Event handler",
         description_length_limit=DESCRIPTION_LENGTH_LIMIT,
         # contexts="\n".join(contexts),
