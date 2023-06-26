@@ -1,8 +1,7 @@
-import { IsOptional, IsBoolean, IsIn, ValidationArguments } from 'class-validator';
+import {  IsIn, ValidationArguments } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 import { validateObjectValue } from '../../utils';
 import { ConfigVariableLevel, ConfigVariableValueConstraints } from './types'
-
 
 function getMessageFn(message: string) {
   return (validationArguments: ValidationArguments) => `${validationArguments.property} ${message}`
@@ -43,8 +42,6 @@ export function validate(value: unknown, constraints: ConfigVariableValueConstra
       ValidationClass = plainToClass(SetInstanceTrainingDataGenerationValue, value);
     }
     
-    console.log('ValidationClass: ', ValidationClass)
-
     validateObjectValue(ValidationClass, value);
 
 }

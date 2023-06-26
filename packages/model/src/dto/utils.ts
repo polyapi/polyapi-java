@@ -7,7 +7,7 @@ function isPlainObjectPredicate(value: unknown): value is object {
     return isPlainObject(value);
 }
 
-export function validateObjectValue(validationClass: new (args: any[]) => any, value: unknown, validatorOptions?: ValidatorOptions) {
+export function validateObjectValue(validationClass: new (...args: any[]) => any, value: unknown, validatorOptions?: ValidatorOptions) {
   if(!isPlainObjectPredicate(value)) {
     throw new BadRequestException(['value must be an object']);
   }
