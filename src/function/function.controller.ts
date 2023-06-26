@@ -79,7 +79,7 @@ export class FunctionController {
     return this.service.apiFunctionToBasicDto(
       await this.service.createOrUpdateApiFunction(
         id,
-        environmentId,
+        req.user.environment,
         url,
         body,
         requestName,

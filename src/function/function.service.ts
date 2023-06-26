@@ -22,6 +22,7 @@ import {
   ArgumentType,
   Auth,
   Body,
+  ConfigVariableName,
   CustomFunctionSpecification,
   FunctionArgument,
   FunctionBasicDto,
@@ -33,6 +34,7 @@ import {
   PropertyType,
   ServerFunctionSpecification,
   Specification,
+  TrainingDataGeneration,
   Variables,
   Visibility,
 } from '@poly/model';
@@ -49,6 +51,7 @@ import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
 import { mergeWith, omit, uniqBy } from 'lodash';
+import { ConfigVariableService } from 'config-variable/config-varirable.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
@@ -75,6 +78,7 @@ export class FunctionService implements OnModuleInit {
     private readonly aiService: AiService,
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
+    private readonly configVariableService: ConfigVariableService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
   }
@@ -141,7 +145,7 @@ export class FunctionService implements OnModuleInit {
 
   async createOrUpdateApiFunction(
     id: string | null,
-    environmentId: string,
+    environment: Environment,
     url: string,
     body: Body,
     requestName: string,
@@ -175,7 +179,7 @@ export class FunctionService implements OnModuleInit {
 
       const apiFunctions = await this.prisma.apiFunction.findMany({
         where: {
-          environmentId,
+          environmentId: environment.id,
           OR: [
             {
               url: {
@@ -232,26 +236,32 @@ export class FunctionService implements OnModuleInit {
     response = this.commonService.trimDownObject(response, 1);
 
     if ((!name || !context || !description) && !willRetrain) {
-      const {
-        name: aiName,
-        description: aiDescription,
-        context: aiContext,
-      } = await this.aiService.getFunctionDescription(
-        url,
-        apiFunction?.method || method,
-        description || apiFunction?.description || '',
-        JSON.stringify(this.commonService.trimDownObject(this.getBodyData(body))),
-        JSON.stringify(response),
-      );
+      const trainingDataCfgVariable = await this.configVariableService.get(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-      if (!name) {
-        name = this.commonService.sanitizeNameIdentifier(aiName);
-      }
-      if (!context && !apiFunction?.context) {
-        context = this.commonService.sanitizeContextIdentifier(aiContext);
-      }
-      if (!description && !apiFunction?.description) {
-        description = aiDescription;
+      const trainingDataCfg = trainingDataCfgVariable ? JSON.parse(trainingDataCfgVariable?.value) as TrainingDataGeneration : null;
+
+      if (trainingDataCfg?.apiFunctions) {
+        const {
+          name: aiName,
+          description: aiDescription,
+          context: aiContext,
+        } = await this.aiService.getFunctionDescription(
+          url,
+          apiFunction?.method || method,
+          description || apiFunction?.description || '',
+          JSON.stringify(this.commonService.trimDownObject(this.getBodyData(body))),
+          JSON.stringify(response),
+        );
+
+        if (!name) {
+          name = this.commonService.sanitizeNameIdentifier(aiName);
+        }
+        if (!context && !apiFunction?.context) {
+          context = this.commonService.sanitizeContextIdentifier(aiContext);
+        }
+        if (!description && !apiFunction?.description) {
+          description = aiDescription;
+        }
       }
     }
 
@@ -294,7 +304,7 @@ export class FunctionService implements OnModuleInit {
         },
         data: {
           ...upsertPayload,
-          name: await this.resolveFunctionName(environmentId, finalName, finalContext, true, true, [apiFunction.id]),
+          name: await this.resolveFunctionName(environment.id, finalName, finalContext, true, true, [apiFunction.id]),
           argumentsMetadata: await this.resolveArgumentsMetadata(
             {
               argumentsMetadata: apiFunction.argumentsMetadata,
@@ -314,11 +324,11 @@ export class FunctionService implements OnModuleInit {
       data: {
         environment: {
           connect: {
-            id: environmentId,
+            id: environment.id,
           },
         },
         ...upsertPayload,
-        name: await this.resolveFunctionName(environmentId, finalName, finalContext, true, true),
+        name: await this.resolveFunctionName(environment.id, finalName, finalContext, true, true),
         argumentsMetadata: await this.resolveArgumentsMetadata(
           {
             argumentsMetadata: null,
