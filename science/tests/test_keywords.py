@@ -1,6 +1,7 @@
 import copy
 import json
 from unittest.mock import patch, Mock
+from app.constants import VarName
 from app.keywords import (
     extract_keywords,
     get_function_match_limit,
@@ -154,12 +155,14 @@ class T(DbTestCase):
         self.assertEqual(keyword_data["keywords"], "foo bar")
 
     def test_get_function_match_limit(self):
-        value = 6
-        name = "function_match_limit"
-        defaults = {"name": name, "value": str(value)}
-        self.db.configvariable.upsert(
-            where={"name": name}, data={"update": defaults, "create": defaults}
-        )
+        value = "6"
+        name = VarName.function_match_limit.value
+        defaults = {"name": name, "value": value}
+        config = self.db.configvariable.find_first(where={"name": name})
+        if config:
+            self.db.configvariable.update(where={"id": config.id}, data={"value": value})
+        else:
+            config = self.db.configvariable.create(data=defaults)
         limit = get_function_match_limit()
         self.assertEqual(limit, 6)
 

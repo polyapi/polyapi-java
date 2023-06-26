@@ -244,5 +244,21 @@ module.exports = {
         'endOfLine': 'auto',
       },
     ],
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        "selector": [
+          "classProperty",
+          "typeProperty",
+          "classMethod",
+          "objectLiteralMethod",
+          "typeMethod",
+          "accessor",
+          "enumMember"
+        ],
+        "format": ["strictCamelCase"],
+        "modifiers": ["requiresQuotes"]
+      }
+    ]
   },
 };

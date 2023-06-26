@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 from flask import Blueprint, Response, request, jsonify
 from openai.error import OpenAIError, RateLimitError
-from app.completion import get_completion_answer
-from app.description import get_function_description, get_webhook_description
-from app.typedefs import DescInputDto
-from app.utils import is_vip_user, log, set_config_variable
+from app.completion import general_question, get_completion_answer
+from app.conversation import conversation_question
+from app.description import get_function_description, get_variable_description, get_webhook_description
+from app.docs import documentation_question
+from app.typedefs import CompletionAnswer, DescInputDto, VarDescInputDto
+from app.utils import create_new_conversation, is_vip_user, log
+from app.router import route_question
 
 bp = Blueprint("views", __name__)
 
@@ -17,7 +20,7 @@ def home():
 
 
 @bp.route("/function-completion", methods=["POST"])  # type: ignore
-def function_completion() -> Dict:
+def function_completion() -> CompletionAnswer:
     data: Dict = request.get_json(force=True)
     question: str = data["question"].strip()
     user_id: Optional[str] = data.get("user_id")
@@ -25,7 +28,28 @@ def function_completion() -> Dict:
     assert user_id
     assert environment_id
 
-    resp = get_completion_answer(user_id, environment_id, question)
+    route = route_question(question)
+    if route == "function":
+        resp = get_completion_answer(user_id, environment_id, question)
+    elif route == "general":
+        conversation = create_new_conversation(user_id)
+        choice = general_question(user_id, conversation.id, question)
+        resp = {"answer": choice['message']['content'], "stats": {}}
+    elif route == "conversation":
+        choice, stats = conversation_question(user_id, question)
+        resp = {"answer": choice['message']['content'], "stats": stats}
+    elif route == "documentation":
+        choice, stats = documentation_question(user_id, question)
+        resp = {"answer": choice['message']['content'], "stats": stats}
+    else:
+        resp = {
+            "answer": f"unexpected category: {route}",
+            "stats": {
+                "todo": "send back more stats!"
+            },
+        }
+
+    resp['stats']['routing'] = route
 
     if is_vip_user(user_id):
         log(f"VIP USER {user_id}", resp, sep="\n")
@@ -47,17 +71,10 @@ def webhook_description() -> Response:
     return jsonify(get_webhook_description(data))
 
 
-@bp.route("/configure", methods=["POST"])
-def configure() -> Tuple[str, int]:
-    data = request.get_json(force=True)
-    name = data["name"]
-    value = data["value"]
-    try:
-        set_config_variable(name, value)
-    except ValueError:
-        return f"Invalid config variable name: {name}", 400
-
-    return "Configured", 201
+@bp.route("/variable-description", methods=["POST"])
+def variable_description() -> Response:
+    data: VarDescInputDto = request.get_json(force=True)
+    return jsonify(get_variable_description(data))
 
 
 @bp.route("/error")

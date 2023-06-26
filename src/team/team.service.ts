@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { Team, TeamMember, User } from '@prisma/client';
 import { TeamDto, TeamMemberDto } from '@poly/model';
@@ -6,6 +6,8 @@ import { UserService } from 'user/user.service';
 
 @Injectable()
 export class TeamService {
+  private readonly logger = new Logger(TeamService.name);
+
   constructor(private readonly prisma: PrismaService, private readonly userService: UserService) {
   }
 
@@ -25,6 +27,7 @@ export class TeamService {
   }
 
   async createTeam(tenantId: string, name: string) {
+    this.logger.log(`Creating team '${name}' in tenant ${tenantId}`);
     return this.prisma.team.create({
       data: {
         tenant: {
@@ -38,6 +41,7 @@ export class TeamService {
   }
 
   async updateTeam(team: Team, name: string) {
+    this.logger.log(`Updating team '${team.name}' to '${name}'`);
     return this.prisma.team.update({
       where: {
         id: team.id,
@@ -49,6 +53,7 @@ export class TeamService {
   }
 
   async deleteTeam(id: string) {
+    this.logger.log(`Deleting team ${id}`);
     return this.prisma.team.delete({
       where: {
         id,
@@ -94,6 +99,7 @@ export class TeamService {
   }
 
   async createMember(teamId: string, userId: string) {
+    this.logger.log(`Creating team member ${userId} in team ${teamId}`);
     return this.prisma.teamMember.create({
       data: {
         teamId,
@@ -106,6 +112,7 @@ export class TeamService {
   }
 
   async deleteMember(id: string) {
+    this.logger.log(`Deleting team member ${id}`);
     return this.prisma.teamMember.delete({
       where: {
         id,

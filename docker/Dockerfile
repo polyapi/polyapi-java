@@ -20,7 +20,7 @@ RUN rm .env*
 RUN yarn install
 RUN yarn run prisma generate
 WORKDIR /poly/app/science
-RUN pip install -r ./requirements.txt
+RUN pip install -r ./requirements.txt --break-system-packages
 RUN prisma generate
 WORKDIR /poly/app
 # Could not find a way to run prisma generate as non-root, so took a different approach which is a bit of hack and needs relooking at later on

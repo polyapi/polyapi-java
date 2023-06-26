@@ -37,7 +37,7 @@ def get_similarity_threshold() -> int:
     # how similar does a function or webhook have to be to be considered a match?
     # scale is 0-100
     var = get_config_variable(VarName.keyword_similarity_threshold)
-    return int(var.value) if var else 55
+    return int(var.value) if var else 41
 
 
 def get_function_match_limit() -> int:

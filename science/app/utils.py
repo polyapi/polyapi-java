@@ -2,6 +2,7 @@ import copy
 import openai
 import string
 import requests
+import numpy as np
 from requests import Response
 from flask import current_app
 from typing import List, Optional, Union
@@ -60,8 +61,9 @@ def func_args(spec: SpecificationDto) -> List[str]:
     """get the args for a function from the headers and url"""
     arg_strings = []
     func = spec["function"]
-    for arg in func["arguments"]:
-        arg_strings.append(_process_property_spec(arg))
+    if func:
+        for arg in func["arguments"]:
+            arg_strings.append(_process_property_spec(arg))
     return arg_strings
 
 
@@ -119,12 +121,17 @@ def store_message(
     return rv
 
 
-def get_conversations_for_user(user_id: str) -> List[ConversationMessage]:
+def get_conversations_for_user(user_id: str) -> List[Conversation]:
     db = get_client()
     return list(
-        db.conversationmessage.find_many(
-            where={"userId": user_id}, order={"createdAt": "asc"}
-        )
+        db.conversation.find_many(where={"userId": user_id}, order={"createdAt": "asc"})
+    )
+
+
+def get_last_conversation(user_id: str) -> Optional[Conversation]:
+    db = get_client()
+    return db.conversation.find_first(
+        where={"userId": user_id}, order={"createdAt": "desc"}
     )
 
 
@@ -191,6 +198,7 @@ def filter_to_real_public_ids(public_ids: List[str]) -> List[str]:
     real += db.customfunction.find_many(where={"id": {"in": public_ids}})
     real += db.authprovider.find_many(where={"id": {"in": public_ids}})
     real += db.webhookhandle.find_many(where={"id": {"in": public_ids}})
+    real += db.variable.find_many(where={"id": {"in": public_ids}})
     real_ids = {r.id for r in real}
 
     return [pid for pid in public_ids if pid in real_ids]
@@ -247,7 +255,9 @@ def query_node_server(user_id: str, environment_id: str, path: str) -> Response:
     return resp
 
 
-def public_ids_to_specs(user_id: str, environment_id: str, public_ids: List[str]) -> List[SpecificationDto]:
+def public_ids_to_specs(
+    user_id: str, environment_id: str, public_ids: List[str]
+) -> List[SpecificationDto]:
     public_ids_set = set(public_ids)
     specs_resp = query_node_server(user_id, environment_id, "specs")
 
@@ -272,6 +282,9 @@ def get_chat_completion(
 ) -> ChatCompletionResponse:
     """send the messages to OpenAI and get a response"""
     stripped = copy.deepcopy(messages)
+    stripped = [
+        m for m in stripped if m["role"] != "info"
+    ]  # info is our internal conversation stats, dont send!
     for s in stripped:
         # remove our internal-use-only fields
         s.pop("type", None)
@@ -281,3 +294,49 @@ def get_chat_completion(
         temperature=temperature,
     )
     return resp
+
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+def set_all_functions_public(password=""):
+    if password != "DONT RUN THIS IN PROD":
+        raise NotImplementedError("incorrect password, blocking!")
+
+    db = get_client()
+    db.apifunction.update_many(
+        where={"visibility": "TENANT"}, data={"visibility": "PUBLIC"}
+    )
+    db.tenant.update_many(
+        where={"publicVisibilityAllowed": False}, data={"publicVisibilityAllowed": True}
+    )
+
+
+def get_variables(
+    environment_id: str, public_ids: Optional[List[str]] = None
+) -> List[SpecificationDto]:
+    db = get_client()
+
+    if public_ids:
+        vars = db.variable.find_many(
+            where={"AND": [
+                {"id": {"in": public_ids}},
+                {"OR": [{"environmentId": environment_id}, {"visibility": "PUBLIC"}]}
+            ]}
+        )
+    else:
+        vars = db.variable.find_many(
+            where={"OR": [{"environmentId": environment_id}, {"visibility": "PUBLIC"}]}
+        )
+    return [
+        SpecificationDto(
+            id=var.id,
+            context=var.context,
+            name=var.name,
+            description=var.description,
+            function=None,
+            type="variable",
+        )
+        for var in vars
+    ]

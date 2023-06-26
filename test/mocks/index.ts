@@ -1,3 +1,4 @@
+export { default as authServiceMock } from './auth.service';
 export { default as authProviderServiceMock } from './auth-provider.service';
 export { default as commonServiceMock } from './common.service';
 export { default as configServiceMock } from './config.service';
@@ -8,3 +9,8 @@ export { default as httpServiceMock } from './http.service';
 export { default as eventServiceMock } from './event.service';
 export { default as aiServiceMock } from './ai.service';
 export { default as specsServiceMock } from './specs.service';
+export { default as secretServiceMock } from './secret.service';
+export { default as environmentServiceMock } from './environment.service';
+export { default as applicationServiceMock } from './application.service';
+export { default as teamServiceMock } from './team.service';
+export { default as userServiceMock } from './user.service';

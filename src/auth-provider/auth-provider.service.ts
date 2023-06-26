@@ -63,7 +63,10 @@ export class AuthProviderService {
       },
     ];
 
-    this.logger.debug(`auth providers filter conditions: ${JSON.stringify([{ AND: filterConditions }, ...idConditions])}`);
+    this.logger.debug(`auth providers filter conditions: ${JSON.stringify([
+{ AND: filterConditions },
+      ...idConditions,
+])}`);
 
     return [{ AND: filterConditions }, ...idConditions];
   }
@@ -400,25 +403,28 @@ export class AuthProviderService {
       this.logger.debug(`No auth token found for auth function ${authProvider.id}`);
       return;
     }
-    await this.httpService
-      .request({
-        url: authProvider.revokeUrl,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        data: {
-          client_id: authToken.clientId,
-          client_secret: authToken.clientSecret,
-          token: authToken.accessToken,
-        },
-      })
-      .pipe(
-        catchError((error: AxiosError) => {
-          this.logger.error(`Error while performing token revoke for auth function (id: ${authProvider.id}): ${error}`);
-          throw new InternalServerErrorException(error.response?.data || error.message);
-        }),
-      );
+
+    await lastValueFrom(
+      this.httpService
+        .request({
+          url: authProvider.revokeUrl,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: {
+            client_id: authToken.clientId,
+            client_secret: authToken.clientSecret,
+            token: authToken.accessToken,
+          },
+        })
+        .pipe(
+          catchError((error: AxiosError) => {
+            this.logger.error(`Error while performing token revoke for auth function (id: ${authProvider.id}): ${error}`);
+            throw new InternalServerErrorException(error.response?.data || error.message);
+          }),
+        ),
+    );
   }
 
   async introspectAuthToken(authProvider: AuthProvider, token: string): Promise<any> {

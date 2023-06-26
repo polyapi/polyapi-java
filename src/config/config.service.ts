@@ -114,4 +114,12 @@ export class ConfigService {
   get faasDockerConfigFile(): string {
     return this.get('FAAS_DOCKER_CONFIG_FILE', `${process.env.HOME}/.docker/config.json`);
   }
+
+  get vaultAddress(): string {
+    return this.get('VAULT_ADDRESS');
+  }
+
+  get vaultToken(): string {
+    return this.get('VAULT_TOKEN');
+  }
 }

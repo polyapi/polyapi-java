@@ -1,9 +1,9 @@
-from typing import Dict, Tuple, TypedDict, List, Literal, Union
+from typing import Dict, Optional, Tuple, TypedDict, List, Literal, Union
 from typing_extensions import NotRequired
-from prisma.models import ApiFunction, CustomFunction, AuthProvider, WebhookHandle
+from prisma.models import ApiFunction, CustomFunction, AuthProvider, WebhookHandle, Variable
 
 
-AnyFunction = Union[ApiFunction, CustomFunction, AuthProvider, WebhookHandle]
+AnyFunction = Union[ApiFunction, CustomFunction, AuthProvider, WebhookHandle, Variable]
 
 
 class DescInputDto(TypedDict):
@@ -19,6 +19,13 @@ class DescOutputDto(TypedDict):
     context: str
     description: str
     openai_response: str
+
+
+class VarDescInputDto(TypedDict):
+    name: str
+    context: str
+    secret: bool
+    value: Union[str, int, float, bool, Dict]
 
 
 class ErrorDto(TypedDict):
@@ -65,8 +72,8 @@ class SpecificationDto(TypedDict):
     context: str
     name: str
     description: str
-    function: FunctionSpecification
-    type: Literal['apiFunction', 'customFunction', 'serverFunction', 'authFunction', 'webhookHandle']
+    function: Optional[FunctionSpecification]
+    type: Literal['apiFunction', 'customFunction', 'serverFunction', 'authFunction', 'webhookHandle', 'variable']
 
 
 class MessageDict(TypedDict, total=False):
@@ -94,3 +101,8 @@ class StatsDict(TypedDict, total=False):
     keyword_stats: 'StatsDict'
     semantically_similar_stats: 'StatsDict'
     config: Dict
+
+
+class CompletionAnswer(TypedDict):
+    answer: str
+    stats: Dict

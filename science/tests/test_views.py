@@ -2,8 +2,6 @@ import json
 from mock import patch, Mock
 from openai.error import ServiceUnavailableError
 
-from app.keywords import get_function_match_limit
-
 from .testing import DbTestCase
 
 # TODO make relative?
@@ -17,16 +15,19 @@ class T(DbTestCase):
         self.assertEqual(user.name, "test")
         self.assertEqual("foo", "foo")
 
+    @patch("app.views.route_question")
     @patch("app.views.get_completion_answer")
-    def test_function_completion_error(self, get_answer: Mock) -> None:
+    def test_function_completion_error(self, get_answer: Mock, route_question) -> None:
         # setup
+        route_question.return_value = "function"
+
         get_answer.side_effect = ServiceUnavailableError(
             "The server is overloaded or not ready yet."
         )
         mock_input = {
             "question": "hi world",
-            "user_id": 1,
-            "environment_id": 1,
+            "user_id": "123",
+            "environment_id": "123",
         }
 
         # execute
@@ -93,13 +94,6 @@ class T(DbTestCase):
         self.assertEqual(output["context"], "booking.reservations")
         self.assertEqual(output["name"], "createReservation")
         self.assertEqual(output["description"], "This Event handler...")
-
-    def test_configure(self):
-        data = {"name": "function_match_limit", "value": "4"}
-        resp = self.client.post("/configure", json=data)
-        self.assertEqual(resp.status_code, 201)
-        out = get_function_match_limit()
-        self.assertEqual(out, 4)
 
     def test_rate_limit_error(self):
         resp = self.client.get("/error-rate-limit")

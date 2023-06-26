@@ -103,7 +103,8 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Delete(':id')
   async deleteTenant(@Param('id') id: string) {
-    await this.tenantService.delete(await this.findTenant(id));
+    const tenant = await this.findTenant(id);
+    await this.tenantService.delete(tenant.id);
   }
 
   @UseGuards(PolyAuthGuard)

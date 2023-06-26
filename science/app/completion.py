@@ -1,12 +1,13 @@
 import re
 import json
-from typing import List, Dict, Optional, Tuple
+from typing import List, Optional, Tuple
 from prisma import get_client
 from prisma.models import SystemPrompt
 
 # TODO change to relative imports
 from app.typedefs import (
     ChatGptChoice,
+    CompletionAnswer,
     ExtractKeywordDto,
     StatsDict,
 )
@@ -18,6 +19,7 @@ from app.typedefs import (
 from app.utils import (
     create_new_conversation,
     filter_to_real_public_ids,
+    get_variables,
     insert_internal_step_info,
     log,
     func_path_with_args,
@@ -63,19 +65,23 @@ def get_function_options_prompt(
         return None, {"match_count": 0}
 
     specs_resp = query_node_server(user_id, environment_id, "specs")
-    items: List[SpecificationDto] = specs_resp.json()
+    specs: List[SpecificationDto] = specs_resp.json()
+    specs += get_variables(environment_id)
 
-    top_matches, stats = get_top_function_matches(items, keywords)
+    top_matches, stats = get_top_function_matches(specs, keywords)
 
     function_parts: List[str] = []
     webhook_parts: List[str] = []
+    variable_parts: List[str] = []
     for match in top_matches:
         if match["type"] == "webhookHandle":
             webhook_parts.append(spec_prompt(match))
+        elif match["type"] == "variable":
+            variable_parts.append(spec_prompt(match))
         else:
             function_parts.append(spec_prompt(match))
 
-    content = _join_content(function_parts, webhook_parts)
+    content = _join_content(function_parts, webhook_parts, variable_parts)
 
     if content:
         return {
@@ -86,9 +92,12 @@ def get_function_options_prompt(
         return None, stats
 
 
-def _join_content(function_parts: List[str], webhook_parts: List[str]) -> str:
+def _join_content(
+    function_parts: List[str], webhook_parts: List[str], variable_parts: List[str]
+) -> str:
     function_preface = "Here are some functions in the Poly API library,"
     webhook_preface = "Here are some event handlers in the Poly API library,"
+    variable_preface = "Here are some variables from the Poly API library,"
     parts = []
     if function_parts:
         parts.append(function_preface)
@@ -98,16 +107,25 @@ def _join_content(function_parts: List[str], webhook_parts: List[str]) -> str:
         parts.append(webhook_preface)
         parts += webhook_parts
 
+    if variable_preface:
+        parts.append(variable_preface)
+        parts += variable_parts
+
     return "\n\n".join(parts)
 
 
 def spec_prompt(match: SpecificationDto) -> str:
     desc = match.get("description", "")
+    if match["type"] == "variable":
+        path = f"vari.{match['context']}.{match['name']}"
+    else:
+        path = func_path_with_args(match)
+
     parts = [
         f"// id: {match['id']}",
         f"// type: {match['type']}",
         f"// description: {desc}",
-        func_path_with_args(match),
+        path,
     ]
     return "\n".join(parts)
 
@@ -117,13 +135,13 @@ Which functions could be invoked as is, if any, to implement this user prompt:
 
 "%s"
 
-Please return only the ids of the functions and confidence scores, on a scale of 1-3, in this format:
+Please return only the ids of the functions or variables and their confidence scores, on a scale of 1-3, in this format:
 
 ```
 [ {"id": "111111-1111-1111-1111-1111111111", "score": 3}, {"id": "222222-2222-2222-2222-222222222", "score": 1} ]
 ```
 
-If no function is suitable, please return the following:
+If no function or variable is suitable, please return the following:
 
 ```
 []
@@ -152,7 +170,7 @@ def get_best_function_messages(
 
     messages = [
         options,
-        MessageDict(role="user", content=BEST_FUNCTION_CHOICE_TEMPLATE % question)
+        MessageDict(role="user", content=BEST_FUNCTION_CHOICE_TEMPLATE % question),
     ]
     insert_system_prompt(environment_id, messages)
     return messages, stats
@@ -169,7 +187,9 @@ def get_system_prompt() -> Optional[SystemPrompt]:
 def get_best_functions(
     user_id: str, conversation_id: str, environment_id: str, question: str
 ) -> Tuple[List[str], StatsDict]:
-    messages, stats = get_best_function_messages(user_id, conversation_id, environment_id, question)
+    messages, stats = get_best_function_messages(
+        user_id, conversation_id, environment_id, question
+    )
     if not messages:
         # we have no candidate functions whatsoever, abort!
         return [], stats
@@ -236,6 +256,12 @@ Use any combination of only the following functions to answer my question:
 
 {spec_str}
 """
+
+BEST_FUNCTION_VARIABLES_TEMPLATE = """Use any combination of the following variables as arguments to those functions:
+
+{variable_str}
+"""
+
 BEST_FUNCTION_QUESTION_TEMPLATE = 'My question:\n"{question}"'
 
 
@@ -249,19 +275,21 @@ def get_best_function_example(
     """take in the best function and get OpenAI to return an example of how to use that function"""
 
     specs = public_ids_to_specs(user_id, environment_id, public_ids)
-    if len(specs) != len(public_ids):
-        raise NotImplementedError(
-            f"spec doesnt exist for {public_ids}? was one somehow deleted?"
-        )
 
-    best_function_prompt = BEST_FUNCTION_DETAILS_TEMPLATE.format(
+    best_functions_prompt = BEST_FUNCTION_DETAILS_TEMPLATE.format(
         spec_str="\n\n".join(spec_prompt(spec) for spec in specs)
     )
     question_prompt = BEST_FUNCTION_QUESTION_TEMPLATE.format(question=question)
-    messages = [
-        MessageDict(role="user", content=best_function_prompt),
-        MessageDict(role="user", content=question_prompt),
-    ]
+    messages = [MessageDict(role="user", content=best_functions_prompt)]
+
+    variables = get_variables(environment_id, public_ids)
+    if variables:
+        best_variables_prompt = BEST_FUNCTION_VARIABLES_TEMPLATE.format(
+            variable_str="\n\n".join(spec_prompt(v) for v in variables)
+        )
+        messages.append(MessageDict(role="user", content=best_variables_prompt))
+
+    messages.append(MessageDict(role="user", content=question_prompt))
 
     insert_system_prompt(environment_id, messages)
     resp = get_chat_completion(messages, temperature=0.5)
@@ -275,7 +303,9 @@ def get_best_function_example(
     return rv
 
 
-def get_completion_answer(user_id: str, environment_id: str, question: str) -> Dict:
+def get_completion_answer(
+    user_id: str, environment_id: str, question: str
+) -> CompletionAnswer:
     conversation = create_new_conversation(user_id)
     best_function_ids, stats = get_best_functions(
         user_id, conversation.id, environment_id, question
@@ -287,19 +317,26 @@ def get_completion_answer(user_id: str, environment_id: str, question: str) -> D
             user_id, conversation.id, environment_id, best_function_ids, question
         )
     else:
-        choice = simple_chatgpt_question(question)
-
-        # store conversation
-        messages = [MessageDict(role="user", content=question), choice['message']]
-        insert_internal_step_info(messages, "FALLBACK")
-        store_messages(user_id, conversation.id, messages)
+        choice = general_question(user_id, conversation.id, question)
 
     answer, hit_token_limit = answer_processing(choice)
 
-    return {"answer": answer, "stats": stats}
+    return {"answer": answer, "stats": stats}  # type: ignore
 
 
 def simple_chatgpt_question(question: str) -> ChatGptChoice:
     messages: List[MessageDict] = [{"role": "user", "content": question}]
     resp = get_chat_completion(messages)
     return resp["choices"][0]
+
+
+def general_question(
+    user_id: str, conversation_id: str, question: str
+) -> ChatGptChoice:
+    choice = simple_chatgpt_question(question)
+
+    # store conversation
+    messages = [MessageDict(role="user", content=question), choice["message"]]
+    insert_internal_step_info(messages, "FALLBACK")
+    store_messages(user_id, conversation_id, messages)
+    return choice

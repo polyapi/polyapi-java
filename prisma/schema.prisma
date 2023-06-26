@@ -62,7 +62,7 @@ model Environment {
   id              String           @id @default(uuid())
   createdAt       DateTime         @default(now()) @map("created_at")
   name            String
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
   tenantId        String           @map("tenant_id")
   subdomain       String           @unique
   apiFunctions    ApiFunction[]
@@ -73,6 +73,7 @@ model Environment {
   apiKeys         ApiKey[]
   gptPlugins      GptPlugin[]
   configVariables ConfigVariable[]
+  variables       Variable[]
 
   @@map("environment")
 }
@@ -182,28 +183,28 @@ model WebhookHandle {
 
 // which thread are the messages a part of?
 model Conversation {
-  id        String            @id @default(uuid())
-  createdAt DateTime          @default(now())
-  user      User              @relation(fields: [userId], references: [id])
+  id        String                @id @default(uuid())
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id])
   userId    String
   messages  ConversationMessage[]
 }
 
 // store all the messages in a conversation
 model ConversationMessage {
-  id        String            @id @default(uuid())
-  createdAt DateTime          @default(now())
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String            @map("user_id")
-  name      String            @default("") // not used for now. in future, will allow the user to have multiple conversations
-  role      String            // assistant or user or system or info
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  name      String   @default("") // not used for now. in future, will allow the user to have multiple conversations
+  role      String // assistant or user or system or info
 
   // 1 is gpt messages, aka messages between us and ChatGPT, 2 is user messages, 3 is internal that was never sent anywhere (like "start stage 1")
-  type      Int               @default(1)
+  type Int @default(1)
 
-  content   String
-  conversation    Conversation      @relation(fields: [conversationId], references: [id])
-  conversationId  String            @map("conversation_id")
+  content        String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String       @map("conversation_id")
 
   @@map("conversation_message")
 }
@@ -264,4 +265,18 @@ model GptPlugin {
   environmentId             String      @map("environment_id")
 
   @@map("gpt_plugin")
+}
+
+model Variable {
+  id            String      @id @default(uuid())
+  createdAt     DateTime    @default(now()) @map("created_at")
+  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environmentId String      @map("environment_id")
+  name          String
+  context       String
+  description   String      @default("")
+  secret        Boolean     @default(false)
+  visibility    String      @default("ENVIRONMENT")
+
+  @@map("variable")
 }

@@ -1,7 +1,7 @@
-import { TypedMock, getFnMock } from '../utils/test-utils';
+import { getFnMock, TypedMock } from '../utils/test-utils';
 import { PrismaService } from 'prisma/prisma.service';
 
-type PrismaEntities = 'apiFunction' | 'webhookHandle';
+type PrismaEntities = 'apiFunction' | 'webhookHandle' | 'variable' | 'environment' | 'tenant';
 
 /**
  * This was taken from prisma client code since saddly prisma client module doesn't export `PrismaAction` I have had to add it manually here.
@@ -29,8 +29,8 @@ function getEntityMock<Entity extends PrismaEntities>(
     findUnique: getFnMock<PrismaService[Entity]['findUnique']>(),
     findMany: getFnMock<PrismaService[Entity]['findMany']>(),
     findFirst: getFnMock<PrismaService[Entity]['findFirst']>(),
-    create: getFnMock<PrismaService[Entity]['create']>(),
-    update: getFnMock<PrismaService[Entity]['update']>(),
+    create: getFnMock<PrismaService[Entity]['create']>().mockImplementation(({ data }) => Promise.resolve(data) as any),
+    update: getFnMock<PrismaService[Entity]['update']>().mockImplementation(({ data }) => Promise.resolve(data) as any),
     updateMany: getFnMock<PrismaService[Entity]['updateMany']>(),
     upsert: getFnMock<PrismaService[Entity]['upsert']>(),
     delete: getFnMock<PrismaService[Entity]['delete']>(),
@@ -41,8 +41,12 @@ function getEntityMock<Entity extends PrismaEntities>(
 }
 
 export default {
+  $transaction: getFnMock<PrismaService['$transaction']>(),
   apiFunction: getEntityMock('apiFunction'),
   webhookHandle: getEntityMock('webhookHandle'),
+  variable: getEntityMock('variable'),
+  tenant: getEntityMock('tenant'),
+  environment: getEntityMock('environment'),
 } as TypedMock<PrismaService> & {
   [key in PrismaEntities]: TypedMock<PrismaService[key]>;
 };

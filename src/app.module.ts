@@ -19,6 +19,8 @@ import { TeamModule } from 'team/team.module';
 import { EnvironmentModule } from 'environment/environment.module';
 import { ApplicationModule } from 'application/application.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
+import { VariableModule } from './variable/variable.module';
+import { SecretModule } from './secret/secret.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
     GptPluginModule,
     ApplicationModule,
     ConfigVariableModule,
+    VariableModule,
+    SecretModule,
   ],
   exports: [ConfigModule],
 })

@@ -4,6 +4,7 @@ from unittest.mock import patch
 from app.description import (
     _parse_openai_response,
     get_function_description,
+    get_variable_description,
     get_webhook_description,
 )
 from .testing import DbTestCase
@@ -44,6 +45,23 @@ class T(DbTestCase):
         self.assertEqual(mock_chat.call_count, 1)
         self.assertEqual(output["name"], "foo")
         self.assertEqual(output["context"], "baR")
+        self.assertEqual(output["description"], "foobar")
+
+    @patch("app.description.openai.ChatCompletion.create")
+    def test_get_variable_description(self, mock_chat):
+        mock_content = {"description": "foobar"}
+        mock_chat.return_value = {
+            "choices": [{"message": {"content": json.dumps(mock_content)}}]
+        }
+        output = get_variable_description(
+            {
+                "name": "fromPhoneNumber",
+                "context": "messaging.twilio",
+                "secret": False,
+                "value": "+18033697"
+            }
+        )
+        self.assertEqual(mock_chat.call_count, 1)
         self.assertEqual(output["description"], "foobar")
 
     @unittest.skip("Old approach not asking OpenAI to return JSON")

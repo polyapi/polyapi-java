@@ -207,10 +207,12 @@ export class TenantService implements OnModuleInit {
     });
   }
 
-  async delete(tenant: Tenant) {
+  async delete(tenantId: string) {
+    await this.environmentService.deleteAllByTenant(tenantId);
+
     return this.prisma.tenant.delete({
       where: {
-        id: tenant.id,
+        id: tenantId,
       },
     });
   }
