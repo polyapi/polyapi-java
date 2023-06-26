@@ -27,12 +27,9 @@ jobs:
     
     - name: Build the Docker image
       run: |
-        # echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        # dockerimage=${{ steps.package.outputs.content }}
-        # dockerimageclean=${dockerimage//[[:space:]]/}
-        # docker build -t $dockerimageclean -f docker/Dockerfile .
-        # docker push $dockerimageclean
-        echo ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
 
   main:
     name: Main docker build and push.
