@@ -9,13 +9,12 @@ jobs:
   develop:
     name: Development docker build and push.
     runs-on: ubuntu-latest
-    env:
-      IMAGE: ghcr.io/polyapi/polyapi-dev
     # if: ${{ github.ref == 'refs/heads/develop' }}
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      IMAGE: ghcr.io/polyapi/polyapi-dev
       
     steps:
     - uses: actions/checkout@v3
