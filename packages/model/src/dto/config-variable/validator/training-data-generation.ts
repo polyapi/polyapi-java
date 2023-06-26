@@ -1,41 +1,50 @@
-import { IsOptional, IsBoolean, validateSync } from 'class-validator';
-import { BadRequestException } from '@nestjs/common';
+import { IsOptional, IsBoolean, IsIn, ValidationArguments } from 'class-validator';
 import { plainToClass } from 'class-transformer';
-import { isPlainObjectPredicate } from './utils';
+import { validateObjectValue } from '../../utils';
+import { ConfigVariableLevel, ConfigVariableValueConstraints } from './types'
 
-export class SetTrainingDataGenerationValue {
-    @IsOptional()
-    @IsBoolean()
-    webhooks: boolean | null
-    @IsOptional()
-    @IsBoolean()
-    clientFunctions: boolean | null
-    @IsOptional()
-    @IsBoolean()
-    serverFunctions: boolean | null
-    @IsOptional()
-    @IsBoolean()
-    apiFunctions: boolean | null
+
+function getMessageFn(message: string) {
+  return (validationArguments: ValidationArguments) => `${validationArguments.property} ${message}`
 }
 
-export function validate(value: unknown){
-    if(!isPlainObjectPredicate(value)) {
-        throw new BadRequestException(['value must be an object']);
+const falseOrNull = 'must be false or null';
+const booleanOrUndefined = 'must be boolean';
+
+export class SetTrainingDataGenerationValue {
+    @IsIn([false, null, undefined], { message: getMessageFn(falseOrNull) })
+    webhooks: false | null
+    @IsIn([false, null, undefined], { message: getMessageFn(falseOrNull) })
+    clientFunctions: false | null
+    @IsIn([false, null, undefined], { message: getMessageFn(falseOrNull) })
+    serverFunctions: false | null
+    @IsIn([false, null, undefined], { message: getMessageFn(falseOrNull) })
+    apiFunctions: false | null
+}
+
+export class SetInstanceTrainingDataGenerationValue {
+    @IsIn([false, true, undefined], { message: getMessageFn(booleanOrUndefined)})
+    webhooks: boolean
+    @IsIn([false, true, undefined], { message: getMessageFn(booleanOrUndefined)})
+    clientFunctions: boolean
+    @IsIn([false, true, undefined], { message: getMessageFn(booleanOrUndefined)})
+    serverFunctions: boolean
+    @IsIn([false, true, undefined], { message: getMessageFn(booleanOrUndefined)})
+    apiFunctions: boolean
+}
+
+export function validate(value: unknown, constraints: ConfigVariableValueConstraints){
+
+    const isInstanceLevel = constraints.find(constraint => constraint.level === ConfigVariableLevel.Instance);
+
+    let ValidationClass: any = plainToClass(SetTrainingDataGenerationValue, value);
+
+    if(isInstanceLevel) {
+      ValidationClass = plainToClass(SetInstanceTrainingDataGenerationValue, value);
     }
+    
+    console.log('ValidationClass: ', ValidationClass)
 
-      const ValidationClass = plainToClass(SetTrainingDataGenerationValue, value);
+    validateObjectValue(ValidationClass, value);
 
-      const errors = validateSync(ValidationClass, {
-        whitelist: true,
-        forbidNonWhitelisted: true,
-      });
-
-
-      const flattenErrors = errors.map(error => {
-        return Object.values(error.constraints || {})
-      }).flat();
-
-      if(flattenErrors.length) {
-        throw new BadRequestException(flattenErrors);
-      }
 }

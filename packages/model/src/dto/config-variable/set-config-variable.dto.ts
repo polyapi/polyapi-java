@@ -1,9 +1,8 @@
 import { IsEnum, IsNotEmpty, Validate } from 'class-validator';
-import { ConfigVariableValue } from './validator';
+import { ConfigVariableLevel, ConfigVariableValue, ConfigVariableValueConstraints } from './validator';
 import { ConfigVariableName } from './value-types';
 
 export { SetTrainingDataGenerationValue } from './validator'
-
 
 export class SetConfigVariableDto {
   @IsNotEmpty()
@@ -11,5 +10,10 @@ export class SetConfigVariableDto {
   name: string;
   @IsNotEmpty()
   @Validate(ConfigVariableValue)
+  value: unknown;
+}
+
+export class SetInstanceConfigVariableDto extends SetConfigVariableDto {
+  @Validate(ConfigVariableValue, [{ level: ConfigVariableLevel.Instance }] as ConfigVariableValueConstraints)
   value: unknown;
 }
