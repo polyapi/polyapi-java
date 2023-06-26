@@ -2,14 +2,16 @@ name: Docker Image CI
 on:
   push:
     branches:
-      - develop
-      - main
+      - testcicd
+      # - main
 
 jobs:
   develop:
     name: Development docker build and push.
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/develop' }}
+    env:
+      IMAGE: ghcr.io/polyapi/polyapi-dev
+    # if: ${{ github.ref == 'refs/heads/develop' }}
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -18,19 +20,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Read docker image tag
-      id: package
-      uses: juliangruber/read-file-action@v1
-      with:
-        path: ./docker/dockerimage-tag-develop.yaml
+    # - name: Read docker image tag
+    #   id: package
+    #   uses: juliangruber/read-file-action@v1
+    #   with:
+    #     path: ./docker/dockerimage-tag-develop.yaml
     
     - name: Build the Docker image
       run: |
-        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        dockerimage=${{ steps.package.outputs.content }}
-        dockerimageclean=${dockerimage//[[:space:]]/}
-        docker build -t $dockerimageclean -f docker/Dockerfile .
-        docker push $dockerimageclean
+        # echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
+        # dockerimage=${{ steps.package.outputs.content }}
+        # dockerimageclean=${dockerimage//[[:space:]]/}
+        # docker build -t $dockerimageclean -f docker/Dockerfile .
+        # docker push $dockerimageclean
+        echo ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
 
   main:
     name: Main docker build and push.
