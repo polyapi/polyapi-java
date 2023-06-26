@@ -123,7 +123,7 @@ export class TenantController {
   ) {
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
-    const configVariable = await this.findClosestChildConfigVariable(name, tenantId);
+    const configVariable = await this.getConfigVariable(name, tenantId);
 
     return this.configVariableService.toDto(configVariable);
   }
@@ -169,7 +169,7 @@ export class TenantController {
       this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
     ]);
 
-    const configVariable = await this.findClosestChildConfigVariable(name, tenantId, environmentId);
+    const configVariable = await this.getConfigVariable(name, tenantId, environmentId);
 
     return this.configVariableService.toDto(configVariable);
   }
@@ -705,8 +705,8 @@ export class TenantController {
     return configVariable;
   }
 
-  private async findClosestChildConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const configVariable = await this.configVariableService.getClosestChild(name, tenantId, environmentId);
+  private async getConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
+    const configVariable = await this.configVariableService.get(name, tenantId, environmentId);
 
     if (!configVariable) {
       throw new NotFoundException('Closest config variable not found.');
