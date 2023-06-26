@@ -644,13 +644,9 @@ export class FunctionService implements OnModuleInit {
       if ((trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction)) {
         const {
           description: aiDescription,
-          context: aiContext,
 
         } = await this.getCustomFunctionAIData(description, code);
 
-        if (!context && !customFunction?.context) {
-          context = this.commonService.sanitizeContextIdentifier(aiContext);
-        }
         if (!description && !customFunction?.description) {
           description = aiDescription;
         }
@@ -1466,7 +1462,6 @@ export class FunctionService implements OnModuleInit {
   private async getCustomFunctionAIData(description: string, code: string) {
     const {
       description: aiDescription,
-      context,
     } = await this.aiService.getFunctionDescription(
       '',
       '',
@@ -1478,7 +1473,6 @@ export class FunctionService implements OnModuleInit {
 
     return {
       description: aiDescription,
-      context,
     };
   }
 }
