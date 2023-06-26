@@ -1,6 +1,9 @@
 import { ConfigVariable } from '@prisma/client';
 import { ConfigVariableStrategy } from './base';
 
+/**
+ * In this strategy,`get` method returns the nearest child value, or child itself if exists.
+ */
 export class DefaultConfigVariableStrategy extends ConfigVariableStrategy {
   async get(name: string, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable | null> {
     let configVariable: ConfigVariable | null | undefined = null;

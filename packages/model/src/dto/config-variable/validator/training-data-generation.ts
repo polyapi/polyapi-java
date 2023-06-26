@@ -7,7 +7,7 @@ function getMessageFn(message: string) {
   return (validationArguments: ValidationArguments) => `${validationArguments.property} ${message}`
 }
 
-const falseOrNull = 'must be false or null';
+const falseOrNull = 'must be false or null at non instance level.';
 const booleanOrUndefined = 'must be boolean';
 
 export class SetTrainingDataGenerationValue {

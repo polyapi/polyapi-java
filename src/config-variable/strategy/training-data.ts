@@ -3,6 +3,12 @@ import { ConfigVariable } from '@prisma/client';
 import { ConfigVariableStrategy } from './base';
 import { SetTrainingDataGenerationValue, TrainingDataGeneration } from '../../../packages/model/src/dto';
 
+/**
+ * In this strategy, on `get` method, object key values that are `null` will be replaced with nearest-parent values.
+ * On `configure` method, on creation, non-specified keys will be `true` for instance level as default value and they will be `null` for rest
+ * of levels as default value.
+ * On updating, will merge incomming value with previous saved one.
+ */
 export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
   async get(name: string, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable | null> {
     const configVariables = await this.findMany(name, tenantId, environmentId);
@@ -41,7 +47,7 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
       if (foundVariable) {
         return this.updateById(foundVariable.id, this.mergeTrainingDataValue(foundVariable.value, newValue));
       } else {
-        return this.create({ name, environmentId, tenantId, value: newValue });
+        return this.create({ name, environmentId, tenantId, value: this.buildValueForCreate(newValue) });
       }
     }
 
@@ -51,7 +57,7 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
       if (foundVariable) {
         return this.updateById(foundVariable.id, this.mergeTrainingDataValue(foundVariable.value, newValue));
       } else {
-        return this.create({ name, environmentId, tenantId, value: newValue });
+        return this.create({ name, environmentId, tenantId, value: this.buildValueForCreate(newValue) });
       }
     }
 
@@ -61,7 +67,16 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
       return this.updateById(foundVariable.id, this.mergeTrainingDataValue(foundVariable.value, newValue));
     }
 
-    return this.create({ name, value: newValue, tenantId, environmentId });
+    return this.create({ name, value: this.buildValueForCreate(newValue, true), tenantId, environmentId });
+  }
+
+  private buildValueForCreate(value: TrainingDataGeneration, instanceLevel = false): TrainingDataGeneration {
+    return {
+      apiFunctions: value.apiFunctions ?? (instanceLevel ? true : null),
+      clientFunctions: value.clientFunctions ?? (instanceLevel ? true : null),
+      serverFunctions: value.serverFunctions ?? (instanceLevel ? true : null),
+      webhooks: value.webhooks ?? (instanceLevel ? true : null),
+    };
   }
 
   private mergeParentValueWithChild(parentValue: TrainingDataGeneration, childValue: TrainingDataGeneration): TrainingDataGeneration {
