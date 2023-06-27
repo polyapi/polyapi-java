@@ -638,7 +638,7 @@ export class FunctionService implements OnModuleInit {
       },
     });
 
-    if (!context || !description) {
+    if (!description && !customFunction?.description) {
       const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
       if ((trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction)) {
@@ -647,9 +647,7 @@ export class FunctionService implements OnModuleInit {
 
         } = await this.getCustomFunctionAIData(description, code);
 
-        if (!description && !customFunction?.description) {
-          description = aiDescription;
-        }
+        description = aiDescription;
       }
     }
 
