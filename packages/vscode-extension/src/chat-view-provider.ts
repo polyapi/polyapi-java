@@ -25,6 +25,17 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this.getWebviewHtml(webviewView.webview);
 
+    const {
+      apiBaseUrl,
+      apiKey,
+    } = this.getCredentials();
+
+    if (!apiBaseUrl || !apiKey) {
+      this.webView?.webview.postMessage({
+        type: 'addSetupMessage',
+      });
+    }
+
     webviewView.webview.onDidReceiveMessage(data => {
       switch (data.type) {
         case 'sendCommand': {
@@ -39,13 +50,26 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           this.requestAbortController?.abort();
           break;
         }
+        case 'goToExtensionSettings': {
+          vscode.commands.executeCommand('workbench.action.openSettings', '@ext:PolyAPICorp.polyapi-vscode-extension');
+          break;
+        }
       }
     });
   }
 
+  private getCredentials() {
+    return {
+      apiBaseUrl: vscode.workspace.getConfiguration('poly').get('apiBaseUrl'),
+      apiKey: vscode.workspace.getConfiguration('poly').get('apiKey'),
+    };
+  }
+
   private async sendPolyQuestionRequest(message: string) {
-    const apiBaseUrl = vscode.workspace.getConfiguration('poly').get('apiBaseUrl');
-    const apiKey = vscode.workspace.getConfiguration('poly').get('apiKey');
+    const {
+      apiBaseUrl,
+      apiKey,
+    } = this.getCredentials();
 
     if (!apiBaseUrl || !apiKey) {
       vscode.window.showErrorMessage('Please set the API base URL and API key in the extension settings.');

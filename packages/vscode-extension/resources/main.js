@@ -79,6 +79,17 @@ const COMMANDS = ['clear'];
       return html.documentElement.innerHTML;
     };
 
+    const getResponseWrapper = (content) => {
+      return `
+        <div class='p-4 self-end'>
+          <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
+          <div class="prose dark:prose-invert">
+            ${content}            
+          </div>
+        </div>
+      `;
+    }
+
     const getResponseTextHtml = text => {
       switch (text.type) {
         case 'plain':
@@ -133,13 +144,7 @@ const COMMANDS = ['clear'];
 
         loadingContainer?.remove();
 
-        conversationList.innerHTML +=
-          `<div class='p-4 self-end'>
-            <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
-            <div class="prose dark:prose-invert">
-              ${texts.map(text => getResponseTextHtml(text)).join('')}            
-            </div>
-          </div>`;
+        conversationList.innerHTML += getResponseWrapper(texts.map(text => getResponseTextHtml(text)).join(''));
         scrollToLastMessage();
         messageInput.removeAttribute('disabled');
         messageInput.focus();
@@ -147,6 +152,15 @@ const COMMANDS = ['clear'];
       }
       case 'clearConversation':
         clearConversation();
+        break;
+      case 'addSetupMessage':
+        conversationList.innerHTML += getResponseWrapper(
+          `
+            <span>
+              Empty credentials. <a href="/#" class="go-to-settings">Go to settings</a> to start using Poly!.
+            </span>
+          `
+        )
         break;
       case 'focusMessageInput':
         messageInput?.focus();
@@ -207,7 +221,18 @@ const COMMANDS = ['clear'];
   });
 
   document.addEventListener('click', e => {
-    const targetButton = e.target.closest('button');
+    const targetButton = e.target.closest('button');    
+    const linkButton = e.target.closest('a');
+    
+    if(linkButton) {
+      if(linkButton.classList?.contains('go-to-settings')) {
+        e.preventDefault();
+        vscode.postMessage({
+          type: 'goToExtensionSettings',
+        });
+      }
+      return;
+    }
 
     if (!targetButton) {
       return;
