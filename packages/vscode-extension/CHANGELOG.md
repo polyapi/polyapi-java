@@ -1,3 +1,6 @@
+### 0.1.31
+* Fixed tailwindcss color scheme to "dark-invert" version.
+
 ### 0.1.30
 * Applied tailwindcss typography plugin for ai responses.
 

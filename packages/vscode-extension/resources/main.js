@@ -28,7 +28,23 @@ const COMMANDS = ['clear'];
         typography: {
           DEFAULT: {
             css: {
-              fontSize: 'var(--vscode-font-size)'
+              fontSize: 'var(--vscode-font-size)',
+              '--tw-prose-body': tailwind.colors.gray[300],
+                '--tw-prose-headings': tailwind.colors.white,
+                '--tw-prose-lead': tailwind.colors.gray[400],
+                '--tw-prose-links': tailwind.colors.white,
+                '--tw-prose-bold': tailwind.colors.white,
+                '--tw-prose-counters': tailwind.colors.gray[400],
+                '--tw-prose-bullets': tailwind.colors.gray[600],
+                '--tw-prose-hr': tailwind.colors.gray[700],
+                '--tw-prose-quotes': tailwind.colors.gray[100],
+                '--tw-prose-quote-borders': tailwind.colors.gray[700],
+                '--tw-prose-captions': tailwind.colors.gray[400],
+                '--tw-prose-code': tailwind.colors.white,
+                '--tw-prose-pre-code': tailwind.colors.gray[300],
+                '--tw-prose-pre-bg': 'rgb(0 0 0 / 50%)',
+                '--tw-prose-th-borders': tailwind.colors.gray[600],
+                '--tw-prose-td-borders': tailwind.colors.gray[700]
             }
           }
         }
@@ -136,7 +152,7 @@ const COMMANDS = ['clear'];
         conversationList.innerHTML +=
           `<div class='p-4 self-end'>
             <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
-            <div class="prose dark:prose-invert">
+            <div class="prose">
               ${texts.map(text => getResponseTextHtml(text)).join('')}            
             </div>
           </div>`;
