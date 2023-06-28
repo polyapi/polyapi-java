@@ -51,7 +51,7 @@ import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
 import { mergeWith, omit, uniqBy } from 'lodash';
-import { ConfigVariableService } from 'config-variable/config-varirable.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 const ARGUMENT_TYPE_SUFFIX = '.Argument';

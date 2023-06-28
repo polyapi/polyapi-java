@@ -48,7 +48,7 @@ import { AuthRequest } from 'common/types';
 import { UserService } from 'user/user.service';
 import { ApplicationService } from 'application/application.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
-import { ConfigVariableService } from 'config-variable/config-varirable.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('tenants')

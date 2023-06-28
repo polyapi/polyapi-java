@@ -2,7 +2,7 @@ import { Body, Controller, UseGuards, Patch, Get, Param, Delete, NotFoundExcepti
 import { Role, SetInstanceConfigVariableDto } from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
-import { ConfigVariableService } from './config-varirable.service';
+import { ConfigVariableService } from './config-variable.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('config-variables')

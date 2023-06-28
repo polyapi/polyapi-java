@@ -17,7 +17,7 @@ import {
 import { ConfigService } from 'config/config.service';
 import { SpecsService } from 'specs/specs.service';
 import { toCamelCase } from '@guanghechen/helper-string';
-import { ConfigVariableService } from 'config-variable/config-varirable.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 @Injectable()
 export class WebhookService {
