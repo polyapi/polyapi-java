@@ -62,3 +62,23 @@
 .question-box {
   white-space: pre-wrap;
 }
+
+.prose h1 {
+  
+  border-style: solid;
+  border-bottom-width: 1px;
+  padding-bottom: 0.3em;
+}
+
+.vscode-dark .prose h1 {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.vscode-light .prose h1 {
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+
+.prose {
+  max-width: initial !important;
+}
