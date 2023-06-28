@@ -51,7 +51,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'goToExtensionSettings': {
-          vscode.commands.executeCommand('workbench.action.openSettings', '@ext:PolyAPICorp.polyapi-vscode-extension');
+          vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.context.extension.id}`);
           break;
         }
       }
