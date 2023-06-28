@@ -1,6 +1,6 @@
 import { PrismaService } from 'prisma/prisma.service';
 import { ConfigVariable } from '@prisma/client';
-import { ParsedConfigVariable } from '../../../packages/model/src/dto';
+import { ParsedConfigVariable } from '@poly/model';
 import { CommonService } from 'common/common.service';
 
 interface Strategy {

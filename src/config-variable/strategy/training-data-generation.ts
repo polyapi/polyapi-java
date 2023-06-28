@@ -1,7 +1,7 @@
 import { merge } from 'lodash';
 import { ConfigVariable } from '@prisma/client';
 import { ConfigVariableStrategy } from './base';
-import { SetTrainingDataGenerationValue, TrainingDataGeneration } from '../../../packages/model/src/dto';
+import { SetTrainingDataGenerationValue, TrainingDataGeneration } from '@poly/model';
 
 /**
  * In this strategy, on `get` method, object key values that are `null` will be replaced with nearest-parent values.
