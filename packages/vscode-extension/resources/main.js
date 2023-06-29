@@ -98,7 +98,7 @@ const COMMANDS = ['clear'];
       return `
         <div class='p-4 self-end'>
           <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
-          <div class="prose dark:prose-invert">
+          <div class="prose prose-headings:font-normal prose-th:font-bold">
             ${content}            
           </div>
         </div>
