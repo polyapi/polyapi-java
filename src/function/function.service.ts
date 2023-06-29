@@ -244,7 +244,7 @@ export class FunctionService implements OnModuleInit {
       );
 
       if (!name) {
-        name = this.commonService.sanitizeNameIdentifier(aiName);
+        name = aiName ? this.commonService.sanitizeNameIdentifier(aiName) : this.commonService.sanitizeNameIdentifier(requestName);
       }
       if (!context && !apiFunction?.context) {
         context = this.commonService.sanitizeContextIdentifier(aiContext);
