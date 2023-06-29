@@ -122,7 +122,7 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('name') name: string,
   ) {
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+    await Promise.all([this.findTenant(tenantId), this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin])]);
 
     const configVariable = await this.getConfigVariable(name, tenantId);
 
@@ -136,7 +136,7 @@ export class TenantController {
     @Body() body: SetConfigVariableDto,
     @Param('id') tenantId: string,
   ) {
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+    await Promise.all([this.findTenant(tenantId), this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin])]);
 
     return this.configVariableService.toDto(
       await this.configVariableService.configure(body.name, body.value, tenantId),
@@ -150,7 +150,7 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('name') name: string,
   ) {
-    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+    await Promise.all([this.findTenant(tenantId), this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin])]);
 
     const configVariable = await this.findConfigVariable(name, tenantId);
 

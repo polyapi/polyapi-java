@@ -235,9 +235,7 @@ export class FunctionService implements OnModuleInit {
     response = this.commonService.trimDownObject(response, 1);
 
     if ((!name || !context || !description) && !willRetrain) {
-      const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
-
-      if (trainingDataCfgVariable?.value.apiFunctions) {
+      if (await this.isApiFunctionAITrainingEnabled(environment)) {
         const {
           name: aiName,
           description: aiDescription,
@@ -639,9 +637,7 @@ export class FunctionService implements OnModuleInit {
     });
 
     if (!description && !customFunction?.description) {
-      const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
-
-      if ((trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction)) {
+      if (await this.isCustomFunctionAITrainingEnabled(environment, serverFunction)) {
         const {
           description: aiDescription,
 
@@ -1404,6 +1400,18 @@ export class FunctionService implements OnModuleInit {
     return {
       description: aiDescription,
     };
+  }
+
+  private async isApiFunctionAITrainingEnabled(environment: Environment) {
+    const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+
+    return trainingDataCfgVariable?.value.apiFunctions;
+  }
+
+  private async isCustomFunctionAITrainingEnabled(environment: Environment, serverFunction: boolean) {
+    const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+
+    return (trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction);
   }
 
   async getFunctionsWithVariableArgument(variablePath: string) {

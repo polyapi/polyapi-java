@@ -147,9 +147,7 @@ export class WebhookService {
       this.logger.debug(`Webhook handle found for ${context}/${name} - updating...`);
 
       if (!name || !context || !description) {
-        const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
-
-        if (trainingDataCfgVariable?.value.webhooks) {
+        if (await this.isWebhookAITrainingEnabled(environment)) {
           const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
 
           return this.prisma.webhookHandle.update({
@@ -313,6 +311,12 @@ export class WebhookService {
     }
 
     return visibility;
+  }
+
+  private async isWebhookAITrainingEnabled(environment: Environment) {
+    const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+
+    return trainingDataCfgVariable?.value.webhooks;
   }
 
   async deleteWebhookHandle(id: string) {
