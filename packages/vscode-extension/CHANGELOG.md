@@ -1,3 +1,6 @@
+### 0.1.33
+* Enable textarea typing when sending poly question.
+
 ### 0.1.32
 * Add setup message if credentials are not found.
 

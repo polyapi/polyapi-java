@@ -58,6 +58,7 @@ const COMMANDS = ['clear'];
   const copyCheckSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' viewBox='0 0 24 24'><path stroke='currentColor' stroke-linejoin='round' stroke-width='2' d='M15 3c1.886 0 2.828 0 3.414.586C19 4.172 19 5.114 19 7v10c0 1.886 0 2.828-.586 3.414C17.828 21 16.886 21 15 21H9c-1.886 0-2.828 0-3.414-.586C5 19.828 5 18.886 5 17V7c0-1.886 0-2.828.586-3.414C6.172 3 7.114 3 9 3h6Z'/><path stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 3v3a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3M9 15l1.5 1.5v0a.707.707 0 0 0 1 0v0L15 13'/></svg>`;
   const cancelSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 32 32'><path d='m7 7 18 18M7 25 25 7' style='fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px'/></svg>`;
   const messageInput = document.getElementById('message-input');
+  const sendMessageButton = document.getElementById('send-message-button');
   const conversationList = document.getElementById('conversation-list');
 
   const setInitialMessageInputHeight = () => {
@@ -139,7 +140,8 @@ const COMMANDS = ['clear'];
       }
       case 'setLoading': {
         const loadingContainer = document.querySelector('.loading-container');
-        messageInput.setAttribute('disabled', 'disabled');
+        sendMessageButton.setAttribute('disabled', 'disabled');
+        messageInput.setAttribute('data-avoid-send', 'true');
 
         if (!loadingContainer) {
           conversationList.innerHTML +=
@@ -161,7 +163,8 @@ const COMMANDS = ['clear'];
 
         conversationList.innerHTML += getResponseWrapper(texts.map(text => getResponseTextHtml(text)).join(''));
         scrollToLastMessage();
-        messageInput.removeAttribute('disabled');
+        sendMessageButton.removeAttribute('disabled');
+        messageInput.removeAttribute('data-avoid-send');
         messageInput.focus();
         break;
       }
@@ -222,7 +225,9 @@ const COMMANDS = ['clear'];
   messageInput.addEventListener('keydown', function(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      processMessageInputValue();
+      if(event.target.getAttribute('data-avoid-send') !== 'true') {
+        processMessageInputValue();
+      }
     }
   });
   messageInput.addEventListener('input', function(event) {
