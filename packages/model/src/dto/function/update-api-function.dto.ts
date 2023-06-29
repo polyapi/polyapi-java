@@ -8,10 +8,12 @@ export class UpdateApiFunctionDto {
   @IsString()
   @Validate(NameIdentifier)
   name?: string;
+
   @IsOptional()
   @IsString()
   @Validate(ContextIdentifier)
   context?: string;
+
   description?: string;
   arguments?: ArgumentsMetadata;
   response?: any;

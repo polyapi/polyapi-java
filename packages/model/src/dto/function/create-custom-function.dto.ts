@@ -6,12 +6,15 @@ export class CreateCustomFunctionDto {
   @IsNotEmpty()
   @Validate(NameIdentifier)
   name: string;
+
   @IsOptional()
   description?: string;
+
   @IsOptional()
   @IsString()
   @Validate(ContextIdentifier)
   context?: string;
+
   @IsNotEmpty()
   code: string;
 }

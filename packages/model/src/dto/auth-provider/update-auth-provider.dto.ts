@@ -4,18 +4,22 @@ import { Visibility } from '../../specs';
 export class UpdateAuthProviderDto {
   @IsOptional()
   name?: string;
+
   @IsOptional()
   context?: string;
+
   @IsUrl({
     require_protocol: true,
   })
   @IsOptional()
   authorizeUrl?: string;
+
   @IsUrl({
     require_protocol: true,
   })
   @IsOptional()
   tokenUrl?: string;
+
   audienceRequired?: boolean;
   refreshEnabled?: boolean;
   @IsUrl({
@@ -23,11 +27,13 @@ export class UpdateAuthProviderDto {
   })
   @IsOptional()
   revokeUrl?: string | null;
+
   @IsUrl({
     require_protocol: true,
   })
   @IsOptional()
   introspectUrl?: string | null;
+
   @IsOptional()
   @IsString()
   @IsEnum(Visibility)

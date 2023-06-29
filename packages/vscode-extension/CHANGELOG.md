@@ -1,3 +1,16 @@
+### 0.1.32
+* Add setup message if credentials are not found.
+
+### 0.1.31
+* Apply and copy vscode markdown styles instead of using "dark-invert" feature from tailwindcss typography plugin
+* Fixed responsive answer. Tailwind typography plugin was applying an arbitrary max-width.
+
+### 0.1.30
+* Applied tailwindcss typography plugin for ai responses.
+
+### 0.1.29
+* Fixed input box for question focus lost when sending a question
+
 ### 0.1.28
 * Preserve newlines, line breaks and whitespace in question's box.
 

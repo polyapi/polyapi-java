@@ -6,14 +6,17 @@ export class UpdateCustomFunctionDto {
   @IsOptional()
   @IsString()
   @Validate(NameIdentifier)
-  name?: string
+  name?: string;
+
   @IsOptional()
   @IsString()
   @Validate(ContextIdentifier)
   context?: string;
+
   @IsOptional()
   @IsString()
   description?: string;
+
   @IsOptional()
   @IsString()
   @IsEnum(Visibility)

@@ -24,7 +24,7 @@ export const toTypeDeclaration = (type: PropertyType, synchronous = true) => {
       } else {
         return wrapInPromiseIfNeeded('any');
       }
-    case 'function':
+    case 'function': {
       if (type.name) {
         return type.name;
       }
@@ -37,5 +37,6 @@ export const toTypeDeclaration = (type: PropertyType, synchronous = true) => {
         type.spec.returnType,
         type.spec.synchronous === true,
       )}`;
+    }
   }
 };

@@ -1,4 +1,6 @@
-import { TypedMock } from '../utils/test-utils';
+import { getFnMock, TypedMock } from '../utils/test-utils';
 import { HttpService } from '@nestjs/axios';
 
-export default {} as TypedMock<HttpService>;
+export default {
+  request: getFnMock<HttpService['request']>(),
+} as TypedMock<HttpService>;

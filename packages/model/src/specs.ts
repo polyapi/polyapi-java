@@ -1,14 +1,21 @@
+import { ValueType } from './dto/variable';
+
+export type SpecificationType =
+  'apiFunction'
+  | 'customFunction'
+  | 'authFunction'
+  | 'webhookHandle'
+  | 'serverFunction'
+  | 'serverVariable';
+
 interface ISpecification {
   id: string;
   context: string;
   name: string;
   description?: string;
-  function: FunctionSpecification;
   type: SpecificationType;
   visibilityMetadata: VisibilityMetadata;
 }
-
-export type SpecificationType = 'apiFunction' | 'customFunction' | 'authFunction' | 'webhookHandle' | 'serverFunction';
 
 export enum Visibility {
   Environment = 'ENVIRONMENT',
@@ -81,26 +88,43 @@ export interface PlainPropertyType extends IPropertyType {
 
 export interface ApiFunctionSpecification extends ISpecification {
   type: 'apiFunction';
+  function: FunctionSpecification;
 }
 
 export interface CustomFunctionSpecification extends ISpecification {
   type: 'customFunction';
+  function: FunctionSpecification;
   requirements: string[];
   code: string;
 }
 
 export interface ServerFunctionSpecification extends ISpecification {
   type: 'serverFunction';
+  function: FunctionSpecification;
   code: string;
 }
 
 export interface AuthFunctionSpecification extends ISpecification {
   type: 'authFunction';
+  function: FunctionSpecification;
   subResource?: string;
 }
 
 export interface WebhookHandleSpecification extends ISpecification {
   type: 'webhookHandle';
+  function: FunctionSpecification;
+}
+
+export interface ServerVariableSpecification extends ISpecification {
+  type: 'serverVariable';
+  variable: VariableSpecification;
+}
+
+export interface VariableSpecification {
+  environmentId: string;
+  secret: boolean;
+  valueType: PropertyType;
+  value?: ValueType;
 }
 
 export type Specification =
@@ -108,7 +132,12 @@ export type Specification =
   | CustomFunctionSpecification
   | ServerFunctionSpecification
   | AuthFunctionSpecification
-  | WebhookHandleSpecification;
+  | WebhookHandleSpecification
+  | ServerVariableSpecification;
+
+export type SpecificationWithFunction = Specification & { function: FunctionSpecification };
+
+export type SpecificationWithVariable = Specification & { variable: VariableSpecification };
 
 export interface SpecificationPath {
   id: string;

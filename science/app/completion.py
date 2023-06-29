@@ -130,10 +130,7 @@ def spec_prompt(spec: SpecificationDto, *, include_return_type=False) -> str:
     if include_return_type:
         return_props = get_return_type_properties(spec)
         if return_props:
-            if type(return_props) == str:
-                return_type = return_props
-            else:
-                return_type = json.dumps(return_props)  # type: ignore
+            return_type = json.dumps(return_props)
             return_type = return_type.replace("\n", " ")
             parts.append(f"// returns {return_type}")
 

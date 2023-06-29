@@ -10,6 +10,7 @@ export interface FunctionArgument {
   typeSchema?: string;
   typeObject?: object;
   payload?: boolean;
+  variable?: string;
   location?: 'url' | 'body' | 'headers' | 'auth';
 }
 

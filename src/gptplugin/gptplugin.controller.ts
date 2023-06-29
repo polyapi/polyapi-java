@@ -28,7 +28,7 @@ export class GptPluginController {
   @Get('plugins/:slug')
   public async pluginGet(@Req() req: AuthRequest, @Param('slug') slug): Promise<unknown> {
     slug = slug.toLowerCase();
-    const plugin = await this.service.getPlugin(slug);
+    const plugin = await this.service.getPlugin(slug, req.user.environment.id);
     return {
       plugin,
       plugin_url: `https://${plugin.slug}-${req.user.environment.subdomain}.${req.hostname}`,

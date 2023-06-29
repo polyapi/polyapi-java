@@ -48,6 +48,16 @@ export class VariableController {
     return this.service.toDto(variable);
   }
 
+  @UseGuards(PolyAuthGuard)
+  @Get(':id/value')
+  async getVariableValue(@Req() req: AuthRequest, @Param('id') id: string): Promise<VariableDto> {
+    const variable = await this.findVariable(req.user, id);
+    if (variable.secret) {
+      throw new NotFoundException(`Variable with id '${id}' is secret`);
+    }
+    return this.service.getVariableValue(variable);
+  }
+
   @UseGuards(new PolyAuthGuard([Role.Admin]))
   @Patch(':id')
   async updateVariable(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateVariableDto): Promise<VariableDto> {

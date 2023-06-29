@@ -5,6 +5,7 @@ import { AuthProviderService } from 'auth-provider/auth-provider.service';
 import { Specification, SpecificationPath, Visibility } from '@poly/model';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { Environment, Tenant } from '@prisma/client';
+import { VariableService } from 'variable/variable.service';
 
 @Injectable()
 export class SpecsService {
@@ -17,6 +18,8 @@ export class SpecsService {
     private readonly webhookService: WebhookService,
     @Inject(forwardRef(() => AuthProviderService))
     private readonly authProviderService: AuthProviderService,
+    @Inject(forwardRef(() => VariableService))
+    private readonly variableService: VariableService,
   ) {
   }
 
@@ -86,11 +89,24 @@ export class SpecsService {
       ).flat();
     };
 
+    const getServerVariablesSpecifications = async () => {
+      const serverVariables = await this.variableService.getAll(environmentId, contexts, names, ids, true, true);
+      return await Promise.all(
+        serverVariables.map(async serverVariable =>
+          await this.fillMetadata(
+            tenantId,
+            serverVariable as any,
+            await this.variableService.toServerVariableSpecification(serverVariable)),
+        ),
+      );
+    };
+
     return [
       ...(await getApiFunctionsSpecifications()),
       ...(await getCustomFunctionsSpecifications()),
       ...(await getWebhookHandlesSpecifications()),
       ...(await getAuthProvidersSpecifications()),
+      ...(await getServerVariablesSpecifications()),
     ].sort(this.sortSpecifications);
   }
 

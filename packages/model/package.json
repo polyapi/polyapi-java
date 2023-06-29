@@ -4,7 +4,9 @@
   "description": "The package containing common model",
   "main": "build/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "prebuild": "yarn run lint",
+    "lint": "eslint src --ext ts"
   },
   "dependencies": {
     "class-validator": "^0.14.0"

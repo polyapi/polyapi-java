@@ -1,6 +1,7 @@
 {{#each contexts}}
 /// <reference path="./{{fileName}}" />
 {{/each}}
+/// <reference path="./vari/index.d.ts" />
 
 {{#each contexts}}
 {{#if firstLevel}}
@@ -29,3 +30,4 @@ interface ErrorHandler {
   off: (path: string) => void;
 }
 export const errorHandler: ErrorHandler;
+export const vari: vari.Vari;

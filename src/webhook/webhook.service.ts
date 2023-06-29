@@ -52,39 +52,6 @@ export class WebhookService {
     return this.prisma.webhookHandle.create(createData);
   }
 
-  private getWebhookFilterConditions(contexts?: string[], names?: string[], ids?: string[]) {
-    const contextConditions = contexts?.length
-      ? contexts.filter(Boolean).map((context) => {
-        return {
-          OR: [
-            {
-              context: { startsWith: `${context}.` },
-            },
-            {
-              context,
-            },
-          ],
-        };
-      })
-      : [];
-
-    const idConditions = [ids?.length ? { id: { in: ids } } : undefined].filter(Boolean) as any;
-
-    const filterConditions = [
-      {
-        OR: contextConditions,
-      },
-      names?.length ? { name: { in: names } } : undefined,
-    ].filter(Boolean) as any[];
-
-    this.logger.debug(`webhookHandles filter conditions: ${JSON.stringify([
-{ AND: filterConditions },
-      ...idConditions,
-])}`);
-
-    return [{ AND: filterConditions }, ...idConditions];
-  }
-
   public async findWebhookHandle(id: string): Promise<WebhookHandle | null> {
     return this.prisma.webhookHandle.findFirst({
       where: {
@@ -107,7 +74,7 @@ export class WebhookService {
             ],
           },
           {
-            OR: this.getWebhookFilterConditions(contexts, names, ids),
+            OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
         ],
       },

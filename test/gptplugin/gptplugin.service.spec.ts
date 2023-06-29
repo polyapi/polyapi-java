@@ -207,13 +207,13 @@ async function _createPlugin(prisma: PrismaService) {
     name: 'Mass Effect',
     iconUrl: 'http://example.com/image.png',
     functionIds: '["123", "456"]',
-    environmentId: environment.id,
   };
   return prisma.gptPlugin.upsert({
-    where: { slug: 'mass-effect' },
+    where: { slug_environmentId: { slug: 'mass-effect', environmentId: environment.id } },
     update: defaults,
     create: {
       slug: 'mass-effect',
+      environmentId: environment.id,
       ...defaults,
     },
   });
@@ -245,7 +245,11 @@ describe('GptPluginService', () => {
       await _createPlugin(prisma);
       const apiFunc = await _createApiFunction(prisma);
 
-      const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io', 'mass-effect');
+      const environment = await _createTestEnvironment(prisma);
+      const specStr = await service.getOpenApiSpec(
+        `mass-effect-${environment.subdomain}.develop.polyapi.io`,
+        'mass-effect',
+      );
 
       const spec = JSON.parse(specStr);
 
@@ -255,7 +259,7 @@ describe('GptPluginService', () => {
 
       expect(spec.openapi).toBe('3.0.1');
       expect(spec.info.title).toBe('Mass Effect');
-      expect(spec.servers[0].url).toBe('https://mass-effect.develop.polyapi.io');
+      expect(spec.servers[0].url).toBe(`https://mass-effect-${environment.subdomain}.develop.polyapi.io`);
 
       expect(Object.keys(spec.paths).length).toBe(1);
       const path1 = spec.paths[`/functions/api/${apiFunc.id}/execute`];
@@ -272,7 +276,11 @@ describe('GptPluginService', () => {
       await _createPlugin(prisma);
       const serverFunc = await _createServerFunction(prisma);
 
-      const specStr = await service.getOpenApiSpec('mass-effect.develop.polyapi.io', 'mass-effect');
+      const environment = await _createTestEnvironment(prisma);
+      const specStr = await service.getOpenApiSpec(
+        `mass-effect-${environment.subdomain}.develop.polyapi.io`,
+        'mass-effect',
+      );
 
       const spec = JSON.parse(specStr);
 

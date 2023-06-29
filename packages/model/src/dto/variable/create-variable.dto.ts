@@ -6,17 +6,22 @@ export class CreateVariableDto {
   @IsString()
   @IsNotEmpty()
   context: string;
+
   @IsString()
   @IsNotEmpty()
   name: string;
+
   @IsString()
   @IsOptional()
   description?: string;
+
   @IsNotEmpty()
   value: ValueType;
+
   @IsBoolean()
   @IsOptional()
   secret?: boolean;
+
   @IsOptional()
   @IsString()
   @IsEnum(Visibility)

@@ -7,6 +7,7 @@ type ClientID = string;
 type Path = string;
 type WebhookHandleID = string;
 type AuthFunctionID = string;
+type VariableID = string;
 
 @Injectable()
 export class EventService {
@@ -14,6 +15,7 @@ export class EventService {
   private readonly errorHandlers: Record<ClientID, Record<Path, Socket[]>> = {};
   private readonly webhookEventHandlers: Record<ClientID, Record<WebhookHandleID, Socket[]>> = {};
   private readonly authFunctionHandlers: Record<ClientID, Record<AuthFunctionID, Socket[]>> = {};
+  private readonly variableUpdateHandlers: Record<ClientID, Record<VariableID, Socket[]>> = {};
 
   registerErrorHandler(client: Socket, clientID: string, path: string) {
     this.logger.debug(`Registering error handler: ${clientID} '${path}'`);
@@ -155,6 +157,53 @@ export class EventService {
       clientHandlers[authFunctionId].forEach(socket => {
         this.logger.debug(`Sending auth function event: '${authFunctionId}'`, eventPayload);
         socket.emit(`handleAuthFunctionEvent:${authFunctionId}`, eventPayload);
+      });
+    });
+  }
+
+  registerVariableUpdateEventHandler(client: Socket, clientID: string, variableId: string): boolean {
+    this.logger.debug(`Registering handler for variable ${variableId} on ${clientID}`);
+    if (!this.variableUpdateHandlers[clientID]) {
+      this.variableUpdateHandlers[clientID] = {};
+    }
+    let handlers = this.variableUpdateHandlers[clientID][variableId];
+    if (!handlers) {
+      this.variableUpdateHandlers[clientID][variableId] = handlers = [];
+    }
+    if (handlers.some(socket => socket.id === client.id)) {
+      return false;
+    }
+    handlers.push(client);
+
+    client.on('disconnect', () => {
+      this.logger.debug(`Client for variable handler disconnected: ${clientID} '${variableId}'`);
+      this.unregisterVariableUpdateEventHandler(client, clientID, variableId);
+    });
+
+    return true;
+  }
+
+  unregisterVariableUpdateEventHandler(client: Socket, clientID: string, variableId: string) {
+    this.logger.debug(`Unregistering variable handler: '${variableId}' on ${clientID}`);
+    if (!this.variableUpdateHandlers[clientID]?.[variableId]) {
+      return;
+    }
+
+    this.variableUpdateHandlers[clientID][variableId] = this.variableUpdateHandlers[clientID][variableId]
+      .filter(socket => socket.id !== client.id);
+  }
+
+  sendVariableUpdateEvent(variableId: string, value: any) {
+    this.logger.debug(`Sending variable update event: '${variableId}'=${value}`);
+
+    const handlers = Object.values(this.variableUpdateHandlers);
+    handlers.forEach(clientHandlers => {
+      if (!clientHandlers?.[variableId]) {
+        return;
+      }
+      clientHandlers[variableId].forEach(socket => {
+        this.logger.debug(`Sending variable event: '${variableId}'`, value);
+        socket.emit(`handleVariableUpdateEvent:${variableId}`, value);
       });
     });
   }

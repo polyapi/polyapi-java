@@ -349,7 +349,7 @@ def get_variables(
     ]
 
 
-def get_return_type_properties(spec: SpecificationDto) -> Union[Dict, str, None]:
+def get_return_type_properties(spec: SpecificationDto) -> Union[Dict, None]:
     if not spec or not spec.get("function", {}).get("returnType"):  # type: ignore
         return None
 
@@ -359,6 +359,6 @@ def get_return_type_properties(spec: SpecificationDto) -> Union[Dict, str, None]
 
     kind = return_type.get("kind")
     if kind == "object":
-        return return_type.get("schema", {}).get("properties")
+        return {"data": return_type.get("schema", {}).get("properties")}
     else:
-        return kind
+        return {"data": kind}

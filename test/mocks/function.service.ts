@@ -7,4 +7,5 @@ export default {
   getCustomFunctions: getFnMock<FunctionService['getCustomFunctions']>(),
   toApiFunctionSpecification: getFnMock<FunctionService['toApiFunctionSpecification']>(),
   toCustomFunctionSpecification: getFnMock<FunctionService['toCustomFunctionSpecification']>(),
+  getFunctionsWithVariableArgument: getFnMock<FunctionService['getFunctionsWithVariableArgument']>(),
 } as TypedMock<FunctionService>;

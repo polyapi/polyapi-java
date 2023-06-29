@@ -38,5 +38,5 @@ pm.environment.set('templateUrl', url);
  * To explicitly override a saved api function, pass { id: string } with api function id to polyData environment variable:
  * pm.environment.set('polyData', {
  *   id: '2915f8c3-1740-4d3b-8165-510d4089c580'
- * }));
+ * });
  */

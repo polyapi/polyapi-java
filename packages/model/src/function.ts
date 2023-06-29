@@ -42,5 +42,6 @@ export type ArgumentsMetadata = {
     typeSchema?: Record<string, any>;
     typeObject?: object;
     payload?: boolean;
+    variable?: string | null;
   };
 };

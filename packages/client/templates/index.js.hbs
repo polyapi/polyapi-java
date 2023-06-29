@@ -6,6 +6,7 @@ const clientFunctions = require('./client');
 const webhooks = require('./webhooks');
 const authFunctions = require('./auth');
 const serverFunctions = require('./server');
+const vari = require('./vari');
 
 const clientID = '{{clientID}}';
 let socket = null;
@@ -37,14 +38,16 @@ const errorHandler = {
 };
 
 const poly = {};
-module.exports = merge(
+merge(
   poly,
   apiFunctions(clientID),
   clientFunctions(poly),
   serverFunctions(clientID),
   authFunctions(clientID, getSocket),
-  webhooks(clientID, getSocket),
-  {
-    errorHandler
-  }
-);
+  webhooks(clientID, getSocket)
+),
+module.exports = {
+  ...poly,
+  errorHandler,
+  vari: vari(clientID, getSocket)
+};

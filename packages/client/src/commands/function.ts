@@ -20,10 +20,10 @@ export const addCustomFunction = async (
 
     const code = fs.readFileSync(file, 'utf8');
     if (server) {
-      shell.echo('-n', chalk.rgb(255, 255, 255)(`Adding custom server side function...`));
+      shell.echo('-n', chalk.rgb(255, 255, 255)('Adding custom server side function...'));
       customFunction = await createServerFunction(context, name, description, code);
     } else {
-      shell.echo('-n', chalk.rgb(255, 255, 255)(`Adding custom client side function...`));
+      shell.echo('-n', chalk.rgb(255, 255, 255)('Adding custom client side function...'));
       customFunction = await createClientFunction(context, name, description, code);
     }
     shell.echo(chalk.green('DONE'));

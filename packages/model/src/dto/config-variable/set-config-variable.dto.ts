@@ -8,6 +8,7 @@ export class SetConfigVariableDto {
   @IsNotEmpty()
   @IsEnum(ConfigVariableName)
   name: string;
+
   @IsNotEmpty()
   @Validate(ConfigVariableValue)
   value: unknown;

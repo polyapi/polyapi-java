@@ -14,3 +14,4 @@ export { default as environmentServiceMock } from './environment.service';
 export { default as applicationServiceMock } from './application.service';
 export { default as teamServiceMock } from './team.service';
 export { default as userServiceMock } from './user.service';
+export { default as variableServiceMock } from './variable.service';

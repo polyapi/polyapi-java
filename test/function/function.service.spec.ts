@@ -1,11 +1,28 @@
 import { FunctionService } from 'function/function.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiFunctionArguments } from 'function/types';
-import { FunctionModule } from 'function/function.module';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError, AxiosResponse } from 'axios';
 import { of, throwError } from 'rxjs';
-import { ApiFunction } from '@prisma/client';
+import { ApiFunction, Variable } from '@prisma/client';
+import { CommonService } from 'common/common.service';
+import {
+  aiServiceMock,
+  commonServiceMock,
+  configServiceMock,
+  eventServiceMock,
+  httpServiceMock,
+  prismaServiceMock,
+  specsServiceMock,
+  variableServiceMock,
+} from '../mocks';
+import { PrismaService } from 'prisma/prisma.service';
+import { ConfigService } from 'config/config.service';
+import { SpecsService } from 'specs/specs.service';
+import { EventService } from 'event/event.service';
+import { AiService } from 'ai/ai.service';
+import { VariableService } from 'variable/variable.service';
+import { Visibility } from '@poly/model';
 
 describe('FunctionService', () => {
   let functionService: FunctionService;
@@ -13,7 +30,41 @@ describe('FunctionService', () => {
 
   beforeEach(async () => {
     moduleRef = await Test.createTestingModule({
-      imports: [FunctionModule],
+      providers: [
+        FunctionService,
+        {
+          provide: CommonService,
+          useValue: commonServiceMock,
+        },
+        {
+          provide: PrismaService,
+          useValue: prismaServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: configServiceMock,
+        },
+        {
+          provide: HttpService,
+          useValue: httpServiceMock,
+        },
+        {
+          provide: SpecsService,
+          useValue: specsServiceMock,
+        },
+        {
+          provide: EventService,
+          useValue: eventServiceMock,
+        },
+        {
+          provide: AiService,
+          useValue: aiServiceMock,
+        },
+        {
+          provide: VariableService,
+          useValue: variableServiceMock,
+        },
+      ],
     }).compile();
 
     functionService = moduleRef.get<FunctionService>(FunctionService);
@@ -406,7 +457,7 @@ describe('FunctionService', () => {
     });
   });
 
-  describe('getArgumentsMap', () => {
+  describe('getArgumentValueMap', () => {
     it('should return all arguments from API function with empty values', async () => {
       const apiFunction = {
         url: 'https://jsonplaceholder.typicode.com/posts/{{variable1}}',
@@ -416,7 +467,7 @@ describe('FunctionService', () => {
         argumentsMetadata: '',
       } as ApiFunction;
 
-      const result = functionService['getArgumentsMap'](apiFunction, {});
+      const result = await functionService['getArgumentValueMap'](apiFunction, {});
       expect(result).toEqual({
         variable1: undefined,
         bodyVar1: undefined,
@@ -434,7 +485,7 @@ describe('FunctionService', () => {
         argumentsMetadata: '',
       } as ApiFunction;
 
-      const result = functionService['getArgumentsMap'](apiFunction, {
+      const result = await functionService['getArgumentValueMap'](apiFunction, {
         variable1: 'test1',
         bodyVar1: 'test2',
         headerVar1: 'test3',
@@ -457,7 +508,7 @@ describe('FunctionService', () => {
         argumentsMetadata: '{"variable1": {"payload": false}, "headerVar1": {"payload": true}, "authVar1": {"payload": true}, "bodyVar1": {"payload": false}}',
       } as ApiFunction;
 
-      const result = functionService['getArgumentsMap'](apiFunction, {
+      const result = await functionService['getArgumentValueMap'](apiFunction, {
         variable1: 'test1',
         bodyVar1: 'test2',
         payload: {
@@ -482,7 +533,7 @@ describe('FunctionService', () => {
         argumentsMetadata: '',
       } as ApiFunction;
 
-      const result = functionService['getArgumentsMap'](apiFunction, {
+      const result = await functionService['getArgumentValueMap'](apiFunction, {
         variable1: 'test\n\r\t\f\e1',
       });
       expect(result).toEqual({
@@ -499,13 +550,64 @@ describe('FunctionService', () => {
         argumentsMetadata: '',
       } as ApiFunction;
 
-      const result = functionService['getArgumentsMap'](apiFunction, {
+      const result = await functionService['getArgumentValueMap'](apiFunction, {
         variable1: {
           test: 'test1',
         },
       });
       expect(result).toEqual({
         variable1: '{"test":"test1"}',
+      });
+    });
+
+    it('should return undefined when accessing variable that does not exist', async () => {
+      variableServiceMock.findByPath?.mockImplementation(() => Promise.resolve(null));
+
+      const apiFunction = {
+        environmentId: 'environmentId',
+        url: 'https://jsonplaceholder.typicode.com/posts/{{variable1}}',
+        body: '',
+        headers: '[]',
+        auth: '',
+        argumentsMetadata: '{ "variable1": { "variable": "json.postId" } }',
+      } as ApiFunction;
+
+      const result = await functionService['getArgumentValueMap'](apiFunction, {});
+      expect(variableServiceMock.findByPath).toHaveBeenCalledWith('environmentId', 'json.postId');
+      expect(result).toEqual({
+        variable1: undefined,
+      });
+    });
+
+    it('should return the value of the variable when accessing a variable that exists', async () => {
+      const mockVariable: Variable = {
+        id: 'variableId',
+        createdAt: new Date(),
+        environmentId: 'environmentId',
+        name: 'postId',
+        context: 'json',
+        description: '',
+        secret: false,
+        visibility: Visibility.Environment,
+      };
+      variableServiceMock.findByPath?.mockImplementation(() => Promise.resolve(mockVariable));
+      variableServiceMock.getVariableValue?.mockImplementation(() => Promise.resolve('testValue'));
+
+      const apiFunction = {
+        url: 'https://jsonplaceholder.typicode.com/posts/{{variable1}}',
+        environmentId: 'environmentId',
+        body: '',
+        headers: '[]',
+        auth: '',
+        argumentsMetadata: '{ "variable1": { "variable": "json.postId" } }',
+      } as ApiFunction;
+
+      const result = await functionService['getArgumentValueMap'](apiFunction, {});
+
+      expect(variableServiceMock.findByPath).toHaveBeenCalledWith('environmentId', 'json.postId');
+      expect(variableServiceMock.getVariableValue).toHaveBeenCalledWith(mockVariable);
+      expect(result).toEqual({
+        variable1: 'testValue',
       });
     });
   });
@@ -517,15 +619,13 @@ describe('FunctionService', () => {
     let requestSpy: jest.SpyInstance;
 
     beforeEach(() => {
-      const httpService = moduleRef.get<HttpService>(HttpService);
-      requestSpy = jest
-        .spyOn(httpService, 'request')
-        .mockImplementation(() => of({
-          data: testResponseBody,
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-        } as AxiosResponse));
+      httpServiceMock.request?.mockImplementation(() => of({
+        data: testResponseBody,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+      } as AxiosResponse));
+      requestSpy = jest.spyOn(httpServiceMock, 'request');
     });
 
     it('should execute api function with url, method, headers and data specified in function', async () => {

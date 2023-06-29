@@ -4,7 +4,6 @@
     "composite": true,
     "outDir": "./build",
     "baseUrl": "./src",
-    "rootDir": "./src"
   },
   "include": ["src/**/*"]
 }

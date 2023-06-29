@@ -8,7 +8,8 @@ import {
   NotFoundException,
   Param,
   Patch,
-  Post, Query,
+  Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -19,8 +20,10 @@ import {
   ApiFunctionResponseDto,
   CreateApiFunctionDto,
   CreateCustomFunctionDto,
-  ExecuteApiFunctionDto, ExecuteApiFunctionQueryParams,
-  ExecuteCustomFunctionDto, ExecuteCustomFunctionQueryParams,
+  ExecuteApiFunctionDto,
+  ExecuteApiFunctionQueryParams,
+  ExecuteCustomFunctionDto,
+  ExecuteCustomFunctionQueryParams,
   FunctionBasicDto,
   FunctionDetailsDto,
   Permission,
@@ -30,13 +33,18 @@ import {
 } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
+import { VariableService } from 'variable/variable.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
 export class FunctionController {
   private logger: Logger = new Logger(FunctionController.name);
 
-  constructor(private readonly service: FunctionService, private readonly authService: AuthService) {
+  constructor(
+    private readonly service: FunctionService,
+    private readonly authService: AuthService,
+    private readonly variableService: VariableService,
+  ) {
   }
 
   @UseGuards(PolyAuthGuard)
@@ -149,6 +157,7 @@ export class FunctionController {
     }
 
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, true, Permission.Use);
+    data = await this.variableService.unwrapSecretVariables(req.user, data);
 
     return await this.service.executeApiFunction(apiFunction, data, clientId);
   }
@@ -323,6 +332,7 @@ export class FunctionController {
     }
 
     await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, true, Permission.Use);
+    data = await this.variableService.unwrapSecretVariables(req.user, data);
 
     return await this.service.executeServerFunction(customFunction, req.user.environment, data, clientId);
   }

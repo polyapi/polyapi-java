@@ -1,0 +1,10 @@
+{{#each contexts}}
+/// <reference path="./{{fileName}}" />
+{{/each}}
+
+declare module vari {
+  type UnregisterOnUpdateHandler = () => void;
+
+  interface Vari {
+  }
+}

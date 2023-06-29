@@ -164,7 +164,7 @@ class T(DbTestCase):
             }
         }
         props = get_return_type_properties(spec)
-        self.assertEqual(props, "string")
+        self.assertEqual(props["data"], "string")
 
     def test_get_return_properties_object(self):
         spec = {
@@ -195,4 +195,4 @@ class T(DbTestCase):
             }
         }
         properties = get_return_type_properties(spec)
-        self.assertIn("account_sid", properties)
+        self.assertIn("account_sid", properties["data"])

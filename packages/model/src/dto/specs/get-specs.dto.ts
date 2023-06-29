@@ -8,12 +8,14 @@ export class GetSpecsDto {
   @Type(() => String)
   @Transform(({ value }) => Array.isArray(value) ? value : value.split(','))
   contexts?: string[];
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @Type(() => String)
   @Transform(({ value }) => Array.isArray(value) ? value : value.split(','))
   names?: string[];
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

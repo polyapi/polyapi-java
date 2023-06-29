@@ -17,8 +17,7 @@ const checkPolyConfig = () => {
   return true;
 };
 
-// tslint:disable-next-line:no-unused-expression
-yargs
+void yargs
   .usage('$0 <cmd> [args]')
   .command('setup', 'Setups your Poly connection', setup)
   .command(

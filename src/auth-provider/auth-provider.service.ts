@@ -213,6 +213,7 @@ export class AuthProviderService {
   }
 
   public async executeAuthProvider(authProvider: AuthProvider, eventsClientId: string, clientId: string, clientSecret: string, audience: string | null, scopes: string[], callbackUrl: string | null): Promise<ExecuteAuthProviderResponseDto> {
+    this.logger.debug(`Executing auth provider ${authProvider.id}`);
     await this.prisma.authToken.deleteMany({
       where: {
         authProvider: {

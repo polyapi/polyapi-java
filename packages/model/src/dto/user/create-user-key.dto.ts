@@ -4,6 +4,7 @@ import { Permissions } from '../../permissions';
 export class CreateUserKeyDto {
   @IsNotEmpty()
   environmentId: string;
+
   @IsOptional()
   permissions?: Permissions;
 }

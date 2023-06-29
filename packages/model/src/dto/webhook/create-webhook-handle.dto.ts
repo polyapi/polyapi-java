@@ -6,11 +6,14 @@ export class CreateWebhookHandleDto {
   @Validate(NameIdentifier)
   @IsString()
   name: string;
+
   @IsOptional()
   @IsString()
   @Validate(ContextIdentifier)
   context: string;
+
   @IsObject()
   eventPayload: any;
+
   description: string;
 }

@@ -4,19 +4,20 @@ import { FunctionService } from 'function/function.service';
 import { mockedAuthData } from '../utils/test-utils';
 import { WebhookService } from 'webhook/webhook.service';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
-import { ApiFunction, AuthProvider, CustomFunction, WebhookHandle } from '@prisma/client';
+import { ApiFunction, AuthProvider, CustomFunction, Variable, WebhookHandle } from '@prisma/client';
 import { createMock } from '@golevelup/ts-jest';
 import {
   ApiFunctionSpecification,
   AuthFunctionSpecification,
-  CustomFunctionSpecification,
+  CustomFunctionSpecification, ServerVariableSpecification,
   Specification,
   Visibility,
   WebhookHandleSpecification,
 } from '@poly/model';
 
-import { functionServiceMock, webhookServiceMock, authProviderServiceMock } from '../mocks';
+import { functionServiceMock, webhookServiceMock, authProviderServiceMock, variableServiceMock } from '../mocks';
 import { resetMocks } from '../mocks/utils';
+import { VariableService } from 'variable/variable.service';
 
 describe('SpecsService', () => {
   let specsService: SpecsService;
@@ -36,6 +37,10 @@ describe('SpecsService', () => {
         {
           provide: AuthProviderService,
           useValue: authProviderServiceMock,
+        },
+        {
+          provide: VariableService,
+          useValue: variableServiceMock,
         },
       ],
     }).compile();
@@ -77,11 +82,17 @@ describe('SpecsService', () => {
         },
       ]);
 
+      const variables = createMock<Variable[]>([
+        {
+          context: 'variable.var1',
+        },
+      ]);
+
       functionServiceMock.getApiFunctions?.mockResolvedValue(apiFunctions);
       functionServiceMock.getCustomFunctions?.mockResolvedValue(customFunctions);
       webhookServiceMock.getWebhookHandles?.mockResolvedValue(webhookHandles);
-
       authProviderServiceMock.getAuthProviders?.mockResolvedValue(authProviders);
+      variableServiceMock.getAll?.mockResolvedValue(variables);
 
       const apiFunctionSpecification = createMock<ApiFunctionSpecification>({
         context: apiFunctions[0].context,
@@ -113,6 +124,13 @@ describe('SpecsService', () => {
         },
       ]);
 
+      const serverVariableSpecification = createMock<ServerVariableSpecification>({
+        context: variables[0].context,
+        visibilityMetadata: {
+          visibility: Visibility.Environment,
+        },
+      });
+
       functionServiceMock.toApiFunctionSpecification?.mockResolvedValue(apiFunctionSpecification);
 
       functionServiceMock.toCustomFunctionSpecification?.mockResolvedValue(customFunctionSpecification);
@@ -120,6 +138,8 @@ describe('SpecsService', () => {
       webhookServiceMock.toWebhookHandleSpecification?.mockResolvedValue(webhookHandleSpecification);
 
       authProviderServiceMock.toAuthFunctionSpecifications?.mockResolvedValue(authFunctionSpecifications);
+
+      variableServiceMock.toServerVariableSpecification?.mockResolvedValue(serverVariableSpecification);
 
       // Action
       const result = await specsService.getSpecifications(mockedAuthData.environment.id, mockedAuthData.tenant.id, contexts, names, ids);
@@ -130,6 +150,7 @@ describe('SpecsService', () => {
         customFunctionSpecification,
         webhookHandleSpecification,
         authFunctionSpecifications,
+        serverVariableSpecification,
       ]);
     });
   });

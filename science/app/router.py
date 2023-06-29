@@ -8,8 +8,8 @@ Please categorize the user's question. Here are the categories:
 {
     "function": "The user is looking for a function or details about a function to address their need",
     "conversation": "The question seems incomplete suggesting the user is referencing information from the preceding conversation",
-    "documentation": "The user is looking to understand how to do something specific with the Poly AI assistant",
-    "general": "The user is asking a general programming or informational question"
+    "documentation": "The user is looking to understand how to do something specific with PolyAPI or has a general question about PolyAPI",
+    %s
 }
 ```
 
@@ -21,12 +21,17 @@ You should return `{"category": "function"}` because the user is looking for a f
 
 Here is the question:
 
-%s
+"%s"
 """
 
 
 def route_question(question: str) -> str:
-    prompt = ROUTER_PROMPT % question
+    if "poly" in question.lower():
+        general = ""
+    else:
+        general = '"general": "The user is asking a general programming or informational question"'
+
+    prompt = ROUTER_PROMPT % (general, question)
     choice = simple_chatgpt_question(prompt)
     content = json.loads(choice['message']['content'])
     return content['category']

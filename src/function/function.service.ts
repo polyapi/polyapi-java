@@ -18,8 +18,8 @@ import { ApiFunction, CustomFunction, Environment } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ApiFunctionResponseDto,
+  ApiFunctionSpecification,
   ArgumentsMetadata,
-  ArgumentType,
   Auth,
   Body,
   ConfigVariableName,
@@ -31,9 +31,7 @@ import {
   Method,
   PostmanVariableEntry,
   PropertySpecification,
-  PropertyType,
   ServerFunctionSpecification,
-  Specification,
   TrainingDataGeneration,
   Variables,
   Visibility,
@@ -52,9 +50,9 @@ import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
 import { mergeWith, omit, uniqBy } from 'lodash';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
+import { VariableService } from 'variable/variable.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
-const ARGUMENT_TYPE_SUFFIX = '.Argument';
 
 mustache.escape = (text) => {
   if (typeof text === 'string') {
@@ -79,6 +77,7 @@ export class FunctionService implements OnModuleInit {
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
     private readonly configVariableService: ConfigVariableService,
+    private readonly variableService: VariableService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
   }
@@ -100,7 +99,7 @@ export class FunctionService implements OnModuleInit {
             ],
           },
           {
-            OR: this.getFunctionFilterConditions(contexts, names, ids),
+            OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
         ],
       },
@@ -365,7 +364,7 @@ export class FunctionService implements OnModuleInit {
     }
 
     if (argumentsMetadata != null) {
-      this.checkArgumentsMetadata(apiFunction, argumentsMetadata);
+      await this.checkArgumentsMetadata(apiFunction, argumentsMetadata);
       argumentsMetadata = await this.resolveArgumentsTypeDeclarations(apiFunction, argumentsMetadata);
     }
 
@@ -406,18 +405,18 @@ export class FunctionService implements OnModuleInit {
   }
 
   async executeApiFunction(apiFunction: ApiFunction, args: Record<string, any>, clientId: string | null = null): Promise<ApiFunctionResponseDto | null> {
-    this.logger.debug(`Executing function ${apiFunction.id} with arguments ${JSON.stringify(args)}`);
+    this.logger.debug(`Executing function ${apiFunction.id}...`);
 
-    const argumentsMap = this.getArgumentsMap(apiFunction, args);
-    const url = mustache.render(apiFunction.url, argumentsMap);
+    const argumentValueMap = await this.getArgumentValueMap(apiFunction, args);
+    const url = mustache.render(apiFunction.url, argumentValueMap);
     const method = apiFunction.method;
-    const auth = apiFunction.auth ? JSON.parse(mustache.render(apiFunction.auth, argumentsMap)) : null;
-    const body = JSON.parse(mustache.render(apiFunction.body || '{}', argumentsMap));
+    const auth = apiFunction.auth ? JSON.parse(mustache.render(apiFunction.auth, argumentValueMap)) : null;
+    const body = JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap));
     const params = {
       ...this.getAuthorizationQueryParams(auth),
     };
     const headers = {
-      ...JSON.parse(mustache.render(apiFunction.headers || '[]', argumentsMap)).reduce(
+      ...JSON.parse(mustache.render(apiFunction.headers || '[]', argumentValueMap)).reduce(
         (headers, header) => Object.assign(headers, { [header.key]: header.value }),
         {},
       ),
@@ -501,8 +500,9 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
-  async toApiFunctionSpecification(apiFunction: ApiFunction): Promise<Specification> {
-    const functionArguments = this.getFunctionArguments(apiFunction);
+  async toApiFunctionSpecification(apiFunction: ApiFunction): Promise<ApiFunctionSpecification> {
+    const functionArguments = this.getFunctionArguments(apiFunction)
+      .filter(arg => !arg.variable);
     const requiredArguments = functionArguments.filter((arg) => !arg.payload && arg.required);
     const optionalArguments = functionArguments.filter((arg) => !arg.payload && !arg.required);
     const payloadArguments = functionArguments.filter((arg) => arg.payload);
@@ -511,7 +511,7 @@ export class FunctionService implements OnModuleInit {
       name: arg.name,
       description: arg.description,
       required: arg.required == null ? true : arg.required,
-      type: await this.toPropertyType(arg.name, arg.type, arg.typeObject),
+      type: await this.commonService.toPropertyType(arg.name, arg.type, arg.typeObject),
     });
 
     const getReturnType = async () => {
@@ -522,7 +522,7 @@ export class FunctionService implements OnModuleInit {
         ? await this.commonService.resolveType('ReturnType', JSON.stringify(responseObject))
         : ['void'];
       return {
-        ...await this.toPropertyType('ReturnType', type),
+        ...await this.commonService.toPropertyType('ReturnType', type),
         schema: typeSchema,
       };
     };
@@ -573,7 +573,7 @@ export class FunctionService implements OnModuleInit {
             ],
           },
           {
-            OR: this.getFunctionFilterConditions(contexts, names, ids),
+            OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
         ],
       },
@@ -767,7 +767,7 @@ export class FunctionService implements OnModuleInit {
             ],
           },
           {
-            OR: this.getFunctionFilterConditions(contexts, names, ids),
+            OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
         ],
         serverSide: false,
@@ -796,7 +796,7 @@ export class FunctionService implements OnModuleInit {
             ],
           },
           {
-            OR: this.getFunctionFilterConditions(contexts, names, ids),
+            OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
         ],
         serverSide: true,
@@ -815,7 +815,7 @@ export class FunctionService implements OnModuleInit {
   }
 
   async executeServerFunction(customFunction: CustomFunction, environment: Environment, args: Record<string, any>, clientId: string | null = null) {
-    this.logger.debug(`Executing server function ${customFunction.id} with arguments ${JSON.stringify(args)}`);
+    this.logger.debug(`Executing server function ${customFunction.id}...`);
 
     const functionArguments = JSON.parse(customFunction.arguments || '[]');
     const argumentsList = functionArguments.map((arg: FunctionArgument) => args[arg.key]);
@@ -953,10 +953,11 @@ export class FunctionService implements OnModuleInit {
       payload: argumentsMetadata[argument]?.payload || false,
       required: argumentsMetadata[argument]?.required !== false,
       secure: argumentsMetadata[argument]?.secure || false,
+      variable: argumentsMetadata[argument]?.variable || undefined,
     };
   }
 
-  private getArgumentsMap(apiFunction: ApiFunction, args: Record<string, any>) {
+  private async getArgumentValueMap(apiFunction: ApiFunction, args: Record<string, any>) {
     const normalizeArg = (arg: any) => {
       if (typeof arg === 'string') {
         return arg
@@ -974,58 +975,26 @@ export class FunctionService implements OnModuleInit {
     };
 
     const functionArgs = this.getFunctionArguments(apiFunction);
-    const getPayloadArgs = () => {
-      const payloadArgs = functionArgs.filter((arg) => arg.payload);
-      if (payloadArgs.length === 0) {
-        return {};
+    const argumentValueMap = {};
+
+    for (const arg of functionArgs) {
+      if (arg.variable) {
+        const variable = await this.variableService.findByPath(apiFunction.environmentId, arg.variable);
+        argumentValueMap[arg.key] = variable ? await this.variableService.getVariableValue(variable) : undefined;
+        this.logger.debug(`Argument '${arg.name}' resolved to variable ${variable?.id}`);
+      } else if (arg.payload) {
+        const payload = args['payload'];
+        if (typeof payload !== 'object') {
+          this.logger.debug(`Expecting payload as object, but it is not: ${JSON.stringify(payload)}`);
+          continue;
+        }
+        argumentValueMap[arg.key] = normalizeArg(payload[arg.name]);
+      } else {
+        argumentValueMap[arg.key] = normalizeArg(args[arg.name]);
       }
-      const payload = args['payload'];
-      if (typeof payload !== 'object') {
-        this.logger.debug(`Expecting payload as object, but it is not: ${JSON.stringify(payload)}`);
-        return {};
-      }
-      return payloadArgs.reduce(
-        (result, arg) => Object.assign(result, { [arg.key]: normalizeArg(payload[arg.name]) }),
-        {},
-      );
-    };
+    }
 
-    return {
-      ...functionArgs
-        .filter((arg) => !arg.payload)
-        .reduce((result, arg) => Object.assign(result, { [arg.key]: normalizeArg(args[arg.name]) }), {}),
-      ...getPayloadArgs(),
-    };
-  }
-
-  private getFunctionFilterConditions(contexts?: string[], names?: string[], ids?: string[]) {
-    const contextConditions = contexts?.length
-      ? contexts.filter(Boolean).map((context) => {
-        return {
-          OR: [
-            {
-              context: { startsWith: `${context}.` },
-            },
-            {
-              context,
-            },
-          ],
-        };
-      })
-      : [];
-
-    const idConditions = [ids?.length ? { id: { in: ids } } : undefined].filter(Boolean) as any;
-
-    const filterConditions = [
-      {
-        OR: contextConditions,
-      },
-      names?.length ? { name: { in: names } } : undefined,
-    ].filter(Boolean) as any[];
-
-    this.logger.debug(`functions filter conditions: ${JSON.stringify(filterConditions)}`);
-
-    return [{ AND: filterConditions }, ...idConditions];
+    return argumentValueMap;
   }
 
   private async resolveFunctionName(
@@ -1207,50 +1176,6 @@ export class FunctionService implements OnModuleInit {
     return payload;
   }
 
-  private async toPropertyType(name: string, type: ArgumentType, typeObject?: object): Promise<PropertyType> {
-    if (type.endsWith('[]')) {
-      return {
-        kind: 'array',
-        items: await this.toPropertyType(name, type.substring(0, type.length - 2)),
-      };
-    }
-    if (type.endsWith(ARGUMENT_TYPE_SUFFIX)) {
-      // backward compatibility (might be removed in the future)
-      type = 'object';
-    }
-
-    switch (type) {
-      case 'string':
-      case 'number':
-      case 'boolean':
-        return {
-          kind: 'primitive',
-          type,
-        };
-      case 'void':
-        return {
-          kind: 'void',
-        };
-      case 'object':
-        if (typeObject) {
-          const schema = await this.commonService.getJsonSchema(toPascalCase(name), typeObject);
-          return {
-            kind: 'object',
-            schema: schema || undefined,
-          };
-        } else {
-          return {
-            kind: 'object',
-          };
-        }
-      default:
-        return {
-          kind: 'plain',
-          value: type,
-        };
-    }
-  }
-
   private findDuplicatedArgumentName(args: FunctionArgument[]) {
     const names = new Set<string>();
 
@@ -1364,14 +1289,21 @@ export class FunctionService implements OnModuleInit {
     return argumentsMetadata;
   }
 
-  private checkArgumentsMetadata(apiFunction: ApiFunction, argumentsMetadata: ArgumentsMetadata) {
+  private async checkArgumentsMetadata(apiFunction: ApiFunction, argumentsMetadata: ArgumentsMetadata) {
     const functionArgs = this.getFunctionArguments(apiFunction);
 
-    Object.keys(argumentsMetadata).forEach((key) => {
+    for (const key of Object.keys(argumentsMetadata)) {
+      const argMetadata = argumentsMetadata[key];
       if (!functionArgs.find((arg) => arg.key === key)) {
         throw new BadRequestException(`Argument '${key}' not found in function`);
       }
-    });
+      if (argMetadata.variable) {
+        const variable = await this.variableService.findByPath(apiFunction.environmentId, argMetadata.variable);
+        if (!variable) {
+          throw new BadRequestException(`Variable on path '${argMetadata.variable}' not found.`);
+        }
+      }
+    }
   }
 
   private mergeArgumentsMetadata(argumentsMetadata: string | null, updatedArgumentsMetadata: ArgumentsMetadata | null) {
@@ -1472,5 +1404,15 @@ export class FunctionService implements OnModuleInit {
     return {
       description: aiDescription,
     };
+  }
+
+  async getFunctionsWithVariableArgument(variablePath: string) {
+    return this.prisma.apiFunction.findMany({
+      where: {
+        argumentsMetadata: {
+          contains: `"variable":"${variablePath}"`,
+        },
+      },
+    });
   }
 }

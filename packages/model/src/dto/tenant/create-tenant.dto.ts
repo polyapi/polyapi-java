@@ -4,6 +4,7 @@ export class CreateTenantDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
   @IsOptional()
   @IsBoolean()
   publicVisibilityAllowed?: boolean;

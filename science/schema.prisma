@@ -19,7 +19,6 @@ model Tenant {
   applications            Application[]
   publicVisibilityAllowed Boolean       @default(false) @map("public_visibility_allowed")
   configVariables ConfigVariable[]
-
   @@map("tenant")
 }
 
@@ -256,7 +255,7 @@ model ConfigVariable {
 
 model GptPlugin {
   id                        Int         @id @default(autoincrement())
-  slug                      String      @unique
+  slug                      String
   name                      String
   contactEmail              String      @default("info@polyapi.io")
   legalUrl                  String      @default("https://polyapi.io/legal")
@@ -267,6 +266,7 @@ model GptPlugin {
   environment               Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   environmentId             String      @map("environment_id")
 
+  @@unique(fields: [slug, environmentId])
   @@map("gpt_plugin")
 }
 

@@ -1,0 +1,29 @@
+{{{typeDeclarations}}}
+declare module vari {
+  interface {{interfaceName}} {
+    {{#each subContexts}}
+      {{name}}: {{interfaceName}};
+    {{/each}}
+    {{#each variableDeclarations}}
+      {{#if comment}}
+      /**
+      {{{comment}}}
+      */
+      {{/if}}
+      {{name}}: {
+        /**
+         * Get the current value of the variable.
+         */
+        get: () => Promise<{{type}}>;
+        /**
+         * Set the current value of the variable.
+         */
+        update: (value: {{type}}) => Promise<void>;
+        /**
+         * Subscribe to changes to the variable. If the variable is secret, the callback won't be called.
+         */
+        onUpdate: (callback: (value: {{type}}) => void) => UnregisterOnUpdateHandler;
+      }
+    {{/each}}
+  }
+}

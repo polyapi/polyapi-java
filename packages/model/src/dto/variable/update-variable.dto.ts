@@ -6,17 +6,22 @@ export class UpdateVariableDto {
   @IsString()
   @IsOptional()
   context?: string;
+
   @IsString()
   @IsOptional()
   name?: string;
+
   @IsString()
   @IsOptional()
   description?: string;
+
   @IsOptional()
   value?: ValueType;
+
   @IsBoolean()
   @IsOptional()
   secret?: boolean;
+
   @IsOptional()
   @IsString()
   @IsEnum(Visibility)

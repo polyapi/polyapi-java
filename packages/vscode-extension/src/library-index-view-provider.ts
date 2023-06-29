@@ -95,7 +95,7 @@ export default class LibraryIndexViewProvider implements vscode.TreeDataProvider
       });
   }
 
-  getTreeItem(element: LibraryTreeItem): TreeItem | Thenable<TreeItem> {
+  getTreeItem(element: LibraryTreeItem): TreeItem {
     element.command = {
       title: 'Copy to clipboard',
       command: 'poly.copyLibraryItem',
@@ -119,12 +119,13 @@ export default class LibraryIndexViewProvider implements vscode.TreeDataProvider
     switch (type) {
       case 'apiFunction':
       case 'customFunction':
-      case 'serverFunction':
+      case 'serverFunction': {
         const args = data.function.arguments;
         vscode.env.clipboard.writeText(
           `await ${parentPath}.${name}(${args.map(toArgumentName).join(', ')});`,
         );
         break;
+      }
       case 'authFunction':
         switch (name) {
           case 'getToken':

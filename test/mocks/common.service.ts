@@ -1,7 +1,10 @@
 import { CommonService } from 'common/common.service';
-import { TypedMock } from '../utils/test-utils';
+import { getFnMock, TypedMock } from '../utils/test-utils';
 
 export default {
-  sanitizeNameIdentifier: jest.fn().mockImplementation((name: string) => name),
-  sanitizeContextIdentifier: jest.fn().mockImplementation((context: string) => context),
+  getPathContent: getFnMock<CommonService['getPathContent']>().mockImplementation((content) => content),
+  sanitizeNameIdentifier: getFnMock<CommonService['sanitizeNameIdentifier']>().mockImplementation((name: string) => name),
+  sanitizeContextIdentifier: getFnMock<CommonService['sanitizeContextIdentifier']>().mockImplementation((context: string) => context),
+  resolveType: getFnMock<CommonService['resolveType']>(),
+  toPropertyType: getFnMock<CommonService['toPropertyType']>(),
 } as TypedMock<CommonService>;

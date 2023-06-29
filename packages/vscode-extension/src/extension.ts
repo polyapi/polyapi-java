@@ -1,28 +1,9 @@
 import * as vscode from 'vscode';
-import * as ts from 'typescript';
 import ChatViewProvider from './chat-view-provider';
 import LibraryIndexViewProvider from './library-index-view-provider';
 
 import { start as startLibraryWatcher } from './library-watcher';
 import { registerPolySpecsChangedListener } from './events';
-
-const isPolyExpression = (node: ts.Node) => {
-  if (!node.parent) {
-    return false;
-  }
-  if (node.kind === ts.SyntaxKind.Identifier && node.getText() === 'poly') {
-    return true;
-  }
-  if (node.parent.kind === ts.SyntaxKind.PropertyAccessExpression) {
-    const currentIndex = node.parent.getChildren().indexOf(node);
-    if (currentIndex === 0) {
-      return false;
-    }
-    return isPolyExpression(node.parent.getChildren()[currentIndex - 1]);
-  }
-
-  return false;
-};
 
 export async function activate(context: vscode.ExtensionContext) {
   const chatViewProvider = new ChatViewProvider(context);
