@@ -4,5 +4,4 @@ export enum ConfigVariableLevel {
     Environment = 'Environment'
   }
 
-
 export type ConfigVariableValueConstraints = Array<{ level: ConfigVariableLevel }>;

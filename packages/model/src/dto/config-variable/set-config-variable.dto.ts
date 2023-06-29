@@ -2,7 +2,7 @@ import { IsEnum, IsNotEmpty, Validate } from 'class-validator';
 import { ConfigVariableLevel, ConfigVariableValue, ConfigVariableValueConstraints } from './validator';
 import { ConfigVariableName } from './value-types';
 
-export { SetTrainingDataGenerationValue } from './validator'
+export { SetTrainingDataGenerationValue } from './validator';
 
 export class SetConfigVariableDto {
   @IsNotEmpty()

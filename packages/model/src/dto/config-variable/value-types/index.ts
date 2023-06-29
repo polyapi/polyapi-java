@@ -9,12 +9,12 @@ export enum ConfigVariableName {
     OpenAIKeywordSimilarityThreshold = 'OpenAIKeywordSimilarityThreshold',
     OpenAIFunctionMatchLimit = 'OpenAIFunctionMatchLimit',
     OpenAIExtractKeywordsTemperature = 'OpenAIExtractKeywordsTemperature',
-    TrainingDataGeneration =  'TrainingDataGeneration'
+    TrainingDataGeneration = 'TrainingDataGeneration'
 }
 
 export class TrainingDataGeneration {
-    webhooks: boolean | null
-    clientFunctions: boolean | null
-    serverFunctions: boolean | null
-    apiFunctions: boolean | null
+  webhooks: boolean | null;
+  clientFunctions: boolean | null;
+  serverFunctions: boolean | null;
+  apiFunctions: boolean | null;
 }
