@@ -175,7 +175,7 @@ const COMMANDS = ['clear'];
         conversationList.innerHTML += getResponseWrapper(
           `
             <span>
-              Empty credentials. <a href="/#" class="go-to-settings">Go to settings</a> to start using Poly!.
+              Extension credentials have not been set, you can set them <a href="/#" class="go-to-settings">here</a>
             </span>
           `
         )

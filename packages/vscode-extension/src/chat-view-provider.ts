@@ -51,7 +51,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'goToExtensionSettings': {
-          vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.context.extension.id}`);
+          this.goToExtensionSettings();
           break;
         }
       }
@@ -72,7 +72,11 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     } = this.getCredentials();
 
     if (!apiBaseUrl || !apiKey) {
-      vscode.window.showErrorMessage('Please set the API base URL and API key in the extension settings.');
+      vscode.window.showErrorMessage('Please set the API base URL and API key in the extension settings.', 'Go to settings').then(selection => {
+        if (selection === 'Go to settings') {
+          this.goToExtensionSettings();
+        }
+      });
       return;
     }
 
@@ -154,6 +158,10 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     this.webView?.webview.postMessage({
       type: 'focusMessageInput',
     });
+  }
+
+  private goToExtensionSettings() {
+    vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.context.extension.id}`);
   }
 
   private getWebviewHtml(webview: vscode.Webview) {

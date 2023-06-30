@@ -1,3 +1,7 @@
+### 0.1.34
+* Updated empty credentials text.
+* Added action to go to settings on notification when credentials are empty.
+
 ### 0.1.33
 * Enable textarea typing when sending poly question.
 
