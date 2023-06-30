@@ -1,8 +1,9 @@
-import { Body, Controller, UseGuards, Patch, Get, Param, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, UseGuards, Patch, Get, Param, Delete, NotFoundException, ValidationPipe } from '@nestjs/common';
 import { Role, SetInstanceConfigVariableDto } from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { ConfigVariableService } from './config-variable.service';
+import { MergeRequestData } from 'common/decorators';
 
 @ApiSecurity('PolyApiKey')
 @Controller('config-variables')
@@ -10,9 +11,9 @@ export class ConfigVariableController {
   constructor(private readonly service: ConfigVariableService) {}
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
-  @Patch('')
-  public async createOrUpdateConfigVariable(@Body() body: SetInstanceConfigVariableDto) {
-    return this.service.toDto(await this.service.configure(body.name, body.value));
+  @Patch('/:name')
+  public async createOrUpdateConfigVariable(@MergeRequestData(['body', 'params'], new ValidationPipe({ validateCustomDecorators: true })) data: SetInstanceConfigVariableDto) {
+    return this.service.toDto(await this.service.configure(data.name, data.value));
   }
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
