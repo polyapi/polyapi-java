@@ -14,11 +14,7 @@ module.exports = (clientID, getSocket) => {
     set(variableHandlers, path, {
       get: () => {
         if (secret) {
-          return Promise.resolve({
-            type: 'PolySecretVariable',
-            id,
-            secret
-          });
+          return Promise.resolve('*** variable is secret ***');
         } else {
           return axios.get(
             `/variables/${id}/value`
@@ -58,7 +54,11 @@ module.exports = (clientID, getSocket) => {
         });
 
         return unregisterEventHandler;
-      }
+      },
+      onServer: () => ({
+        type: 'PolyVariable',
+        id
+      }),
     });
   });
   return variableHandlers;

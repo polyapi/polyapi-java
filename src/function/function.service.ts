@@ -22,6 +22,7 @@ import {
   ArgumentsMetadata,
   Auth,
   Body,
+  ConfigVariableName,
   CustomFunctionSpecification,
   FunctionArgument,
   FunctionBasicDto,
@@ -31,6 +32,7 @@ import {
   PostmanVariableEntry,
   PropertySpecification,
   ServerFunctionSpecification,
+  TrainingDataGeneration,
   Variables,
   Visibility,
 } from '@poly/model';
@@ -47,6 +49,7 @@ import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
 import { mergeWith, omit, uniqBy } from 'lodash';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { VariableService } from 'variable/variable.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
@@ -73,6 +76,7 @@ export class FunctionService implements OnModuleInit {
     private readonly aiService: AiService,
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
+    private readonly configVariableService: ConfigVariableService,
     private readonly variableService: VariableService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
@@ -140,7 +144,7 @@ export class FunctionService implements OnModuleInit {
 
   async createOrUpdateApiFunction(
     id: string | null,
-    environmentId: string,
+    environment: Environment,
     url: string,
     body: Body,
     requestName: string,
@@ -174,7 +178,7 @@ export class FunctionService implements OnModuleInit {
 
       const apiFunctions = await this.prisma.apiFunction.findMany({
         where: {
-          environmentId,
+          environmentId: environment.id,
           OR: [
             {
               url: {
@@ -231,26 +235,28 @@ export class FunctionService implements OnModuleInit {
     response = this.commonService.trimDownObject(response, 1);
 
     if ((!name || !context || !description) && !willRetrain) {
-      const {
-        name: aiName,
-        description: aiDescription,
-        context: aiContext,
-      } = await this.aiService.getFunctionDescription(
-        url,
-        apiFunction?.method || method,
-        description || apiFunction?.description || '',
-        JSON.stringify(this.commonService.trimDownObject(this.getBodyData(body))),
-        JSON.stringify(response),
-      );
+      if (await this.isApiFunctionAITrainingEnabled(environment)) {
+        const {
+          name: aiName,
+          description: aiDescription,
+          context: aiContext,
+        } = await this.aiService.getFunctionDescription(
+          url,
+          apiFunction?.method || method,
+          description || apiFunction?.description || '',
+          JSON.stringify(this.commonService.trimDownObject(this.getBodyData(body))),
+          JSON.stringify(response),
+        );
 
-      if (!name) {
-        name = this.commonService.sanitizeNameIdentifier(aiName);
-      }
-      if (!context && !apiFunction?.context) {
-        context = this.commonService.sanitizeContextIdentifier(aiContext);
-      }
-      if (!description && !apiFunction?.description) {
-        description = aiDescription;
+        if (!name) {
+          name = aiName ? this.commonService.sanitizeNameIdentifier(aiName) : this.commonService.sanitizeNameIdentifier(requestName);
+        }
+        if (!context && !apiFunction?.context) {
+          context = this.commonService.sanitizeContextIdentifier(aiContext);
+        }
+        if (!description && !apiFunction?.description) {
+          description = aiDescription;
+        }
       }
     }
 
@@ -293,7 +299,7 @@ export class FunctionService implements OnModuleInit {
         },
         data: {
           ...upsertPayload,
-          name: await this.resolveFunctionName(environmentId, finalName, finalContext, true, true, [apiFunction.id]),
+          name: await this.resolveFunctionName(environment.id, finalName, finalContext, true, true, [apiFunction.id]),
           argumentsMetadata: await this.resolveArgumentsMetadata(
             {
               argumentsMetadata: apiFunction.argumentsMetadata,
@@ -313,11 +319,11 @@ export class FunctionService implements OnModuleInit {
       data: {
         environment: {
           connect: {
-            id: environmentId,
+            id: environment.id,
           },
         },
         ...upsertPayload,
-        name: await this.resolveFunctionName(environmentId, finalName, finalContext, true, true),
+        name: await this.resolveFunctionName(environment.id, finalName, finalContext, true, true),
         argumentsMetadata: await this.resolveArgumentsMetadata(
           {
             argumentsMetadata: null,
@@ -630,6 +636,17 @@ export class FunctionService implements OnModuleInit {
       },
     });
 
+    if (!description && !customFunction?.description) {
+      if (await this.isCustomFunctionAITrainingEnabled(environment, serverFunction)) {
+        const {
+          description: aiDescription,
+
+        } = await this.getCustomFunctionAIData(description, code);
+
+        description = aiDescription;
+      }
+    }
+
     if (customFunction) {
       this.logger.debug(`Updating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
       const serverSide = customFunction.serverSide;
@@ -654,6 +671,7 @@ export class FunctionService implements OnModuleInit {
       }
     } else {
       this.logger.debug(`Creating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
+
       customFunction = await this.prisma.customFunction.create({
         data: {
           environment: {
@@ -1365,6 +1383,35 @@ export class FunctionService implements OnModuleInit {
     }
 
     return apiFunction;
+  }
+
+  private async getCustomFunctionAIData(description: string, code: string) {
+    const {
+      description: aiDescription,
+    } = await this.aiService.getFunctionDescription(
+      '',
+      '',
+      description,
+      '',
+      '',
+      code,
+    );
+
+    return {
+      description: aiDescription,
+    };
+  }
+
+  private async isApiFunctionAITrainingEnabled(environment: Environment) {
+    const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+
+    return trainingDataCfgVariable?.value.apiFunctions;
+  }
+
+  private async isCustomFunctionAITrainingEnabled(environment: Environment, serverFunction: boolean) {
+    const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+
+    return (trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction);
   }
 
   async getFunctionsWithVariableArgument(variablePath: string) {

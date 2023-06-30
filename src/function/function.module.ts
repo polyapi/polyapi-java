@@ -9,6 +9,7 @@ import { AiModule } from 'ai/ai.module';
 import { SpecsModule } from 'specs/specs.module';
 import { AuthModule } from 'auth/auth.module';
 import { VariableModule } from 'variable/variable.module';
+import { ConfigVariableModule } from 'config-variable/config-variable.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { VariableModule } from 'variable/variable.module';
     CommonModule,
     AiModule,
     forwardRef(() => SpecsModule),
+    ConfigVariableModule,
     VariableModule,
   ],
   providers: [FunctionService],

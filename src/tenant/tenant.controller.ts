@@ -48,7 +48,7 @@ import { AuthRequest } from 'common/types';
 import { UserService } from 'user/user.service';
 import { ApplicationService } from 'application/application.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
-import { ConfigVariableService } from 'config-variable/config-varirable.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('tenants')
@@ -122,9 +122,10 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('name') name: string,
   ) {
+    await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
-    const configVariable = await this.findClosestChildConfigVariable(name, tenantId);
+    const configVariable = await this.getConfigVariable(name, tenantId);
 
     return this.configVariableService.toDto(configVariable);
   }
@@ -136,6 +137,7 @@ export class TenantController {
     @Body() body: SetConfigVariableDto,
     @Param('id') tenantId: string,
   ) {
+    await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     return this.configVariableService.toDto(
@@ -150,6 +152,7 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('name') name: string,
   ) {
+    await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     const configVariable = await this.findConfigVariable(name, tenantId);
@@ -165,12 +168,10 @@ export class TenantController {
     @Param('name') name: string,
     @Param('environment') environmentId: string,
   ) {
-    await Promise.all([
-      this.findEnvironment(tenantId, environmentId),
-      this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
-    ]);
+    await this.findEnvironment(tenantId, environmentId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
-    const configVariable = await this.findClosestChildConfigVariable(name, tenantId, environmentId);
+    const configVariable = await this.getConfigVariable(name, tenantId, environmentId);
 
     return this.configVariableService.toDto(configVariable);
   }
@@ -183,10 +184,8 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('environment') environmentId: string,
   ) {
-    await Promise.all([
-      this.findEnvironment(tenantId, environmentId),
-      this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
-    ]);
+    await this.findEnvironment(tenantId, environmentId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     return this.configVariableService.toDto(
       await this.configVariableService.configure(body.name, body.value, tenantId, environmentId),
@@ -201,10 +200,8 @@ export class TenantController {
     @Param('environment') environmentId: string,
     @Param('name') name: string,
   ) {
-    await Promise.all([
-      this.findEnvironment(tenantId, environmentId),
-      this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]),
-    ]);
+    await this.findEnvironment(tenantId, environmentId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     const configVariable = await this.findConfigVariable(name, tenantId, environmentId);
 
@@ -706,8 +703,8 @@ export class TenantController {
     return configVariable;
   }
 
-  private async findClosestChildConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const configVariable = await this.configVariableService.getClosestChild(name, tenantId, environmentId);
+  private async getConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
+    const configVariable = await this.configVariableService.get(name, tenantId, environmentId);
 
     if (!configVariable) {
       throw new NotFoundException('Closest config variable not found.');

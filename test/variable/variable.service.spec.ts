@@ -78,7 +78,7 @@ describe('VariableService', () => {
 
     service = module.get<VariableService>(VariableService);
 
-    resetMocks(commonServiceMock, prismaServiceMock, configServiceMock, secretServiceMock, authServiceMock, eventServiceMock);
+    resetMocks(commonServiceMock, prismaServiceMock, configServiceMock, secretServiceMock, authServiceMock, functionServiceMock, eventServiceMock);
 
     secretServiceMock.get?.mockResolvedValue('value12345');
     prismaServiceMock.$transaction?.mockImplementation((cb) => cb(prismaServiceMock as any));
@@ -277,6 +277,7 @@ describe('VariableService', () => {
           id: 'environmentId12345',
         },
       }) as any);
+      functionServiceMock.getFunctionsWithVariableArgument?.mockResolvedValue([]);
 
       await service.deleteVariable({
         ...testVariable,
@@ -293,6 +294,7 @@ describe('VariableService', () => {
           id: 'environmentId12345',
         },
       }) as any);
+      functionServiceMock.getFunctionsWithVariableArgument?.mockResolvedValue([]);
 
       await service.deleteVariable({
         ...testVariable,

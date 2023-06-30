@@ -23,7 +23,7 @@ To start the server, run the following:
 > pip install -r requirements.txt
 
 # prisma
-> prisma generate  # generates the library for python to access the db
+> prisma generate --generator py --schema ../prisma/schema.prisma # generates the library for python to access the db
 # if you do not have CLI access to prisma, try adding this to your path in your bashrc:
 # export PATH=$PATH:$HOME/.local/bin
 # and then reopen a new terminal
@@ -62,7 +62,7 @@ To run tests, run this:
 
 ```
 cd science
-prisma generate  # only needed before first test run
+prisma generate --generator py --schema ../prisma/schema.prisma  # only needed before first test run
 python -m unittest discover
 ```
 

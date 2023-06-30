@@ -7,12 +7,12 @@ yarn install
 
 # migrate and regenerate the hooks for the npm client
 yarn run prisma migrate deploy
-yarn run prisma generate
+yarn run prisma generate --generator js --schema ./prisma/schema.prisma
 
 # regenerate the hooks for the python client
 cd science
 pip install -r requirements.txt
-prisma generate
+prisma generate --generator py --schema ../prisma/schema.prisma
 cd ..
 
 yarn run build

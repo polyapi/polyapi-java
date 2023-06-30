@@ -122,4 +122,12 @@ export class ConfigService {
   get vaultToken(): string {
     return this.get('VAULT_TOKEN');
   }
+
+  get redisUrl(): string {
+    return this.get('REDIS_URL') || 'redis://127.0.0.1:6379';
+  }
+
+  get cacheTTL(): number {
+    return Number(this.get('CACHE_TTL', 24 * 60 * 60));
+  }
 }

@@ -1,5 +1,12 @@
-generator client {
+generator js {
   provider = "prisma-client-js"
+  default  = true
+}
+
+generator py {
+  provider             = "prisma-client-py"
+  interface            = "sync"
+  recursive_type_depth = 5
 }
 
 datasource db {
@@ -8,15 +15,16 @@ datasource db {
 }
 
 model Tenant {
-  id                      String        @id @default(uuid())
-  createdAt               DateTime      @default(now()) @map("created_at")
+  id                      String           @id @default(uuid())
+  createdAt               DateTime         @default(now()) @map("created_at")
   name                    String
   users                   User[]
   teams                   Team[]
   environments            Environment[]
   applications            Application[]
-  publicVisibilityAllowed Boolean       @default(false) @map("public_visibility_allowed")
-  configVariables ConfigVariable[]
+  publicVisibilityAllowed Boolean          @default(false) @map("public_visibility_allowed")
+  configVariables         ConfigVariable[]
+
   @@map("tenant")
 }
 
@@ -239,14 +247,14 @@ model AuthToken {
 }
 
 model ConfigVariable {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) @map("created_at")
-  name      String
-  value     String
-  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantId  String? @map("tenant_id")
-  environment Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String? @map("environment_id")
+  id            Int          @id @default(autoincrement())
+  createdAt     DateTime     @default(now()) @map("created_at")
+  name          String
+  value         String
+  tenant        Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId      String?      @map("tenant_id")
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environmentId String?      @map("environment_id")
 
   @@map("config_variable")
 }

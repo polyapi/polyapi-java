@@ -1,10 +1,8 @@
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, Validate } from 'class-validator';
+import { ConfigVariableLevel, ConfigVariableValue, ConfigVariableValueConstraints } from './validator';
+import { ConfigVariableName } from './value-types';
 
-export enum ConfigVariableName {
-  OpenAIKeywordSimilarityThreshold = 'OpenAIKeywordSimilarityThreshold',
-  OpenAIFunctionMatchLimit = 'OpenAIFunctionMatchLimit',
-  OpenAIExtractKeywordsTemperature = 'OpenAIExtractKeywordsTemperature',
-}
+export { SetTrainingDataGenerationValue } from './validator';
 
 export class SetConfigVariableDto {
   @IsNotEmpty()
@@ -12,6 +10,11 @@ export class SetConfigVariableDto {
   name: string;
 
   @IsNotEmpty()
-  @IsString()
-  value: string;
+  @Validate(ConfigVariableValue)
+  value: unknown;
+}
+
+export class SetInstanceConfigVariableDto extends SetConfigVariableDto {
+  @Validate(ConfigVariableValue, [{ level: ConfigVariableLevel.Instance }] as ConfigVariableValueConstraints)
+  value: unknown;
 }

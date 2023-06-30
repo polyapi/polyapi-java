@@ -23,6 +23,15 @@ declare module vari {
          * Subscribe to changes to the variable. If the variable is secret, the callback won't be called.
          */
         onUpdate: (callback: (value: {{type}}) => void) => UnregisterOnUpdateHandler;
+        /**
+         * Gets variable data.
+         * This is intended to be used in Poly functions, so the variable values are resolved on the server
+         * without fetching them from the client.
+         *
+         * @example
+         * await poly.products.addItem(vari.products.shopId.onServer(), 'Toy car', 1)
+         */
+        onServer: () => {{{type}}};
       }
     {{/each}}
   }

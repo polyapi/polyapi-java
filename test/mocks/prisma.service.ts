@@ -1,7 +1,7 @@
 import { getFnMock, TypedMock } from '../utils/test-utils';
 import { PrismaService } from 'prisma/prisma.service';
 
-type PrismaEntities = 'apiFunction' | 'webhookHandle' | 'variable' | 'environment' | 'tenant';
+type PrismaEntities = 'apiFunction' | 'webhookHandle' | 'variable' | 'environment' | 'tenant' | 'conversation';
 
 /**
  * This was taken from prisma client code since saddly prisma client module doesn't export `PrismaAction` I have had to add it manually here.
@@ -47,6 +47,7 @@ export default {
   variable: getEntityMock('variable'),
   tenant: getEntityMock('tenant'),
   environment: getEntityMock('environment'),
+  conversation: getEntityMock('conversation'),
 } as TypedMock<PrismaService> & {
   [key in PrismaEntities]: TypedMock<PrismaService[key]>;
 };

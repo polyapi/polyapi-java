@@ -1,7 +1,8 @@
 import { PrismaService } from 'prisma/prisma.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ChatModule } from 'chat/chat.module';
 import { ChatService } from 'chat/chat.service';
+import { aiServiceMock } from '../mocks';
+import { AiService } from 'ai/ai.service';
 
 describe('ChatService', () => {
   const prisma = new PrismaService();
@@ -9,7 +10,14 @@ describe('ChatService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ChatModule],
+      providers: [
+        ChatService,
+        PrismaService,
+        {
+          provide: AiService,
+          useValue: aiServiceMock,
+        },
+      ],
     }).compile();
 
     service = await module.get(ChatService);

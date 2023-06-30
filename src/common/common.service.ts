@@ -8,9 +8,10 @@ import {
   CONTEXT_ALLOWED_CHARACTERS_PATTERN,
   DOTS_AT_BEGINNING_PATTERN,
   DOTS_AT_END_PATTERN,
-  NUMBERS_AT_BEGINNING_PATTERN, Visibility, ArgumentType, PropertyType,
+  NUMBERS_AT_BEGINNING_PATTERN, Visibility, ArgumentType, PropertyType, ParsedConfigVariable,
 } from '@poly/model';
 import { toPascalCase } from '@guanghechen/helper-string';
+import { ConfigVariable } from '@prisma/client';
 
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
 
@@ -232,6 +233,13 @@ export class CommonService {
           },
         },
       ],
+    };
+  }
+
+  getConfigVariableWithParsedValue<T = any>(configVariable: ConfigVariable): ParsedConfigVariable<T> {
+    return {
+      ...configVariable,
+      value: JSON.parse(configVariable.value),
     };
   }
 

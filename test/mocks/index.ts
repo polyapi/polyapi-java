@@ -15,3 +15,5 @@ export { default as applicationServiceMock } from './application.service';
 export { default as teamServiceMock } from './team.service';
 export { default as userServiceMock } from './user.service';
 export { default as variableServiceMock } from './variable.service';
+export { default as cacheManagerMock } from './cache-manager';
+export { default as secretServiceProviderMock } from './secret-service-provider';
