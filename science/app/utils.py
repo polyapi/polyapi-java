@@ -357,8 +357,6 @@ def get_return_type_properties(spec: SpecificationDto) -> Union[Dict, None]:
     if not return_type:
         return None
 
-    kind = return_type.get("kind")
-    if kind == "object":
-        return {"data": return_type.get("schema", {}).get("properties")}
-    else:
-        return {"data": kind}
+    if "title" in return_type:
+        return_type['title'] = "data"
+    return {"data": return_type}

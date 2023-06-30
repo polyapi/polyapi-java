@@ -200,7 +200,7 @@ export class AuthService {
     return true;
   }
 
-  async checkPermissions({ user, permissions }: AuthData, ...permissionsToCheck: Permission[]) {
+  async checkPermissions({ user, permissions }: AuthData, ...permissionsToCheck: (Permission | Permission[])[]) {
     if (!permissionsToCheck.length) {
       return true;
     }
@@ -209,9 +209,15 @@ export class AuthService {
       return true;
     }
 
-    permissionsToCheck.forEach((permission) => {
-      if (!permissions[permission]) {
-        throw new ForbiddenException(`Missing '${permission}' permission`);
+    permissionsToCheck.forEach((permissionOrPermissions) => {
+      if (Array.isArray(permissionOrPermissions)) {
+        if (!permissionOrPermissions.some((permission) => permissions[permission])) {
+          throw new ForbiddenException(`Missing some of the permissions: ${permissionOrPermissions.join(', ')}`);
+        }
+      } else {
+        if (!permissions[permissionOrPermissions]) {
+          throw new ForbiddenException(`Missing '${permissionOrPermissions}' permission`);
+        }
       }
     });
   }

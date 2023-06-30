@@ -244,7 +244,7 @@ export class VariableService {
   async unwrapSecretVariables<T extends Record<string, any>>(authData: AuthData, obj: T): Promise<T> {
     for (const key of Object.keys(obj)) {
       const value = obj[key];
-      if (typeof value === 'object' && value.type === 'PolySecretVariable') {
+      if (typeof value === 'object' && value.type === 'PolyVariable' && value.id) {
         const variable = await this.findById(value.id);
         if (variable) {
           await this.authService.checkEnvironmentEntityAccess(variable, authData, true);

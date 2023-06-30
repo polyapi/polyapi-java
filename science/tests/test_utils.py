@@ -164,35 +164,4 @@ class T(DbTestCase):
             }
         }
         props = get_return_type_properties(spec)
-        self.assertEqual(props["data"], "string")
-
-    def test_get_return_properties_object(self):
-        spec = {
-            "function": {
-                "returnType": {
-                    "kind": "object",
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-06/schema#",
-                        "definitions": {
-                            "SubresourceUris": {
-                                "type": "object",
-                                "properties": {"media": {"type": "string"}},
-                                "required": ["media"],
-                                "title": "SubresourceUris",
-                            }
-                        },
-                        "type": "object",
-                        "properties": {
-                            "account_sid": {"type": "string"},
-                            "uri": {
-                                "type": "string",
-                            },
-                        },
-                        "required": ["account_sid", "uri"],
-                        "title": "ReturnType",
-                    },
-                }
-            }
-        }
-        properties = get_return_type_properties(spec)
-        self.assertIn("account_sid", properties["data"])
+        self.assertEqual(props["data"]["kind"], "string")

@@ -3,6 +3,8 @@ export enum Permission {
   Teach = 'teach',
   CustomDev = 'customDev',
   AuthConfig = 'authConfig',
+  ManageNonSecretVariables = 'manageVariables',
+  ManageSecretVariables = 'manageSecretVariables',
 }
 
 export type Permissions = {
@@ -10,4 +12,6 @@ export type Permissions = {
   [Permission.Teach]?: boolean;
   [Permission.CustomDev]?: boolean;
   [Permission.AuthConfig]?: boolean;
+  [Permission.ManageNonSecretVariables]?: boolean;
+  [Permission.ManageSecretVariables]?: boolean;
 }
