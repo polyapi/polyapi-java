@@ -122,7 +122,6 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('name') name: string,
   ) {
-
     await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -138,7 +137,6 @@ export class TenantController {
     @Body() body: SetConfigVariableDto,
     @Param('id') tenantId: string,
   ) {
-
     await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -154,7 +152,6 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('name') name: string,
   ) {
-
     await this.findTenant(tenantId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -171,7 +168,6 @@ export class TenantController {
     @Param('name') name: string,
     @Param('environment') environmentId: string,
   ) {
-
     await this.findEnvironment(tenantId, environmentId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -188,7 +184,6 @@ export class TenantController {
     @Param('id') tenantId: string,
     @Param('environment') environmentId: string,
   ) {
-
     await this.findEnvironment(tenantId, environmentId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
@@ -205,7 +200,6 @@ export class TenantController {
     @Param('environment') environmentId: string,
     @Param('name') name: string,
   ) {
-
     await this.findEnvironment(tenantId, environmentId);
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
