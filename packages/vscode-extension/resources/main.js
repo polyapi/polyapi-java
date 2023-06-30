@@ -225,7 +225,7 @@ const COMMANDS = ['clear'];
   messageInput.addEventListener('keydown', function(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if(event.target.getAttribute('data-avoid-send') !== 'true') {
+      if (event.target.getAttribute('data-avoid-send') !== 'true') {
         processMessageInputValue();
       }
     }
