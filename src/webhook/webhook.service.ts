@@ -196,7 +196,7 @@ export class WebhookService {
           );
 
           if (!name || !description || !context) {
-            const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+            const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
             if (trainingDataCfgVariable?.value.webhooks) {
               const aiResponse = await this.getAIWebhookData(webhookHandle, description, eventPayload);
@@ -314,7 +314,7 @@ export class WebhookService {
   }
 
   private async isWebhookAITrainingEnabled(environment: Environment) {
-    const trainingDataCfgVariable = await this.configVariableService.getParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+    const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
     return trainingDataCfgVariable?.value.webhooks;
   }

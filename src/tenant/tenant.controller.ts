@@ -117,6 +117,18 @@ export class TenantController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @Get('/:id/config-variables')
+  async getConfigVariablesUnderTenant(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+  ) {
+    await this.findTenant(tenantId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return (await this.configVariableService.getMany(tenantId)).map(this.configVariableService.toDto);
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Get('/:id/config-variables/:name')
   async getConfigVariableUnderTenant(
     @Req() req: AuthRequest,
@@ -159,6 +171,19 @@ export class TenantController {
     const configVariable = await this.findConfigVariable(name, tenantId);
 
     return this.configVariableService.toDto(await this.configVariableService.delete(configVariable));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/:id/environments/:environment/config-variables')
+  async getConfigVariablesUnderEnvironment(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Param('environment') environmentId: string,
+  ) {
+    await this.findEnvironment(tenantId, environmentId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return (await this.configVariableService.getMany(tenantId, environmentId)).map(this.configVariableService.toDto);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -705,7 +730,7 @@ export class TenantController {
   }
 
   private async getConfigVariable(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const configVariable = await this.configVariableService.get(name, tenantId, environmentId);
+    const configVariable = await this.configVariableService.getOne(name, tenantId, environmentId);
 
     if (!configVariable) {
       throw new NotFoundException('Closest config variable not found.');

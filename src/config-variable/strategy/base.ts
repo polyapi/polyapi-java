@@ -4,43 +4,12 @@ import { ParsedConfigVariable } from '@poly/model';
 import { CommonService } from 'common/common.service';
 
 interface Strategy {
-  get(name: string, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable | null>;
+  getOneFromList(configVariable: ConfigVariable[]): ConfigVariable | null;
   configure(name: string, value: unknown, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable>;
 }
 
 export abstract class ConfigVariableStrategy implements Strategy {
   constructor(protected prisma: PrismaService, protected commonService: CommonService) {}
-
-  protected findMany(name: string, tenantId: string | null = null, environmentId: string | null = null) {
-    const conditions: [{ name: string, tenantId: string | null, environmentId?: string | null }] = [
-      {
-        name,
-        tenantId: null,
-        environmentId: null,
-      },
-    ];
-
-    if (tenantId) {
-      conditions.push({
-        name,
-        tenantId,
-        environmentId: null,
-      });
-    }
-    if (environmentId) {
-      conditions.push({
-        name,
-        tenantId,
-        environmentId,
-      });
-    }
-
-    return this.prisma.configVariable.findMany({
-      where: {
-        OR: conditions,
-      },
-    });
-  }
 
   protected create({
     name,
@@ -111,6 +80,6 @@ export abstract class ConfigVariableStrategy implements Strategy {
       configVariable.tenantId === null && configVariable.environmentId === null;
   }
 
-  abstract get(name: string, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable | null>;
+  abstract getOneFromList(configVariable): ConfigVariable | null;
   abstract configure(name: string, value: unknown, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable>;
 }

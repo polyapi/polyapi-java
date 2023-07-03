@@ -2,6 +2,7 @@ import { merge } from 'lodash';
 import { ConfigVariable } from '@prisma/client';
 import { ConfigVariableStrategy } from './base';
 import { SetTrainingDataGenerationValue, TrainingDataGeneration } from '@poly/model';
+import { findMany } from './utils';
 
 /**
  * In this strategy, on `get` method, object key values that are `null` will be replaced with nearest-parent values.
@@ -10,9 +11,7 @@ import { SetTrainingDataGenerationValue, TrainingDataGeneration } from '@poly/mo
  * On updating, will merge incomming value with previous saved one.
  */
 export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
-  async get(name: string, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable | null> {
-    const configVariables = await this.findMany(name, tenantId, environmentId);
-
+  getOneFromList(configVariables: ConfigVariable[]): ConfigVariable | null {
     if (!configVariables.length) {
       return null;
     }
@@ -37,7 +36,7 @@ export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
   async configure(name: string, value: unknown, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable> {
     const newValue = value as SetTrainingDataGenerationValue;
 
-    const configVariables = await this.findMany(name, tenantId, environmentId);
+    const configVariables = await findMany(this.prisma, name, tenantId, environmentId);
 
     const sortedConfigVariables = configVariables.sort(this.getSortHandler()).map(this.commonService.getConfigVariableWithParsedValue<TrainingDataGeneration>);
 

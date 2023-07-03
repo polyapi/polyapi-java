@@ -10,6 +10,12 @@ import { MergeRequestData } from 'common/decorators';
 export class ConfigVariableController {
   constructor(private readonly service: ConfigVariableService) {}
 
+  @Get('')
+  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
+  public async getConfigVariables() {
+    return (await this.service.getMany()).map(this.service.toDto);
+  }
+
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch('/:name')
   public async createOrUpdateConfigVariable(@MergeRequestData(['body', 'params'], new ValidationPipe({ validateCustomDecorators: true })) data: SetInstanceConfigVariableDto) {
