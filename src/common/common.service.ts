@@ -270,4 +270,33 @@ export class CommonService {
 
     return [{ AND: filterConditions }, ...idConditions];
   }
+
+  getConfigVariableFilters(name: string | null, tenantId: string | null = null, environmentId: string | null = null) {
+    const OR: [{ name?: string, tenantId: string | null, environmentId?: string | null }] = [
+      {
+        ...(name ? { name } : {}),
+        tenantId: null,
+        environmentId: null,
+      },
+    ];
+
+    if (tenantId) {
+      OR.push({
+        ...(name ? { name } : {}),
+        tenantId,
+        environmentId: null,
+      });
+    }
+    if (environmentId) {
+      OR.push({
+        ...(name ? { name } : {}),
+        tenantId,
+        environmentId,
+      });
+    }
+
+    return {
+      OR,
+    };
+  }
 }

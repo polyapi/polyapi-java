@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-
 import { ConfigVariableDto, ConfigVariableName } from '@poly/model';
-
-import { ConfigVariableStrategy, DefaultConfigVariableStrategy, TrainingDataGenerationStrategy, findMany } from './strategy';
+import { ConfigVariableStrategy, DefaultConfigVariableStrategy, TrainingDataGenerationStrategy } from './strategy';
 import { CommonService } from 'common/common.service';
+
 @Injectable()
 export class ConfigVariableService {
   private readonly prisma: PrismaService;
@@ -71,13 +70,17 @@ export class ConfigVariableService {
     tenantId: string | null = null,
     environmentId: string | null = null,
   ) {
-    const configVariables = await findMany(this.prisma, name, tenantId, environmentId);
+    const configVariables = await this.prisma.configVariable.findMany({
+      where: this.commonService.getConfigVariableFilters(name, tenantId, environmentId),
+    });
 
     return this.getStrategy(name).getOneFromList(configVariables);
   }
 
   async getMany(tenantId: string | null = null, environmentId: string | null = null) {
-    const configVariables = await findMany(this.prisma, null, tenantId, environmentId);
+    const configVariables = await this.prisma.configVariable.findMany({
+      where: this.commonService.getConfigVariableFilters(null, tenantId, environmentId),
+    });
 
     const result: ConfigVariable[] = [];
 
