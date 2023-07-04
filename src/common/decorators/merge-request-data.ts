@@ -1,5 +1,3 @@
-import { merge } from 'lodash';
-
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export type RequestDataType = 'body' | 'headers' | 'query' | 'params';
@@ -10,14 +8,5 @@ export type RequestDataType = 'body' | 'headers' | 'query' | 'params';
  */
 export const MergeRequestData = createParamDecorator<RequestDataType[]>((requestTypes: RequestDataType[] = ['body'], ctx: ExecutionContext) => {
   const request = ctx.switchToHttp().getRequest();
-
-  const firstRequestType = requestTypes[0];
-
-  if (!firstRequestType) {
-    return {};
-  }
-
-  return requestTypes.slice(1).reduce((acum, value) => {
-    return merge(acum, request[value]);
-  }, request[firstRequestType] || {});
+  return requestTypes.reduce((acc, requestType) => Object.assign(acc, request[requestType]), {});
 });
