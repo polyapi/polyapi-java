@@ -73,14 +73,20 @@
           "id": "poly.library-info",
           "name": "poly",
           "icon": "resources/poly-library-index.png",
-          "when": "polyLibraryInstalled == false"
+          "when": "(polyLibraryInstalled == false && installingPolyLibrary == false) || missingCredentials == true"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "poly.library-info",
-        "contents": "No Poly library present.\nTo install the Poly library:\n1. Open a terminal\n2. Run `npm install polyapi`\n3. Run `npx poly generate` to generate code.\n\nMore information about usage can be found in node_modules/polyapi/README.md after the installation."
+        "contents": "No Poly library present.\n[Setup Poly library](command:poly.setupLibrary)\nOr you can do:\n1. Open a terminal\n2. Run `npm install polyapi`\n3. Run `npx poly setup` to setup your credentials.\n4.`Run `npx poly generate` to generate code.\n\nMore information about usage can be found in node_modules/polyapi/README.md after the installation.",
+        "when": "polyLibraryInstalled == false && installingPolyLibrary == false"
+      },
+      {
+        "view": "poly.library-info",
+        "contents": "Missing credentials.\n[Set Poly credentials](command:poly.setupCredentials)\nOr you can execute `npm poly setup` to setup your credentials.\n\nMore information about usage can be found in node_modules/polyapi/README.md after the installation",
+        "when": "polyLibraryInstalled == true && missingCredentials == true"
       }
     ],
     "keybindings": [
@@ -94,7 +100,7 @@
   "scripts": {
     "vscode:prepublish": "yarn run compile",
     "compile": "tsc -p ./ && tsc-alias -p tsconfig.json",
-    "precompile": "yarn run lint",
+    "precompile": "yarn run lint --fix",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts"

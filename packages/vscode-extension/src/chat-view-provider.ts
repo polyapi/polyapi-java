@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import { RawAxiosRequestHeaders } from 'axios/index';
+import { getCredentials } from './common';
 
 export default class ChatViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
@@ -25,17 +26,6 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this.getWebviewHtml(webviewView.webview);
 
-    const {
-      apiBaseUrl,
-      apiKey,
-    } = this.getCredentials();
-
-    if (!apiBaseUrl || !apiKey) {
-      this.webView?.webview.postMessage({
-        type: 'addSetupMessage',
-      });
-    }
-
     webviewView.webview.onDidReceiveMessage(data => {
       switch (data.type) {
         case 'sendCommand': {
@@ -58,18 +48,11 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private getCredentials() {
-    return {
-      apiBaseUrl: vscode.workspace.getConfiguration('poly').get('apiBaseUrl'),
-      apiKey: vscode.workspace.getConfiguration('poly').get('apiKey'),
-    };
-  }
-
   private async sendPolyQuestionRequest(message: string) {
     const {
       apiBaseUrl,
       apiKey,
-    } = this.getCredentials();
+    } = getCredentials();
 
     if (!apiBaseUrl || !apiKey) {
       vscode.window.showErrorMessage('Please set the API base URL and API key in the extension settings.', 'Go to settings').then(selection => {
@@ -107,12 +90,14 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       this.logStats(data.texts);
     } catch (error) {
       console.error(error);
+
       this.webView?.webview.postMessage({
         type: 'addResponseTexts',
         value: [
           {
             type: 'error',
             value: error.response?.data?.message || error.message,
+            error,
           },
         ],
       });

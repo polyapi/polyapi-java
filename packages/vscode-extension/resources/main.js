@@ -111,7 +111,16 @@ const COMMANDS = ['clear'];
         case 'plain':
           return `<div>${text.value}</div>`;
         case 'error':
-          return `<div class='response-text-error'>${text.value}</div>`;
+
+          const goToSettings = `
+            <span>
+              Check your credentials <a href="/#" class="go-to-settings">here</a>
+            </span>
+          `;
+
+          const isCredentialsIssue = text.error?.status === 401 || text.error?.status === 403;
+
+          return `<div class='response-text-error'>${text.value}. ${isCredentialsIssue ? goToSettings : ''}</div>`;
         case 'js':
           return getHtmlWithCodeCopy(marked.parse(`\`\`\`\n${text.value}\n\`\`\``));
         case 'markdown':
@@ -170,15 +179,6 @@ const COMMANDS = ['clear'];
       }
       case 'clearConversation':
         clearConversation();
-        break;
-      case 'addSetupMessage':
-        conversationList.innerHTML += getResponseWrapper(
-          `
-            <span>
-              Extension credentials have not been set, you can set them <a href="/#" class="go-to-settings">here</a>
-            </span>
-          `
-        )
         break;
       case 'focusMessageInput':
         messageInput?.focus();
