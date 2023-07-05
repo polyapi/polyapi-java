@@ -2,6 +2,7 @@ import vscode from 'vscode';
 import fs, { Stats } from 'fs';
 
 import { polySpecsChanged } from './events';
+import { getCredentialsFromExtension, saveCredentialsInExtension, saveCredentialsOnClientLibrary } from './common';
 
 const CHECK_INTERVAL = 5000;
 
@@ -19,13 +20,34 @@ const checkForLibraryInstalled = () => {
   vscode.workspace.workspaceFolders?.forEach((folder) => {
     if (fs.existsSync(`${folder.uri.fsPath}/node_modules/polyapi/package.json`)) {
       installed = true;
+    } else {
+      installed = false;
     }
   });
-  if (!installed) {
-    libraryInstalledCheckerTimeoutID = setTimeout(() => checkForLibraryInstalled(), CHECK_INTERVAL);
-  }
+  libraryInstalledCheckerTimeoutID = setTimeout(() => checkForLibraryInstalled(), CHECK_INTERVAL);
   vscode.commands.executeCommand('setContext', 'polyLibraryInstalled', installed);
 };
+
+function checkCredentials() {
+  const initCredentials = getCredentialsFromExtension();
+  if (initCredentials.apiBaseUrl && initCredentials.apiKey) {
+    saveCredentialsOnClientLibrary(initCredentials.apiBaseUrl, initCredentials.apiKey);
+  } else {
+    vscode.commands.executeCommand('setContext', 'missingCredentials', false);
+  }
+
+  vscode.workspace.onDidChangeConfiguration(event => {
+    if (event.affectsConfiguration('poly.apiBaseUrl') || event.affectsConfiguration('poly.apiKey')) {
+      const credentials = getCredentialsFromExtension();
+      if (!credentials.apiBaseUrl || !credentials.apiKey) {
+        vscode.commands.executeCommand('setContext', 'missingCredentials', true);
+      } else {
+        saveCredentialsOnClientLibrary(credentials.apiBaseUrl, credentials.apiKey);
+        vscode.commands.executeCommand('setContext', 'missingCredentials', false);
+      }
+    }
+  });
+}
 
 export const start = () => {
   polySpecsChanged({});
@@ -37,6 +59,8 @@ export const start = () => {
   vscode.workspace.workspaceFolders?.forEach(watchWorkspace);
 
   checkForLibraryInstalled();
+
+  checkCredentials();
 
   return () => {
     watchedWorkspaceInfos.forEach((_, folder) => unwatchWorkspace(folder));
@@ -67,7 +91,7 @@ const watchWorkspace = (folder: vscode.WorkspaceFolder) => {
       polySpecsChanged(getPolySpecs(folder));
     }
   } else if (watchedWorkspaceInfos.get(folder)?.fileStats) {
-    console.log('POLY: Poly library removed, sending event...');
+    console.log('POLY: Poly library changed, sending event...');
     polySpecsChanged({});
   }
 

@@ -1,7 +1,7 @@
 import * as childProcess from 'child_process';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
-import { getCredentials, getLibraryVersionFromApiHost, getPackageManager, getWorkspacePath, saveCredentialsOnClientLibrary } from './common';
+import { getCredentialsFromExtension, getLibraryVersionFromApiHost, getPackageManager, getWorkspacePath, saveCredentialsInExtension, saveCredentialsOnClientLibrary } from './common';
 
 const exec = promisify(childProcess.exec);
 
@@ -11,11 +11,10 @@ export default class DefaultViewProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
   ) {
-    this.init();
   }
 
   async setupLibraryCredentials() {
-    const credentials = getCredentials();
+    const credentials = getCredentialsFromExtension();
 
     if (credentials.apiBaseUrl && credentials.apiKey) {
       return saveCredentialsOnClientLibrary(credentials.apiBaseUrl, credentials.apiKey);
@@ -33,7 +32,7 @@ export default class DefaultViewProvider {
         }
         return null;
       },
-      value: (credentials.apiBaseUrl as string) || 'https://na1.polyapi.io'
+      value: (credentials.apiBaseUrl as string) || 'https://na1.polyapi.io',
     });
 
     const apiKey = await vscode.window.showInputBox({
@@ -48,12 +47,11 @@ export default class DefaultViewProvider {
         }
         return null;
       },
-      value: (credentials.apiKey as string)
+      value: (credentials.apiKey as string),
     });
 
     if (apiBaseUrl && apiKey) {
-      vscode.workspace.getConfiguration('poly').update('apiBaseUrl', apiBaseUrl);
-      vscode.workspace.getConfiguration('poly').update('apiKey', apiKey);
+      saveCredentialsInExtension(apiBaseUrl, apiKey);
       saveCredentialsOnClientLibrary(apiBaseUrl, apiKey);
       vscode.commands.executeCommand('setContext', 'missingCredentials', false);
     } else {
@@ -82,33 +80,6 @@ export default class DefaultViewProvider {
       vscode.window.showErrorMessage('Failed to generate poly client code.');
     }
   }
-  
-  private setMissingCredentialsFlagIfNeeded() {
-    const credentials = getCredentials();
-    if (!credentials.apiBaseUrl || !credentials.apiKey) {
-      vscode.commands.executeCommand('setContext', 'missingCredentials', true);
-    }
-  }
-
-  private setupEvents() {
-    vscode.workspace.onDidChangeConfiguration(event => {
-      if(event.affectsConfiguration('poly.apiBaseUrl') || event.affectsConfiguration('poly.apiKey')) {
-        const apiBaseUrl = vscode.workspace.getConfiguration('poly').get('apiBaseUrl');
-        const apiKey = vscode.workspace.getConfiguration('poly').get('apiKey');
-
-        if(!apiBaseUrl || !apiKey) {
-          vscode.commands.executeCommand('setContext', 'missingCredentials', true);
-        } else {
-          vscode.commands.executeCommand('setContext', 'missingCredentials', false);
-        }
-      }
-    });
-  }
-
-  private init() {
-    this.setMissingCredentialsFlagIfNeeded();
-    this.setupEvents();
-  }
 
   private installLibrary() {
     return new Promise((resolve, reject) => {
@@ -119,7 +90,7 @@ export default class DefaultViewProvider {
       }, async () => {
         vscode.commands.executeCommand('setContext', 'installingPolyLibrary', true);
         const packageManager = getPackageManager();
-        const credentials = getCredentials();
+        const credentials = getCredentialsFromExtension();
 
         const libraryVersion = getLibraryVersionFromApiHost(credentials.apiBaseUrl);
         const libraryFullName = `polyapi${libraryVersion ? `@${libraryVersion}` : ''}`;
@@ -169,5 +140,4 @@ export default class DefaultViewProvider {
       });
     });
   }
-
 }

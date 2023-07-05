@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import { RawAxiosRequestHeaders } from 'axios/index';
-import { getCredentials } from './common';
+import { getCredentialsFromExtension } from './common';
 
 export default class ChatViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
@@ -52,7 +52,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     const {
       apiBaseUrl,
       apiKey,
-    } = getCredentials();
+    } = getCredentialsFromExtension();
 
     if (!apiBaseUrl || !apiKey) {
       vscode.window.showErrorMessage('Please set the API base URL and API key in the extension settings.', 'Go to settings').then(selection => {
