@@ -4,12 +4,12 @@ import LibraryIndexViewProvider from './library-index-view-provider';
 
 import { start as startLibraryWatcher } from './library-watcher';
 import { registerPolySpecsChangedListener } from './events';
-import DefaultViewProvider from './default-view-provider';
+import DefaultView from './default-view-provider';
 
 export async function activate(context: vscode.ExtensionContext) {
   const chatViewProvider = new ChatViewProvider(context);
   const libraryIndexViewProvider = new LibraryIndexViewProvider();
-  const defaultViewProvider = new DefaultViewProvider(context);
+  const defaultView = new DefaultView();
 
   const unregisterPolyFunctionsRegeneratedListener = registerPolySpecsChangedListener(contexData => {
     console.log('POLY: Restarting TS server...');
@@ -26,8 +26,8 @@ export async function activate(context: vscode.ExtensionContext) {
       chatViewProvider.focusMessageInput();
     }),
     vscode.commands.registerCommand('poly.copyLibraryItem', LibraryIndexViewProvider.copyLibraryItem),
-    vscode.commands.registerCommand('poly.setupLibrary', () => defaultViewProvider.setupLibrary()),
-    vscode.commands.registerCommand('poly.setupCredentials', () => defaultViewProvider.setupLibraryCredentials()),
+    vscode.commands.registerCommand('poly.setupLibrary', () => defaultView.setupLibrary()),
+    vscode.commands.registerCommand('poly.setupCredentials', () => defaultView.setupLibraryCredentials()),
     vscode.window.registerWebviewViewProvider(
       'poly.ai-view',
       chatViewProvider,

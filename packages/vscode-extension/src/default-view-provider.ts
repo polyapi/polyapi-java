@@ -7,12 +7,7 @@ const exec = promisify(childProcess.exec);
 
 const URL_REGEX = /https?:\/\/(?:w{1,3}\.)?[^\s.]+(?:\.[a-z]+)*(?::\d+)?(?![^<]*(?:<\/\w+>|\/?>))/;
 
-export default class DefaultViewProvider {
-  constructor(
-    private readonly context: vscode.ExtensionContext,
-  ) {
-  }
-
+export default class DefaultView {
   async setupLibraryCredentials() {
     const credentials = getCredentialsFromExtension();
 
