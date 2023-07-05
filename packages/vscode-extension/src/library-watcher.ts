@@ -2,7 +2,7 @@ import vscode from 'vscode';
 import fs, { Stats } from 'fs';
 
 import { polySpecsChanged } from './events';
-import { getCredentialsFromExtension, saveCredentialsInExtension, saveCredentialsOnClientLibrary } from './common';
+import { getCredentialsFromExtension, saveCredentialsOnClientLibrary } from './common';
 
 const CHECK_INTERVAL = 5000;
 

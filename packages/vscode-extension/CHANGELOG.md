@@ -1,3 +1,7 @@
+### 0.1.35
+* Poly setup through graphic UI
+* Sync credentials from vscode extension to poly lib.
+
 ### 0.1.34
 * Updated empty credentials text.
 * Added action to go to settings on notification when credentials are empty.
