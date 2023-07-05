@@ -11,13 +11,10 @@ export default class DefaultViewProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
   ) {
-    const credentials = getCredentials();
-    if (!credentials.apiBaseUrl || !credentials.apiKey) {
-      vscode.commands.executeCommand('setContext', 'missingCredentials', true);
-    }
+    this.init();
   }
 
-  public async setupLibraryCredentials() {
+  async setupLibraryCredentials() {
     const credentials = getCredentials();
 
     if (credentials.apiBaseUrl && credentials.apiKey) {
@@ -62,6 +59,55 @@ export default class DefaultViewProvider {
     } else {
       throw new Error('Missing credentials.');
     }
+  }
+
+  async setupLibrary() {
+    try {
+      await this.setupLibraryCredentials();
+    } catch (err) {
+      return vscode.window.showErrorMessage('Failed to set poly credentials.');
+    }
+
+    try {
+      await this.installLibrary();
+      vscode.window.showInformationMessage('Poly library installed.');
+    } catch (err) {
+      return vscode.window.showErrorMessage('Failed to install polyapi');
+    }
+
+    try {
+      await this.execGenerateCommandInLibrary();
+      vscode.window.showInformationMessage('Generated poly client code.');
+    } catch (err) {
+      vscode.window.showErrorMessage('Failed to generate poly client code.');
+    }
+  }
+  
+  private setMissingCredentialsFlagIfNeeded() {
+    const credentials = getCredentials();
+    if (!credentials.apiBaseUrl || !credentials.apiKey) {
+      vscode.commands.executeCommand('setContext', 'missingCredentials', true);
+    }
+  }
+
+  private setupEvents() {
+    vscode.workspace.onDidChangeConfiguration(event => {
+      if(event.affectsConfiguration('poly.apiBaseUrl') || event.affectsConfiguration('poly.apiKey')) {
+        const apiBaseUrl = vscode.workspace.getConfiguration('poly').get('apiBaseUrl');
+        const apiKey = vscode.workspace.getConfiguration('poly').get('apiKey');
+
+        if(!apiBaseUrl || !apiKey) {
+          vscode.commands.executeCommand('setContext', 'missingCredentials', true);
+        } else {
+          vscode.commands.executeCommand('setContext', 'missingCredentials', false);
+        }
+      }
+    });
+  }
+
+  private init() {
+    this.setMissingCredentialsFlagIfNeeded();
+    this.setupEvents();
   }
 
   private installLibrary() {
@@ -124,25 +170,4 @@ export default class DefaultViewProvider {
     });
   }
 
-  async setupLibrary() {
-    try {
-      await this.setupLibraryCredentials();
-    } catch (err) {
-      return vscode.window.showErrorMessage('Failed to set poly credentials.');
-    }
-
-    try {
-      await this.installLibrary();
-      vscode.window.showInformationMessage('Poly library installed.');
-    } catch (err) {
-      return vscode.window.showErrorMessage('Failed to install polyapi');
-    }
-
-    try {
-      await this.execGenerateCommandInLibrary();
-      vscode.window.showInformationMessage('Generated poly client code.');
-    } catch (err) {
-      vscode.window.showErrorMessage('Failed to generate poly client code.');
-    }
-  }
 }
