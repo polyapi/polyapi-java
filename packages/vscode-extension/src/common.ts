@@ -41,16 +41,14 @@ export function getLibraryVersionFromApiHost(apiBaseUrl: unknown) {
 
 }
 
-export function saveConfigOnClientLibrary(config: Record<string, string>) {
+export function saveCredentialsOnClientLibrary(apiBaseUrl: unknown, apiKey: unknown) {
 
     const polyFolder = path.join(getWorkspacePath(), 'node_modules/.poly');
 
     fs.mkdirSync(polyFolder, { recursive: true });
     fs.writeFileSync(
       path.join(polyFolder, '.config.env'),
-      Object.entries(config)
-        .map(([key, value]) => `${key}=${value}`)
-        .join('\n'),
+      `POLY_API_BASE_URL=${apiBaseUrl}\nPOLY_API_KEY=${apiKey}\n`,
     );
   };
 

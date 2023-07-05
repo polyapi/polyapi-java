@@ -1,7 +1,7 @@
 import * as childProcess from 'child_process';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
-import { getCredentials, getLibraryVersionFromApiHost, getPackageManager, getWorkspacePath, saveConfigOnClientLibrary } from './common';
+import { getCredentials, getLibraryVersionFromApiHost, getPackageManager, getWorkspacePath, saveCredentialsOnClientLibrary } from './common';
 
 const exec = promisify(childProcess.exec);
 
@@ -21,7 +21,7 @@ export default class DefaultViewProvider {
     const credentials = getCredentials();
 
     if (credentials.apiBaseUrl && credentials.apiKey) {
-      return saveConfigOnClientLibrary(credentials as Record<string, string>);
+      return saveCredentialsOnClientLibrary(credentials.apiBaseUrl, credentials.apiKey);
     }
 
     const apiBaseUrl = await vscode.window.showInputBox({
@@ -57,8 +57,10 @@ export default class DefaultViewProvider {
     if (apiBaseUrl && apiKey) {
       vscode.workspace.getConfiguration('poly').update('apiBaseUrl', apiBaseUrl);
       vscode.workspace.getConfiguration('poly').update('apiKey', apiKey);
-      saveConfigOnClientLibrary({ apiBaseUrl: apiBaseUrl.trim(), apiKey: apiKey.trim() } as Record<string, string>);
+      saveCredentialsOnClientLibrary(apiBaseUrl, apiKey);
       vscode.commands.executeCommand('setContext', 'missingCredentials', false);
+    } else {
+      throw new Error('Missing credentials.');
     }
   }
 
@@ -88,13 +90,9 @@ export default class DefaultViewProvider {
             throw new Error('Path not found');
           }
 
-          const result = await exec(`cd ${workSpacePath} && ${installCommand}`);
+          await exec(`cd ${workSpacePath} && ${installCommand}`);
 
-          if (result.stderr) {
-            throw new Error('Failed to install polyapi.');
-          }
-
-          vscode.window.showInformationMessage('Poly library installed.');
+          resolve(true);
         } catch (err) {
           reject(err);
         }
@@ -103,17 +101,48 @@ export default class DefaultViewProvider {
     });
   }
 
+  private execGenerateCommandInLibrary() {
+    return new Promise((resolve, reject) => {
+      vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Generating poly functions.',
+        cancellable: false,
+      }, async () => {
+        try {
+          const workSpacePath = getWorkspacePath();
+          if (!workSpacePath) {
+            throw new Error('Path not found');
+          }
+
+          await exec(`cd ${workSpacePath} && npx poly generate`);
+
+          resolve(true);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  }
+
   async setupLibrary() {
     try {
       await this.setupLibraryCredentials();
     } catch (err) {
-      vscode.window.showErrorMessage('Failed to set poly credentials.');
+      return vscode.window.showErrorMessage('Failed to set poly credentials.');
     }
 
     try {
       await this.installLibrary();
+      vscode.window.showInformationMessage('Poly library installed.');
     } catch (err) {
-      vscode.window.showErrorMessage('Failed to install polyapi.');
+      return vscode.window.showErrorMessage('Failed to install polyapi');
+    }
+
+    try {
+      await this.execGenerateCommandInLibrary();
+      vscode.window.showInformationMessage('Generated poly client code.');
+    } catch (err) {
+      vscode.window.showErrorMessage('Failed to generate poly client code.');
     }
   }
 }

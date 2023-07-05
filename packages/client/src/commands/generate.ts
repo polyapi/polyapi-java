@@ -490,6 +490,7 @@ const showErrGettingSpecs = (error: any) => {
   shell.echo(chalk.red('ERROR'));
   shell.echo('Error while getting data from Poly server. Make sure the version of library/server is up to date.');
   shell.echo(chalk.red(error.message), chalk.red(JSON.stringify(error.response?.data)));
+  shell.exit(1);
 };
 
 const showErrGeneratingFiles = (error: any) => {
@@ -497,6 +498,7 @@ const showErrGeneratingFiles = (error: any) => {
   shell.echo('Error while generating code files. Make sure the version of library/server is up to date.');
   shell.echo(chalk.red(error.message));
   shell.echo(chalk.red(error.stack));
+  shell.exit(2);
 };
 
 const generateSingleCustomFunction = async (functionId: string) => {
