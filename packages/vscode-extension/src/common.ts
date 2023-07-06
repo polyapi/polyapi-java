@@ -8,27 +8,27 @@ export const HOST_LIBRARY_VERSION_MAP = {
   'staging.polyapi.io': 'staging',
 };
 
-export function getCredentialsFromExtension() {
+export const getCredentialsFromExtension = () => {
   return {
     apiBaseUrl: vscode.workspace.getConfiguration('poly').get('apiBaseUrl'),
     apiKey: vscode.workspace.getConfiguration('poly').get('apiKey'),
   };
-}
+};
 
-export function saveCredentialsInExtension(apiBaseUrl: unknown, apiKey: unknown) {
+export const saveCredentialsInExtension = (apiBaseUrl: unknown, apiKey: unknown) => {
   vscode.workspace.getConfiguration('poly').update('apiBaseUrl', apiBaseUrl);
   vscode.workspace.getConfiguration('poly').update('apiKey', apiKey);
-}
+};
 
-export function getWorkspacePath() {
+export const getWorkspacePath = () => {
   return vscode.workspace.workspaceFolders[0].uri.fsPath;
-}
+};
 
-export function getPackageManager(): 'yarn' | 'npm' {
+export const getPackageManager = (): 'yarn' | 'npm' => {
   return fs.existsSync(`${getWorkspacePath()}/yarn.lock`) ? 'yarn' : 'npm';
-}
+};
 
-export function getLibraryVersionFromApiHost(apiBaseUrl: unknown) {
+export const getLibraryVersionFromApiHost = (apiBaseUrl: unknown) => {
   let result = '';
 
   if (!apiBaseUrl) {
@@ -43,9 +43,9 @@ export function getLibraryVersionFromApiHost(apiBaseUrl: unknown) {
   }
 
   return result;
-}
+};
 
-export function saveCredentialsOnClientLibrary(apiBaseUrl: unknown, apiKey: unknown) {
+export const saveCredentialsOnClientLibrary = (apiBaseUrl: unknown, apiKey: unknown) => {
   const polyFolder = path.join(getWorkspacePath(), 'node_modules/.poly');
 
   fs.mkdirSync(polyFolder, { recursive: true });
@@ -54,5 +54,3 @@ export function saveCredentialsOnClientLibrary(apiBaseUrl: unknown, apiKey: unkn
         `POLY_API_BASE_URL=${apiBaseUrl}\nPOLY_API_KEY=${apiKey}\n`,
   );
 };
-
-// node_modules/.poly/.config.env

@@ -4,7 +4,7 @@ import LibraryIndexViewProvider from './library-index-view-provider';
 
 import { start as startLibraryWatcher } from './library-watcher';
 import { registerPolySpecsChangedListener } from './events';
-import DefaultView from './default-view-provider';
+import DefaultView from './default-view';
 
 export async function activate(context: vscode.ExtensionContext) {
   const chatViewProvider = new ChatViewProvider(context);

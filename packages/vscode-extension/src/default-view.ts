@@ -27,7 +27,7 @@ export default class DefaultView {
         }
         return null;
       },
-      value: (credentials.apiBaseUrl as string) || 'https://na1.polyapi.io',
+      value: (credentials.apiBaseUrl as string) || 'https://staging.polyapi.io',
     });
 
     const apiKey = await vscode.window.showInputBox({
