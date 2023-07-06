@@ -113,7 +113,7 @@ const watchWorkspace = (folder: vscode.WorkspaceFolder) => {
       watchedFileInfos.set(polyDataPath, stats);
       polySpecsChanged(getPolySpecs(folder));
     }
-  } else {
+  } else if (watchedWorkspaceInfos.get(folder)?.fileStats) {
     console.log('POLY: Poly library changed, sending event...');
     polySpecsChanged({});
   }
@@ -123,7 +123,9 @@ const watchWorkspace = (folder: vscode.WorkspaceFolder) => {
   if (fs.existsSync(credentialsFilePath)) {
     stats = fs.statSync(credentialsFilePath);
 
-    if (watchedFileInfos.get(credentialsFilePath)?.mtimeMs !== stats.mtimeMs) {
+    if (!watchedFileInfos.get(credentialsFilePath)) {
+      watchedFileInfos.set(credentialsFilePath, stats);
+    } else if (watchedFileInfos.get(credentialsFilePath)?.mtimeMs !== stats.mtimeMs) {
       console.log('POLY: Poly library credentials changed, synchronizing...');
       watchedFileInfos.set(credentialsFilePath, stats);
       const credentials = getLibraryCredentialsFromWorkspace(folder) as any;
