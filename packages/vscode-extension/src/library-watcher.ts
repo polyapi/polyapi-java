@@ -2,7 +2,7 @@ import vscode from 'vscode';
 import fs, { Stats } from 'fs';
 
 import { polySpecsChanged } from './events';
-import { getCredentialsFromExtension, saveCredentialsOnClientLibrary } from './common';
+import { getCredentialsFromExtension, saveCredentialsInExtension, saveCredentialsOnClientLibrary } from './common';
 
 const CHECK_INTERVAL = 5000;
 
@@ -14,6 +14,7 @@ type Info = {
 };
 
 const watchedWorkspaceInfos = new Map<vscode.WorkspaceFolder, Info>();
+const watchedFileInfos = new Map<string, Stats>();
 
 const checkForLibraryInstalled = () => {
   let installed = false;
@@ -79,20 +80,55 @@ const getPolySpecs = (folder: vscode.WorkspaceFolder) => {
   return JSON.parse(fs.readFileSync(polyDataPath, 'utf8'));
 };
 
+const getLibraryCredentialsPathFromWorspace = (folder: vscode.WorkspaceFolder) => `${folder.uri.fsPath}/node_modules/.poly/.config.env`;
+const getLibraryCredentialsFromWorkspace = (folder: vscode.WorkspaceFolder) => {
+  const libCredentialsPath = getLibraryCredentialsPathFromWorspace(folder);
+  if (!fs.existsSync(libCredentialsPath)) {
+    return {};
+  }
+
+  const content = fs.readFileSync(libCredentialsPath, 'utf8');
+
+  const credentialsList = content.split('\n').filter(line => ['POLY_API_BASE_URL', 'POLY_API_KEY'].includes(line.split('=')[0]));
+
+  return credentialsList.reduce((acum, value) => {
+    const [credentialKey, credentialValue] = value.split('=');
+
+    return {
+      ...acum,
+      [credentialKey === 'POLY_API_BASE_URL' ? 'apiBaseUrl' : 'apiKey']: credentialValue,
+    };
+  }, {});
+};
+
 const watchWorkspace = (folder: vscode.WorkspaceFolder) => {
   const polyDataPath = getPolySpecsPath(folder);
   let stats: Stats;
 
   if (fs.existsSync(polyDataPath)) {
     stats = fs.statSync(polyDataPath);
-    if (watchedWorkspaceInfos.get(folder)?.fileStats?.mtimeMs !== stats.mtimeMs) {
+
+    if (watchedFileInfos.get(polyDataPath)?.mtimeMs !== stats.mtimeMs) {
       console.log('POLY: Poly library changed, sending event...');
-      watchedWorkspaceInfos.set(folder, { timeoutID: null, fileStats: stats });
+      watchedFileInfos.set(polyDataPath, stats);
       polySpecsChanged(getPolySpecs(folder));
     }
-  } else if (watchedWorkspaceInfos.get(folder)?.fileStats) {
+  } else {
     console.log('POLY: Poly library changed, sending event...');
     polySpecsChanged({});
+  }
+
+  const credentialsFilePath = getLibraryCredentialsPathFromWorspace(folder);
+
+  if (fs.existsSync(credentialsFilePath)) {
+    stats = fs.statSync(credentialsFilePath);
+
+    if (watchedFileInfos.get(credentialsFilePath)?.mtimeMs !== stats.mtimeMs) {
+      console.log('POLY: Poly library credentials changed, synchronizing...');
+      watchedFileInfos.set(credentialsFilePath, stats);
+      const credentials = getLibraryCredentialsFromWorkspace(folder) as any;
+      saveCredentialsInExtension(credentials.apiBaseUrl, credentials.apiKey);
+    }
   }
 
   const timeoutID = setTimeout(() => watchWorkspace(folder), CHECK_INTERVAL);

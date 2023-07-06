@@ -1,3 +1,6 @@
+### 0.1.36
+* Synchronization of credentials across client library and vscode extension.
+
 ### 0.1.35
 * Poly setup through graphic UI
 * Sync credentials from vscode extension to poly lib.
