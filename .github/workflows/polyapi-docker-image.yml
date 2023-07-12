@@ -14,23 +14,16 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      IMAGE: ghcr.io/polyapi/polyapi-dev
       
     steps:
     - uses: actions/checkout@v3
-
-    - name: Read docker image tag
-      id: package
-      uses: juliangruber/read-file-action@v1
-      with:
-        path: ./docker/dockerimage-tag-develop.yaml
     
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        dockerimage=${{ steps.package.outputs.content }}
-        dockerimageclean=${dockerimage//[[:space:]]/}
-        docker build -t $dockerimageclean -f docker/Dockerfile .
-        docker push $dockerimageclean
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
 
   main:
     name: Main docker build and push.
@@ -40,20 +33,13 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      IMAGE: ghcr.io/polyapi/polyapi-main
       
     steps:
     - uses: actions/checkout@v3
 
-    - name: Read docker image tag
-      id: package
-      uses: juliangruber/read-file-action@v1
-      with:
-        path: ./docker/dockerimage-tag-main.yaml
-
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        dockerimage=${{ steps.package.outputs.content }}
-        dockerimageclean=${dockerimage//[[:space:]]/}
-        docker build -t $dockerimageclean -f docker/Dockerfile .
-        docker push $dockerimageclean
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
