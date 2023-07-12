@@ -232,26 +232,33 @@ export class FunctionService implements OnModuleInit {
     response = this.commonService.trimDownObject(response, 1);
 
     if ((!name || !context || !description) && !willRetrain) {
-      const {
-        name: aiName,
-        description: aiDescription,
-        context: aiContext,
-      } = await this.aiService.getFunctionDescription(
-        url,
-        apiFunction?.method || method,
-        description || apiFunction?.description || '',
-        JSON.stringify(this.commonService.trimDownObject(this.getBodyData(body))),
-        JSON.stringify(response),
-      );
+      try {
+        const {
+          name: aiName,
+          description: aiDescription,
+          context: aiContext,
+        } = await this.aiService.getFunctionDescription(
+          url,
+          apiFunction?.method || method,
+          description || apiFunction?.description || '',
+          JSON.stringify(this.commonService.trimDownObject(this.getBodyData(body))),
+          JSON.stringify(response),
+        );
 
-      if (!name) {
-        name = this.commonService.sanitizeNameIdentifier(aiName);
-      }
-      if (!context && !apiFunction?.context) {
-        context = this.commonService.sanitizeContextIdentifier(aiContext);
-      }
-      if (!description && !apiFunction?.description) {
-        description = aiDescription;
+        if (!name) {
+          name = this.commonService.sanitizeNameIdentifier(aiName);
+        }
+        if (!context && !apiFunction?.context) {
+          context = this.commonService.sanitizeContextIdentifier(aiContext);
+        }
+        if (!description && !apiFunction?.description) {
+          description = aiDescription;
+        }
+      } catch (err) {
+        this.logger.error('Failed to generate AI data for new api function. Taking function name from request name if not provided...');
+        if (!name) {
+          name = this.commonService.sanitizeNameIdentifier(requestName);
+        }
       }
     }
 
@@ -267,7 +274,7 @@ export class FunctionService implements OnModuleInit {
     );
 
     const finalContext = context?.trim() || '';
-    const finalName = name?.trim() ? name : requestName;
+    const finalName = name?.trim() ? name : this.commonService.sanitizeNameIdentifier(requestName);
     const finalDescription = description || '';
 
     if (!finalName) {
