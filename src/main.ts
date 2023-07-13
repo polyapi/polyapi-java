@@ -4,6 +4,7 @@ import { AppModule } from 'app.module';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConfigService } from 'config/config.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 const logger = new Logger('main');
 
@@ -19,11 +20,13 @@ const initSwagger = (app: INestApplication) => {
 };
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.useGlobalPipes(new ValidationPipe({
     transform: false,
   }));
+
+  app.useBodyParser('json', { limit: '3mb' });
 
   const config = app.get(ConfigService);
 
