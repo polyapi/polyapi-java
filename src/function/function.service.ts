@@ -187,7 +187,7 @@ export class FunctionService implements OnModuleInit {
               },
             },
             {
-              url: templateUrl,
+              url: templateBaseUrl,
             },
           ],
           method,
