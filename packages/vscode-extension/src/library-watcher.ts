@@ -10,7 +10,8 @@ let libraryInstalledCheckerTimeoutID: NodeJS.Timeout;
 
 type Info = {
   timeoutID: NodeJS.Timeout;
-  fileStats?: Stats;
+  credentialsFileStats?: Stats;
+  polyFolderStats?: Stats;
 };
 
 const watchedWorkspaceInfos = new Map<vscode.WorkspaceFolder, Info>();
@@ -103,17 +104,18 @@ const getLibraryCredentialsFromWorkspace = (folder: vscode.WorkspaceFolder) => {
 
 const watchWorkspace = (folder: vscode.WorkspaceFolder) => {
   const polyDataPath = getPolySpecsPath(folder);
-  let stats: Stats;
+  let credentialsFileStats: Stats | undefined;
+  let polyFolderStats: Stats | undefined;
 
   if (fs.existsSync(polyDataPath)) {
-    stats = fs.statSync(polyDataPath);
+    polyFolderStats = fs.statSync(polyDataPath);
 
-    if (watchedFileInfos.get(polyDataPath)?.mtimeMs !== stats.mtimeMs) {
+    if (watchedFileInfos.get(polyDataPath)?.mtimeMs !== polyFolderStats.mtimeMs) {
       console.log('POLY: Poly library changed, sending event...');
-      watchedFileInfos.set(polyDataPath, stats);
+      watchedFileInfos.set(polyDataPath, polyFolderStats);
       polySpecsChanged(getPolySpecs(folder));
     }
-  } else if (watchedWorkspaceInfos.get(folder)?.fileStats) {
+  } else if (watchedWorkspaceInfos.get(folder)?.polyFolderStats) {
     console.log('POLY: Poly library changed, sending event...');
     polySpecsChanged({});
   }
@@ -121,20 +123,20 @@ const watchWorkspace = (folder: vscode.WorkspaceFolder) => {
   const credentialsFilePath = getLibraryCredentialsPathFromWorspace(folder);
 
   if (fs.existsSync(credentialsFilePath)) {
-    stats = fs.statSync(credentialsFilePath);
+    credentialsFileStats = fs.statSync(credentialsFilePath);
 
     if (!watchedFileInfos.get(credentialsFilePath)) {
-      watchedFileInfos.set(credentialsFilePath, stats);
-    } else if (watchedFileInfos.get(credentialsFilePath)?.mtimeMs !== stats.mtimeMs) {
+      watchedFileInfos.set(credentialsFilePath, credentialsFileStats);
+    } else if (watchedFileInfos.get(credentialsFilePath)?.mtimeMs !== credentialsFileStats.mtimeMs) {
       console.log('POLY: Poly library credentials changed, synchronizing...');
-      watchedFileInfos.set(credentialsFilePath, stats);
+      watchedFileInfos.set(credentialsFilePath, credentialsFileStats);
       const credentials = getLibraryCredentialsFromWorkspace(folder) as any;
       saveCredentialsInExtension(credentials.apiBaseUrl, credentials.apiKey);
     }
   }
 
   const timeoutID = setTimeout(() => watchWorkspace(folder), CHECK_INTERVAL);
-  watchedWorkspaceInfos.set(folder, { timeoutID, fileStats: stats });
+  watchedWorkspaceInfos.set(folder, { timeoutID, credentialsFileStats, polyFolderStats });
 };
 
 const unwatchWorkspace = (folder: vscode.WorkspaceFolder) => {
