@@ -1,3 +1,6 @@
+### 0.1.40
+* Fix infinite `typescript.restartTsServer` on edge-case.
+
 ### 0.1.39
 * Removed debug logging
 
