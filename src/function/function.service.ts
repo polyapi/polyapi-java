@@ -1368,13 +1368,6 @@ export class FunctionService implements OnModuleInit {
           typeObject: srcValue.typeObject,
         };
       }
-
-      if (objValue?.type === 'object' && srcValue.type !== 'object') {
-        return {
-          ...omit(objValue, 'typeSchema'),
-          ...srcValue,
-        };
-      }
     });
   }
 
