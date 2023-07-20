@@ -429,13 +429,17 @@ export class FunctionService implements OnModuleInit {
     this.logger.debug(`Executing function ${apiFunction.id}...`);
 
     const argumentValueMap = await this.getArgumentValueMap(apiFunction, args);
+
     const url = mustache.render(apiFunction.url, argumentValueMap);
     const method = apiFunction.method;
     const auth = apiFunction.auth ? JSON.parse(mustache.render(apiFunction.auth, argumentValueMap)) : null;
-    const body = JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap));
+
+    const body = this.sanitizeStringArgValuesForExecution(apiFunction, argumentValueMap);
+
     const params = {
       ...this.getAuthorizationQueryParams(auth),
     };
+
     const headers = {
       ...JSON.parse(mustache.render(apiFunction.headers || '[]', argumentValueMap))
         .filter((header) => !!header.key?.trim())
@@ -1405,6 +1409,12 @@ export class FunctionService implements OnModuleInit {
           typeObject: srcValue.typeObject,
         };
       }
+      if (objValue?.type === 'object' && srcValue.type !== 'object') {
+        return {
+          ...omit(objValue, 'typeSchema'),
+          ...srcValue,
+        };
+      }
     });
   }
 
@@ -1502,5 +1512,79 @@ export class FunctionService implements OnModuleInit {
 
   private filterJSONComments(jsonString: string) {
     return stripComments(jsonString);
+  }
+
+  private sanitizeStringArgValuesForExecution(apiFunction: ApiFunction, argumentValueMap: Record<string, any>): Body {
+    const body = JSON.parse(apiFunction.body || '{}');
+
+    function sanitizeArgumentValue(name, quoted) {
+      const escapedString = argumentValueMap[name].replace(/"/g, '\\"');
+
+      argumentValueMap[name] = quoted ? escapedString : `"${escapedString}"`;
+    }
+
+    if (body.mode === 'raw') {
+      const unquotedArgsRegexp = /(?<!\\")\{\{.+?\}\}(?!\\")/ig;
+      const quotedArgsRegexp = /(?<=\\")\{\{.+?\}\}(?=\\")/ig;
+      const bodyString = apiFunction.body || '';
+      const foundArgs: {
+        quoted: boolean,
+        name: string,
+      }[] = [];
+
+      const unquotedArgsMatchResult = (bodyString || '').match(unquotedArgsRegexp);
+      const quotedArgsMatchResult = (bodyString || '').match(quotedArgsRegexp);
+
+      if (unquotedArgsMatchResult) {
+        for (const unquotedArg of unquotedArgsMatchResult) {
+          foundArgs.push({
+            quoted: false,
+            name: unquotedArg.replace('{{', '').replace('}}', ''),
+          });
+        }
+      }
+
+      if (quotedArgsMatchResult) {
+        for (const quotedArg of quotedArgsMatchResult) {
+          foundArgs.push({
+            quoted: true,
+            name: quotedArg.replace('{{', '').replace('}}', ''),
+          });
+        }
+      }
+
+      for (const arg of foundArgs) {
+        const argValue = argumentValueMap[arg.name];
+
+        if (typeof argValue === 'undefined') {
+          continue;
+        }
+
+        try {
+          const parsedValue = JSON.parse(argValue);
+
+          if (typeof parsedValue === 'string') {
+            sanitizeArgumentValue(arg.name, arg.quoted);
+          }
+        } catch (err) {
+          if (typeof argValue === 'string') {
+            sanitizeArgumentValue(arg.name, arg.quoted);
+          }
+        }
+      }
+
+      const unescapedBodyString = body.raw.replace(/\\"/g, '"');
+
+      return {
+        mode: 'raw',
+        raw: JSON.stringify(JSON.parse(mustache.render(unescapedBodyString || '{}', argumentValueMap, {}, {
+          escape(text) {
+            return text;
+          },
+        }))),
+      };
+    }
+
+    return body;
   }
 }
