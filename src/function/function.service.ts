@@ -48,7 +48,7 @@ import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
-import { uniqBy, mergeWith, omit } from 'lodash';
+import { uniqBy, mergeWith, omit, cloneDeep } from 'lodash';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
@@ -411,7 +411,7 @@ export class FunctionService implements OnModuleInit {
     const url = mustache.render(apiFunction.url, argumentsMap);
     const method = apiFunction.method;
     const auth = apiFunction.auth ? JSON.parse(mustache.render(apiFunction.auth, argumentsMap)) : null;
-    const body = this.sanitizeStringArgValuesForExecution(apiFunction, argumentsMap);
+    const body = this.getSanitizedRawBody(apiFunction, argumentsMap);
     const params = {
       ...this.getAuthorizationQueryParams(auth),
     };
@@ -1442,14 +1442,16 @@ export class FunctionService implements OnModuleInit {
     return apiFunction;
   }
 
-  private sanitizeStringArgValuesForExecution(apiFunction: ApiFunction, argumentValueMap: Record<string, any>): Body {
+  private getSanitizedRawBody(apiFunction: ApiFunction, argumentValueMap: Record<string, any>): Body {
     const body = JSON.parse(apiFunction.body || '{}');
 
-    function sanitizeArgumentValue(name, quoted) {
-      const escapedString = argumentValueMap[name].replace(/"/g, '\\"');
+    const clonedArgumentValueMap = cloneDeep(argumentValueMap);
 
-      argumentValueMap[name] = quoted ? escapedString : `"${escapedString}"`;
-    }
+    const sanitizeArgumentValue = (name: string, quoted: boolean) => {
+      const escapedString = clonedArgumentValueMap[name].replace(/"/g, '\\"');
+
+      clonedArgumentValueMap[name] = quoted ? escapedString : `"${escapedString}"`;
+    };
 
     if (body.mode === 'raw') {
       const unquotedArgsRegexp = /(?<!\\")\{\{.+?\}\}(?!\\")/ig;
@@ -1482,7 +1484,7 @@ export class FunctionService implements OnModuleInit {
       }
 
       for (const arg of foundArgs) {
-        const argValue = argumentValueMap[arg.name];
+        const argValue = clonedArgumentValueMap[arg.name];
 
         if (typeof argValue === 'undefined') {
           continue;
@@ -1505,7 +1507,7 @@ export class FunctionService implements OnModuleInit {
 
       return {
         mode: 'raw',
-        raw: JSON.stringify(JSON.parse(mustache.render(unescapedBodyString || '{}', argumentValueMap, {}, {
+        raw: JSON.stringify(JSON.parse(mustache.render(unescapedBodyString || '{}', clonedArgumentValueMap, {}, {
           escape(text) {
             return text;
           },
