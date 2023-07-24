@@ -1456,7 +1456,7 @@ export class FunctionService implements OnModuleInit {
           If function argument string is an stringified JSON we should stringify it again since it will be included inside a key value in the
           final rendered mustache template.
         */
-        if (isPlainObject(parsedValue)) {
+        if (isPlainObject(parsedValue) || Array.isArray(parsedValue)) {
           const doubleStringifiedValue = JSON.stringify(clonedArgumentValueMap[name]);
 
           if (quoted) {
