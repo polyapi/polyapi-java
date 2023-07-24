@@ -415,6 +415,7 @@ export class FunctionService implements OnModuleInit {
     const params = {
       ...this.getAuthorizationQueryParams(auth),
     };
+
     const headers = {
       ...JSON.parse(mustache.render(apiFunction.headers || '[]', argumentsMap)).reduce(
         (headers, header) => Object.assign(headers, { [header.key]: header.value }),
@@ -1443,7 +1444,7 @@ export class FunctionService implements OnModuleInit {
   }
 
   private getSanitizedRawBody(apiFunction: ApiFunction, argumentValueMap: Record<string, any>): Body {
-    const body = JSON.parse(apiFunction.body || '{}');
+    const body = JSON.parse(apiFunction.body || '{}') as Body;
 
     const clonedArgumentValueMap = cloneDeep(argumentValueMap);
 
@@ -1458,9 +1459,9 @@ export class FunctionService implements OnModuleInit {
       const quotedArgsRegexp = /(?<=\\")\{\{.+?\}\}(?=\\")/ig;
       const bodyString = apiFunction.body || '';
       const foundArgs: {
-        quoted: boolean,
-        name: string,
-      }[] = [];
+          quoted: boolean,
+          name: string,
+        }[] = [];
 
       const unquotedArgsMatchResult = (bodyString || '').match(unquotedArgsRegexp);
       const quotedArgsMatchResult = (bodyString || '').match(quotedArgsRegexp);
@@ -1506,7 +1507,7 @@ export class FunctionService implements OnModuleInit {
       const unescapedBodyString = body.raw.replace(/\\"/g, '"');
 
       return {
-        mode: 'raw',
+        ...body,
         raw: JSON.stringify(JSON.parse(mustache.render(unescapedBodyString || '{}', clonedArgumentValueMap, {}, {
           escape(text) {
             return text;
@@ -1515,6 +1516,6 @@ export class FunctionService implements OnModuleInit {
       };
     }
 
-    return body;
+    return JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap));
   }
 }
