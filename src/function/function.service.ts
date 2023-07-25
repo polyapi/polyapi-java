@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { HttpService } from '@nestjs/axios';
-import { catchError, lastValueFrom, map, of } from 'rxjs';
+import { catchError, from, lastValueFrom, map, of } from 'rxjs';
 import mustache from 'mustache';
 import { stripComments } from 'jsonc-parser';
 import { ApiFunction, CustomFunction, Environment } from '@prisma/client';
@@ -468,7 +468,12 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
-  async executeApiFunction(apiFunction: ApiFunction, args: Record<string, any>, clientId: string | null = null): Promise<ApiFunctionResponseDto | null> {
+  async executeApiFunction(
+    apiFunction: ApiFunction & { environment: Environment },
+    args: Record<string, any>,
+    userId: string | null = null,
+    applicationId: string | null = null,
+  ): Promise<ApiFunctionResponseDto | null> {
     this.logger.debug(`Executing function ${apiFunction.id}...`);
 
     const argumentValueMap = await this.getArgumentValueMap(apiFunction, args);
@@ -564,24 +569,35 @@ export class FunctionService implements OnModuleInit {
         )
         .pipe(
           catchError((error: AxiosError) => {
-            this.logger.error(`Error while performing HTTP request (id: ${apiFunction.id}): ${error}`);
+            const processError = async () => {
+              this.logger.error(`Error while performing HTTP request (id: ${apiFunction.id}): ${error}`);
 
-            const functionPath = `${apiFunction.context ? `${apiFunction.context}.` : ''}${apiFunction.name}`;
-            const errorEventSent = this.eventService.sendErrorEvent(clientId, functionPath, this.eventService.getEventError(error));
+              const functionPath = `${apiFunction.context ? `${apiFunction.context}.` : ''}${apiFunction.name}`;
+              const errorEventSent = await this.eventService.sendErrorEvent(
+                apiFunction.id,
+                apiFunction.environmentId,
+                apiFunction.environment.tenantId,
+                apiFunction.visibility as Visibility,
+                applicationId,
+                userId,
+                functionPath,
+                this.eventService.getEventError(error),
+              );
 
-            if (error.response) {
-              return of(
-                {
+              if (error.response) {
+                return {
                   status: error.response.status,
                   headers: error.response.headers,
                   data: error.response.data,
-                } as ApiFunctionResponseDto,
-              );
-            } else if (!errorEventSent) {
-              throw new InternalServerErrorException(error.message);
-            } else {
-              return of(null);
-            }
+                } as ApiFunctionResponseDto;
+              } else if (!errorEventSent) {
+                throw new InternalServerErrorException(error.message);
+              } else {
+                return null;
+              }
+            };
+
+            return from(processError());
           }),
         ),
     );
@@ -927,14 +943,20 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
-  async executeServerFunction(customFunction: CustomFunction, environment: Environment, args: Record<string, any>, headers: Record<string, any>, clientId: string | null = null) {
+  async executeServerFunction(
+    customFunction: CustomFunction & { environment: Environment },
+    args: Record<string, any>,
+    headers: Record<string, any>,
+    userId: string | null = null,
+    applicationId: string | null = null,
+  ) {
     this.logger.debug(`Executing server function ${customFunction.id}...`);
 
     const functionArguments = JSON.parse(customFunction.arguments || '[]');
     const argumentsList = functionArguments.map((arg: FunctionArgument) => args[arg.key]);
 
     try {
-      const result = await this.faasService.executeFunction(customFunction.id, environment.tenantId, environment.id, argumentsList, headers);
+      const result = await this.faasService.executeFunction(customFunction.id, customFunction.environment.tenantId, customFunction.environment.id, argumentsList, headers);
       this.logger.debug(
         `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
       );
@@ -942,7 +964,16 @@ export class FunctionService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Error executing server function ${customFunction.id}: ${error.message}`);
       const functionPath = `${customFunction.context ? `${customFunction.context}.` : ''}${customFunction.name}`;
-      if (this.eventService.sendErrorEvent(clientId, functionPath, this.eventService.getEventError(error))) {
+      if (await this.eventService.sendErrorEvent(
+        customFunction.id,
+        customFunction.environmentId,
+        customFunction.environment.tenantId,
+        customFunction.visibility as Visibility,
+        applicationId,
+        userId,
+        functionPath,
+        this.eventService.getEventError(error),
+      )) {
         return;
       }
 

@@ -18,23 +18,29 @@ const getSocket = () => {
 };
 
 const errorHandler = {
-  on: (path, callback) => {
+  on: (path, callback, options) => {
     const socket = getSocket();
+    let handlerId = null;
     socket.emit('registerErrorHandler', {
-      clientID,
+      ...options,
       path,
       apiKey: '{{apiKey}}'
+    }, (id) => {
+      handlerId = id;
+      socket.on(`handleError:${handlerId}`, callback);
     });
-    socket.on(`handleError:${path}`, callback);
+
+    return () => {
+      if (handlerId) {
+        socket.off(`handleError:${handlerId}`);
+        socket.emit('unregisterErrorHandler', {
+          id: handlerId,
+          path,
+          apiKey: '{{apiKey}}'
+        });
+      }
+    };
   },
-  off: (path) => {
-    const socket = getSocket();
-    socket.emit('unregisterErrorHandler', {
-      clientID,
-      path,
-      apiKey: '{{apiKey}}'
-    });
-  }
 };
 
 const poly = {};

@@ -4,8 +4,9 @@ import { EventService } from 'event/event.service';
 import { Socket } from 'socket.io';
 import { AuthService } from 'auth/auth.service';
 import { authServiceMock } from '../mocks';
-import { Variable } from '@prisma/client';
+import { Environment, Variable } from '@prisma/client';
 import { AuthData } from 'common/types';
+import { Visibility } from '@poly/model';
 
 describe('EventService', () => {
   let service: EventService;
@@ -39,60 +40,372 @@ describe('EventService', () => {
   });
 
   describe('registerErrorHandler', () => {
-    it('registers new error handler', () => {
-      service.registerErrorHandler(socket1, 'client1', 'path1');
-
+    it('should register handler with auth data', () => {
+      const authData = {
+        key: 'key',
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path');
       // @ts-ignore
-      expect(service.errorHandlers['client1']['path1']).toEqual([socket1]);
+      const handler = service.errorHandlers[0];
+      expect(handler.authData).toBe(authData);
     });
 
-    it('adds socket to existing handler', () => {
-      service.registerErrorHandler(socket1, 'client1', 'path1');
-      service.registerErrorHandler(socket2, 'client1', 'path1');
-
+    it('should register handler with applicationIds filter', () => {
+      const authData = {
+        key: 'key',
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path', ['app1']);
       // @ts-ignore
-      expect(service.errorHandlers['client1']['path1']).toEqual([socket1, socket2]);
+      const handler = service.errorHandlers[0];
+      expect(handler.applicationIds).toEqual(['app1']);
+      expect(handler.environmentIds).toEqual(undefined);
+      expect(handler.functionIds).toEqual(undefined);
+      expect(handler.tenant).toEqual(undefined);
+    });
+
+    it('should register handler with environmentsIds filter', () => {
+      const authData = {
+        key: 'key',
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path', undefined, ['env1']);
+      // @ts-ignore
+      const handler = service.errorHandlers[0];
+      expect(handler.applicationIds).toEqual(undefined);
+      expect(handler.environmentIds).toEqual(['env1']);
+      expect(handler.functionIds).toEqual(undefined);
+      expect(handler.tenant).toEqual(undefined);
+    });
+
+    it('should register handler with functionIds filter', () => {
+      const authData = {
+        key: 'key',
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path', undefined, undefined, ['func1']);
+      // @ts-ignore
+      const handler = service.errorHandlers[0];
+      expect(handler.applicationIds).toEqual(undefined);
+      expect(handler.environmentIds).toEqual(undefined);
+      expect(handler.functionIds).toEqual(['func1']);
+      expect(handler.tenant).toEqual(undefined);
+    });
+
+    it('should register handler with tenant filter', () => {
+      const authData = {
+        key: 'key',
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path', undefined, undefined, undefined, true);
+      // @ts-ignore
+      const handler = service.errorHandlers[0];
+      expect(handler.applicationIds).toEqual(undefined);
+      expect(handler.environmentIds).toEqual(undefined);
+      expect(handler.functionIds).toEqual(undefined);
+      expect(handler.tenant).toEqual(true);
     });
   });
 
   describe('unregisterErrorHandler', () => {
     it('removes handler socket', () => {
+      const authData = {
+        key: 'key',
+      } as AuthData;
+
       // register handler
-      service.registerErrorHandler(socket1, 'client1', 'path1');
+      const id = service.registerErrorHandler(socket1, authData, 'path1');
 
       // unregister
-      service.unregisterErrorHandler(socket1, 'client1', 'path1');
+      service.unregisterErrorHandler(socket1, id);
 
       // @ts-ignore
-      expect(service.errorHandlers['client1']['path1']).toEqual([]);
+      expect(service.errorHandlers).toEqual([]);
     });
 
     it('does not throw error if handler does not exist', () => {
       expect(() => {
-        service.unregisterErrorHandler(socket1, 'client1', 'path1');
+        service.unregisterErrorHandler(socket1, 'handlerId');
       }).not.toThrow();
     });
   });
 
   describe('sendErrorEvent', () => {
-    it('sends event to matching handler', () => {
-      // register handler
-      service.registerErrorHandler(socket1, 'client1', 'path1');
+    const environmentEntity = {
+      id: 'entity1',
+      environmentId: 'env1',
+      environment: {
+        tenantId: 'tenant1',
+      } as Environment,
+      visibility: Visibility.Environment,
+    };
 
-      // send event
-      service.sendErrorEvent('client1', 'path1', { message: 'Error' });
-
-      // check socket emit called
-      expect(socket1.emit).toBeCalledWith('handleError:path1', { message: 'Error' });
+    beforeEach(() => {
+      authServiceMock.hasEnvironmentEntityAccess?.mockResolvedValue(true);
     });
 
-    it('does not send event if no matching handler', () => {
-      // send event
-      const sent = service.sendErrorEvent('client1', 'path1', { message: 'Error' });
+    it('should send to handlers matching path', async () => {
+      const authData = {
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path1');
 
-      // check nothing emitted
-      expect(sent).toBe(false);
+      await service.sendErrorEvent(
+        environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        null,
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).toBeCalled();
+      expect(socket2.emit).not.toBeCalled();
+    });
+
+    it('should not send to handlers not matching path', async () => {
+      const authData = {} as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path2');
+
+      await service.sendErrorEvent(
+        environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        null,
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
       expect(socket1.emit).not.toBeCalled();
+      expect(socket2.emit).not.toBeCalled();
+    });
+
+    it('should not send if no access based on auth data', async () => {
+      const authData = {
+        tenant: {
+          id: 'tenant2',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData, 'path1');
+
+      await service.sendErrorEvent(environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        null,
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).not.toBeCalled();
+      expect(socket2.emit).not.toBeCalled();
+    });
+
+    it('should send only to specific application', async () => {
+      const authData1 = {
+        application: {
+          id: 'app1',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      const authData2 = {
+        application: {
+          id: 'app2',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData1, 'path1');
+      service.registerErrorHandler(socket2, authData2, 'path1');
+
+      await service.sendErrorEvent(environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        'app1',
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).toBeCalled();
+      expect(socket2.emit).not.toBeCalled();
+    });
+
+    it('should send only to defined applications', async () => {
+      const authData1 = {
+        application: {
+          id: 'app1',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      const authData2 = {
+        application: {
+          id: 'app2',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData1, 'path1', ['app1']);
+      service.registerErrorHandler(socket2, authData2, 'path1', ['app1']);
+
+      await service.sendErrorEvent(environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        'app1',
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).toBeCalled();
+      expect(socket2.emit).toBeCalled();
+    });
+
+    it('should send only to defined environments', async () => {
+      const authData1 = {
+        application: {
+          id: 'app1',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      const authData2 = {
+        application: {
+          id: 'app2',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData1, 'path1', undefined, ['env1']);
+      service.registerErrorHandler(socket2, authData2, 'path1', undefined, ['env1']);
+
+      await service.sendErrorEvent(environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        'app1',
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).toBeCalled();
+      expect(socket2.emit).toBeCalled();
+    });
+
+    it('should send only to defined functions', async () => {
+      const authData1 = {
+        application: {
+          id: 'app1',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      const authData2 = {
+        application: {
+          id: 'app1',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData1, 'path1', undefined, undefined, ['entity1']);
+      service.registerErrorHandler(socket2, authData2, 'path1', undefined, undefined, ['entity2']);
+
+      await service.sendErrorEvent(
+        environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        'app1',
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).toBeCalled();
+      expect(socket2.emit).not.toBeCalled();
+    });
+
+    it('should send only to auth data tenant', async () => {
+      const authData1 = {
+        application: {
+          id: 'app1',
+        },
+        tenant: {
+          id: 'tenant1',
+        },
+      } as AuthData;
+      const authData2 = {
+        application: {
+          id: 'app2',
+        },
+        tenant: {
+          id: 'tenant2',
+        },
+      } as AuthData;
+      service.registerErrorHandler(socket1, authData1, 'path1', undefined, undefined, undefined, true);
+      service.registerErrorHandler(socket2, authData2, 'path1', undefined, undefined, undefined, true);
+
+      await service.sendErrorEvent(
+        environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        'app1',
+        null,
+        'path1',
+        {
+          message: 'errorMessage',
+          data: {},
+          status: 69,
+          statusText: 'Test Error',
+        });
+
+      expect(socket1.emit).toBeCalled();
+      expect(socket2.emit).not.toBeCalled();
     });
   });
 

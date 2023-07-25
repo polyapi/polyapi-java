@@ -6,6 +6,7 @@ import os
 from typing import Dict, List, Tuple
 import openai
 from prisma.models import ConversationMessage
+from app.constants import QUESTION_TEMPLATE, MessageType
 from app.typedefs import ChatGptChoice, MessageDict
 from app.utils import (
     cosine_similarity,
@@ -30,8 +31,6 @@ Answer the following question using markdown to format.
 Please provide generous spacing between sections. Indent lists.
 Feel free to reorganize or reformat to make the information more consumable.
 Translate the answer to the same language of the question.
-
-"%s"
 """
 
 DOCS = [
@@ -210,8 +209,10 @@ def documentation_question(
     if not most_similar_doc:
         raise NotImplementedError("No matching documentation found!")
 
-    prompt = DOC_PROMPT % (most_similar_doc["name"], most_similar_doc["text"], question)
-    messages = msgs_to_msg_dicts(prev_msgs) + [MessageDict(role="user", content=prompt)]
+    prompt = DOC_PROMPT % (most_similar_doc["name"], most_similar_doc["text"])
+    prompt_msg = MessageDict(role="user", content=prompt)
+    question_msg = MessageDict(role="user", content=QUESTION_TEMPLATE.format(question), type=MessageType.user)
+    messages = msgs_to_msg_dicts(prev_msgs) + [prompt_msg, question_msg]
 
     host_url = os.environ.get("HOST_URL", "https://na1.polyapi.io")
     if host_url != "https://na1.polyapi.io":
@@ -222,7 +223,9 @@ def documentation_question(
     choice = resp["choices"][0]
 
     # let's store conversation for later
-    messages.append(choice["message"])
+    answer = choice["message"]
+    answer["type"] = MessageType.user
+    messages.append(answer)
     conversation = create_new_conversation(user_id)
     store_messages(user_id, conversation.id, messages)
 

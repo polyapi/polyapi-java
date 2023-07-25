@@ -17,3 +17,6 @@ class MessageType(IntEnum):
 
 
 CHAT_GPT_MODEL = "gpt-4-0613"
+
+# standard question template where the FE knows how to extract the stuff in the quotes
+QUESTION_TEMPLATE = 'Question: "{}"'

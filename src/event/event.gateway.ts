@@ -13,6 +13,8 @@ import { AuthService } from 'auth/auth.service';
 import { WebhookService } from 'webhook/webhook.service';
 import { VariableService } from 'variable/variable.service';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
+import { ApplicationService } from 'application/application.service';
+import { EnvironmentService } from 'environment/environment.service';
 
 @WebSocketGateway({ namespace: 'events' })
 export class EventGateway {
@@ -27,16 +29,30 @@ export class EventGateway {
     private readonly webhookService: WebhookService,
     private readonly authProviderService: AuthProviderService,
     private readonly variableService: VariableService,
+    private readonly applicationService: ApplicationService,
+    private readonly environmentService: EnvironmentService,
   ) {
   }
 
   @SubscribeMessage('registerErrorHandler')
   async registerErrorHandler(client: Socket, errorHandler: ErrorHandlerDto) {
     if (!await this.checkErrorHandler(errorHandler)) {
-      return false;
+      return null;
     }
-    this.eventService.registerErrorHandler(client, errorHandler.clientID, errorHandler.path);
-    return true;
+    const authData = await this.authService.getAuthData(errorHandler.apiKey);
+    if (!authData) {
+      return null;
+    }
+
+    return this.eventService.registerErrorHandler(
+      client,
+      authData,
+      errorHandler.path,
+      errorHandler.applicationIds,
+      errorHandler.environmentIds,
+      errorHandler.functionIds,
+      errorHandler.tenant,
+    );
   }
 
   @SubscribeMessage('unregisterErrorHandler')
@@ -44,7 +60,12 @@ export class EventGateway {
     if (!await this.checkErrorHandler(errorHandler)) {
       return false;
     }
-    this.eventService.unregisterErrorHandler(client, errorHandler.clientID, errorHandler.path);
+    if (!errorHandler.id) {
+      this.logger.debug('No id provided for unregisterErrorHandler');
+      return false;
+    }
+
+    this.eventService.unregisterErrorHandler(client, errorHandler.id);
   }
 
   @SubscribeMessage('registerWebhookEventHandler')
@@ -117,11 +138,7 @@ export class EventGateway {
     this.eventService.unregisterVariablesChangeEventHandler(client, handler.clientID, handler.path);
   }
 
-  private async checkErrorHandler({ clientID, apiKey, path }: ErrorHandlerDto) {
-    if (!clientID) {
-      this.logger.debug('Missing client ID.');
-      return false;
-    }
+  private async checkErrorHandler({ apiKey, path, applicationIds, environmentIds }: ErrorHandlerDto) {
     if (path == null) {
       this.logger.debug('Missing path.');
       return false;
@@ -135,6 +152,34 @@ export class EventGateway {
       this.logger.debug(`Invalid API key: ${apiKey}`);
       return false;
     }
+
+    if (applicationIds) {
+      for (const applicationId of applicationIds) {
+        const application = await this.applicationService.findById(applicationId);
+        if (!application) {
+          this.logger.debug(`Invalid application ID: ${applicationId}`);
+          return false;
+        }
+        if (application.tenantId !== authData.tenant.id) {
+          this.logger.debug(`No access to application ${applicationId} from another tenant`);
+          return false;
+        }
+      }
+    }
+    if (environmentIds) {
+      for (const environmentId of environmentIds) {
+        const environment = await this.environmentService.findById(environmentId);
+        if (!environment) {
+          this.logger.debug(`Invalid environment ID: ${environmentId}`);
+          return false;
+        }
+        if (environment.tenantId !== authData.tenant.id) {
+          this.logger.debug(`No access to environment ${environmentId} from another tenant`);
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 

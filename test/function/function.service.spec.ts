@@ -5,7 +5,7 @@ import { ApiFunctionArguments } from 'function/types';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError, AxiosResponse } from 'axios';
 import { of, throwError } from 'rxjs';
-import { ApiFunction, Variable } from '@prisma/client';
+import { ApiFunction, Environment, Tenant, Variable } from '@prisma/client';
 import { CommonService } from 'common/common.service';
 import {
   aiServiceMock,
@@ -665,7 +665,7 @@ describe('FunctionService', () => {
         url,
         headers,
         body,
-      } as ApiFunction;
+      } as ApiFunction & { environment: Environment };
 
       const result = await functionService.executeApiFunction(apiFunction, {});
       expect(requestSpy).toHaveBeenCalledWith({
@@ -697,7 +697,7 @@ describe('FunctionService', () => {
         headers: '[{"key": "header1", "value": "{{headerVar1}}"}]',
         auth: '{"auth1": "{{authVar1}}"}',
         argumentsMetadata: '',
-      } as ApiFunction;
+      } as ApiFunction & { environment: Environment };
 
       const result = await functionService.executeApiFunction(apiFunction, {
         variable1: 'test1',
@@ -745,7 +745,12 @@ describe('FunctionService', () => {
         headers: '[{"key": "header1", "value": "{{headerVar1}}"}]',
         auth: '{"auth1": "{{authVar1}}"}',
         argumentsMetadata: '',
-      } as ApiFunction;
+        environment: {
+          tenant: {
+            id: 'tenantId',
+          },
+        } as any,
+      } as ApiFunction & { environment: Environment };
 
       const result = await functionService.executeApiFunction(apiFunction, {});
       expect(result).toEqual({

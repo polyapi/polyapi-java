@@ -175,7 +175,7 @@ export class AuthService {
   }
 
   public async hasEnvironmentEntityAccess(
-    environmentEntity: { environmentId: string; visibility: string, environment?: Environment },
+    environmentEntity: { environmentId: string; visibility: string, environment?: { tenantId: string } },
     authData: AuthData,
     checkVisibility = false,
     ...permissions: Permission[]
@@ -217,7 +217,7 @@ export class AuthService {
   }
 
   async checkEnvironmentEntityAccess(
-    environmentEntity: { environmentId: string; visibility: string },
+    environmentEntity: { environmentId: string; visibility: string, environment?: Environment },
     authData: AuthData,
     checkVisibility = false,
     ...permissions: Permission[]

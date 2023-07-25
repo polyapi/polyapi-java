@@ -5,6 +5,8 @@ import { AuthModule } from 'auth/auth.module';
 import { WebhookModule } from 'webhook/webhook.module';
 import { AuthProviderModule } from 'auth-provider/auth-provider.module';
 import { VariableModule } from 'variable/variable.module';
+import { ApplicationModule } from 'application/application.module';
+import { EnvironmentModule } from 'environment/environment.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { VariableModule } from 'variable/variable.module';
     forwardRef(() => WebhookModule),
     forwardRef(() => AuthProviderModule),
     forwardRef(() => VariableModule),
+    ApplicationModule,
+    EnvironmentModule,
   ],
   providers: [EventGateway, EventService],
   exports: [EventService],

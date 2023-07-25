@@ -1,6 +1,7 @@
+import crypto from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { ErrorEvent, VariableChangeEvent, VariableChangeEventType } from '@poly/model';
+import { ErrorEvent, VariableChangeEvent, VariableChangeEventType, Visibility } from '@poly/model';
 import { AxiosError } from 'axios';
 import { Variable } from '@prisma/client';
 import { AuthService } from 'auth/auth.service';
@@ -8,6 +9,16 @@ import { AuthData } from 'common/types';
 
 type ClientID = string;
 type Path = string;
+type ErrorHandler = {
+  id: string;
+  path: string;
+  socket: Socket;
+  authData: AuthData;
+  applicationIds?: string[];
+  environmentIds?: string[];
+  functionIds?: string[];
+  tenant?: boolean;
+}
 type WebhookHandleID = string;
 type AuthFunctionID = string;
 type VariableID = string;
@@ -21,7 +32,8 @@ type VariableSocketListener = {
 @Injectable()
 export class EventService {
   private logger: Logger = new Logger(EventService.name);
-  private readonly errorHandlers: Record<ClientID, Record<Path, Socket[]>> = {};
+  private errorHandlers: ErrorHandler[] = [];
+  // TODO: future: use flat array structure for this
   private readonly webhookEventHandlers: Record<ClientID, Record<WebhookHandleID, Socket[]>> = {};
   private readonly authFunctionHandlers: Record<ClientID, Record<AuthFunctionID, Socket[]>> = {};
   private readonly variableChangeHandlers: Record<ClientID, Record<VariableID, Socket[]>> = {};
@@ -32,49 +44,95 @@ export class EventService {
   ) {
   }
 
-  registerErrorHandler(client: Socket, clientID: string, path: string) {
-    this.logger.debug(`Registering error handler: ${clientID} '${path}'`);
-    if (!this.errorHandlers[clientID]) {
-      this.errorHandlers[clientID] = {};
-    }
-    if (!this.errorHandlers[clientID][path]) {
-      this.errorHandlers[clientID][path] = [];
-    }
-    this.errorHandlers[clientID][path].push(client);
-
-    client.on('disconnect', () => {
-      this.logger.debug(`Client for error handler disconnected: ${clientID} '${path}'`);
-      this.unregisterErrorHandler(client, clientID, path);
+  registerErrorHandler(
+    socket: Socket,
+    authData: AuthData,
+    path: string,
+    applicationIds?: string[],
+    environmentIds?: string[],
+    functionIds?: string[],
+    tenant?: boolean,
+  ) {
+    const id = crypto.randomUUID();
+    this.logger.debug(`Registering error handler: ${socket.id} '${path}', applicationIds: ${applicationIds}, environmentIds: ${environmentIds}, functionIds: ${functionIds}, tenant: ${tenant} with ID=${id}}`);
+    this.errorHandlers.push({
+      id,
+      socket,
+      path,
+      authData,
+      applicationIds,
+      environmentIds,
+      functionIds,
+      tenant,
     });
+
+    socket.on('disconnect', () => {
+      this.logger.debug(`Client for error handler '${id}' disconnected. Removing handler...`);
+      this.errorHandlers = this.errorHandlers.filter(handler => handler.id !== id);
+    });
+
+    return id;
   }
 
-  unregisterErrorHandler(client: Socket, clientID: string, path: string) {
-    this.logger.debug(`Unregistering error handler: ${clientID} '${path}'`);
-    if (!this.errorHandlers[clientID]?.[path]) {
-      return;
-    }
-    this.errorHandlers[clientID][path] = this.errorHandlers[clientID][path].filter(socket => socket.id !== client.id);
+  unregisterErrorHandler(socket: Socket, handlerId: string) {
+    this.logger.debug(`Unregistering error handler: ${socket.id} '${handlerId}'`);
+    this.errorHandlers = this.errorHandlers.filter(handler => handler.id !== handlerId);
   }
 
-  sendErrorEvent(clientID: string | null, functionPath: string, error: ErrorEvent): boolean {
-    if (!clientID) {
+  async sendErrorEvent(
+    id: string,
+    environmentId: string,
+    tenantId: string,
+    visibility: Visibility,
+    applicationId: string | null,
+    userId: string | null,
+    path: string,
+    error: ErrorEvent,
+  ): Promise<boolean> {
+    const handlerEvent = {
+      ...error,
+      id,
+      applicationId,
+      userId,
+    };
+    const errorHandlersOnPath = this.errorHandlers
+      .filter(this.filterByPath(path, handler => handler.path));
+    const tenantHandlers = errorHandlersOnPath
+      .filter(handler => handler.tenant === true && tenantId === handler.authData.tenant.id);
+    const environmentHandlers = errorHandlersOnPath
+      .filter(handler => handler.environmentIds?.includes(environmentId));
+    const applicationHandlers = errorHandlersOnPath
+      .filter(handler => applicationId && handler.applicationIds?.includes(applicationId));
+    const functionHandlers = errorHandlersOnPath
+      .filter(handler => handler.functionIds?.includes(id));
+    const defaultHandlers = errorHandlersOnPath
+      .filter(handler => handler.functionIds === undefined && handler.applicationIds === undefined && handler.environmentIds === undefined && handler.tenant === undefined)
+      .filter(handler => !userId || handler.authData.user?.id === userId)
+      .filter(handler => !applicationId || handler.authData.application?.id === applicationId);
+    const allHandlers = [
+      ...tenantHandlers,
+      ...environmentHandlers,
+      ...applicationHandlers,
+      ...functionHandlers,
+      ...defaultHandlers,
+    ];
+    if (allHandlers.length === 0) {
       return false;
     }
 
-    const clientErrorHandler = this.errorHandlers[clientID];
-    if (!clientErrorHandler) {
-      return false;
-    }
-    const handlers = Object.keys(clientErrorHandler)
-      .filter(this.filterByPath(functionPath));
+    const sentInfos = await Promise.all(allHandlers.map(async ({ id, authData, socket }) => {
+      // currently allowing Tenant access by default
+      if (visibility !== Visibility.Public && authData.tenant.id !== tenantId) {
+        return false;
+      }
 
-    handlers
-      .forEach(handlerPath => {
-        this.logger.debug(`Sending error event: ${clientID} '${functionPath}'->'${handlerPath}'`, error);
-        clientErrorHandler[handlerPath].forEach(socket => socket.emit(`handleError:${handlerPath}`, error));
-      });
+      this.logger.debug(`Sending error event for path: '${path}' to '${id}'`, handlerEvent);
+      socket.emit(`handleError:${id}`, handlerEvent);
+      return true;
+    }));
 
-    return handlers.length > 0;
+    // counted only if default handlers are used
+    return defaultHandlers.length > 0 && sentInfos.some(sent => sent);
   }
 
   getEventError(error: AxiosError): ErrorEvent {
@@ -299,7 +357,10 @@ export class EventService {
     }
   }
 
-  private filterByPath(path: string) {
-    return handlerPath => handlerPath === '' || path === handlerPath || path.startsWith(`${handlerPath}.`) || path.endsWith(`.${handlerPath}`);
+  private filterByPath(path: string, mapToPath: (handler: any) => Path = handler => handler) {
+    return handler => {
+      const handlerPath = mapToPath(handler);
+      return handlerPath === '' || path === handlerPath || path.startsWith(`${handlerPath}.`) || path.endsWith(`.${handlerPath}`);
+    };
   }
 }

@@ -33,10 +33,16 @@ export interface ErrorEvent {
   status?: number;
   statusText?: string;
 }
+export interface ErrorHandlerOptions {
+  applicationIds?: string[];
+  environmentIds?: string[];
+  functionIds?: string[];
+  tenant?: boolean;
+}
+export type UnregisterErrorHandler = () => void;
 
 interface ErrorHandler {
-  on: (path: string, handler: (error: ErrorEvent) => void) => void;
-  off: (path: string) => void;
+  on: (path: string, handler: (error: ErrorEvent) => void, options?: ErrorHandlerOptions) => UnregisterErrorHandler;
 }
 export const errorHandler: ErrorHandler;
 export const vari: vari.Vari;

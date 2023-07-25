@@ -3,6 +3,7 @@ import json
 from typing import Dict, List, Optional, Tuple
 from prisma import get_client
 from prisma.models import SystemPrompt, ConversationMessage
+from app.constants import QUESTION_TEMPLATE, MessageType
 from app.conversation import insert_prev_msgs
 
 # TODO change to relative imports
@@ -276,8 +277,6 @@ Each variable has the following methods:
 * .onServer()  // use the variable inside a poly function to be injected on the poly server at the time of execution
 """
 
-BEST_FUNCTION_QUESTION_TEMPLATE = 'My question:\n"{question}"'
-
 
 def get_best_function_example(
     user_id: str,
@@ -300,7 +299,6 @@ def get_best_function_example(
             spec_prompt(spec, include_return_type=True) for spec in specs
         )
     )
-    question_prompt = BEST_FUNCTION_QUESTION_TEMPLATE.format(question=question)
     messages = [MessageDict(role="user", content=best_functions_prompt)]
 
     if variables:
@@ -309,7 +307,10 @@ def get_best_function_example(
         )
         messages.append(MessageDict(role="user", content=best_variables_prompt))
 
-    messages.append(MessageDict(role="user", content=question_prompt))
+    question_msg = MessageDict(
+        role="user", content=QUESTION_TEMPLATE.format(question), type=MessageType.user
+    )
+    messages.append(question_msg)
 
     insert_prev_msgs(messages, prev_msgs)
     insert_system_prompt(messages, environment_id)
@@ -319,7 +320,9 @@ def get_best_function_example(
     # store conversation
     insert_internal_step_info(messages, "STEP 3: GET FUNCTION EXAMPLE")
     rv = resp["choices"][0]
-    messages.append(rv["message"])
+    answer = rv['message']
+    answer["type"] = 2
+    messages.append(answer)
     store_messages(user_id, conversation_id, messages)
 
     return rv
@@ -367,16 +370,15 @@ def general_question(
     question: str,
     prev_msgs: Optional[List[ConversationMessage]] = None,
 ) -> ChatGptChoice:
-    """ ask a general question not related to any Poly-specific functionality
-    """
+    """ask a general question not related to any Poly-specific functionality"""
     messages = msgs_to_msg_dicts(prev_msgs) + [
-        MessageDict(role="user", content=question, type=2)
+        MessageDict(role="user", content=question, type=MessageType.user)
     ]
 
     resp = get_chat_completion(messages)
     choice = resp["choices"][0]
     answer = choice["message"]
-    answer["type"] = 2
+    answer["type"] = MessageType.user
     messages.append(answer)
 
     insert_internal_step_info(messages, "FALLBACK")

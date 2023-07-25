@@ -21,7 +21,6 @@ import {
   CreateApiFunctionDto,
   CreateCustomFunctionDto,
   ExecuteApiFunctionDto,
-  ExecuteApiFunctionQueryParams,
   ExecuteCustomFunctionDto,
   ExecuteCustomFunctionQueryParams,
   FunctionBasicDto,
@@ -158,7 +157,6 @@ export class FunctionController {
     @Req() req: AuthRequest,
     @Param('id') id: string,
     @Body() data: ExecuteApiFunctionDto,
-    @Query() { clientId }: ExecuteApiFunctionQueryParams,
   ): Promise<ApiFunctionResponseDto | null> {
     const apiFunction = await this.service.findApiFunction(id, true);
     if (!apiFunction) {
@@ -168,7 +166,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, true, Permission.Use);
     data = await this.variableService.unwrapVariables(req.user, data);
 
-    return await this.service.executeApiFunction(apiFunction, data, clientId);
+    return await this.service.executeApiFunction(apiFunction, data, req.user.user?.id, req.user.application?.id);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -346,7 +344,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, true, Permission.Use);
     data = await this.variableService.unwrapVariables(req.user, data);
 
-    return await this.service.executeServerFunction(customFunction, req.user.environment, data, headers, clientId);
+    return await this.service.executeServerFunction(customFunction, data, headers, clientId);
   }
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
