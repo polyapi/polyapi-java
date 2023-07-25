@@ -3,12 +3,6 @@ import { ChatText } from '@poly/model';
 import { PrismaService } from 'prisma/prisma.service';
 import { AiService } from 'ai/ai.service';
 
-type MessageDict = {
-  role: string;
-  content: string;
-  createdAt: Date;
-};
-
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
@@ -69,18 +63,32 @@ export class ChatService {
     return parts.join('\n\n');
   }
 
-  async getHistory(userId: string | undefined): Promise<MessageDict[]> {
+  async getHistory(userId: string | undefined, perPage = 10, lastMessageDate: Date | null = null) {
     if (!userId) {
       return [];
     }
 
+    let cursor: { id: string } | null = null;
+
+    if (lastMessageDate) {
+      cursor = await this.prisma.conversationMessage.findFirst({
+        select: {
+          id: true,
+        },
+        where: {
+          createdAt: lastMessageDate,
+        },
+      });
+    }
+
     const messages = this.prisma.conversationMessage.findMany({
-      where: { userId, type: 2 },
-      orderBy: { createdAt: 'desc' },
-      take: 30,
+      where: { userId, type: 2, role: { in: ['user', 'assistant'] } },
+      orderBy: { createdAt: 'asc' },
+      take: perPage,
+      cursor: cursor ?? undefined,
     });
     return (await messages).map((m) => {
-      return { role: m.role, content: m.content, createdAt: m.createdAt };
+      return { role: m.role, content: m.content, createdAt: m.createdAt, id: m.id, type: m.type };
     });
   }
 }
