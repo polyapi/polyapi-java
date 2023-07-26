@@ -67,6 +67,12 @@ const COMMANDS = ['clear'];
 
   setInitialMessageInputHeight();
 
+  const removeConversationLoadErr = () => {
+    const conversationLoadError = document.getElementById('conversation-load-error');
+
+    conversationLoadError?.remove();
+  }
+
   window.addEventListener('message', (event) => {
     const message = event.data;
 
@@ -164,7 +170,15 @@ const COMMANDS = ['clear'];
       </div>`;
     }
 
+    const findMessageByCreatedAt = (createdAt) => {
+      return document.querySelector(`div[data-created-at="${createdAt}"]`);
+    }
+
+    
+
     console.log('on messagess', message);
+
+    const loadingContainer = document.querySelector('.loading-container');
 
     switch (message.type) {
       case 'addQuestion': {
@@ -177,14 +191,15 @@ const COMMANDS = ['clear'];
         const value = message.value || {
           cancellable: true,
           prepend: false,
-          avoidScrollDown: false,
+          skipScrollToLastMessage: false,
+        }
+        
+        if(value.prepend) {
+          removeConversationLoadErr();
         }
 
-        const loadingContainer = document.querySelector('.loading-container');
         sendMessageButton.setAttribute('disabled', 'disabled');
         messageInput.setAttribute('data-avoid-send', 'true');
-
-        console.log('loadingContainer: ', loadingContainer);
 
         if (!loadingContainer) {
 
@@ -195,7 +210,7 @@ const COMMANDS = ['clear'];
           }
         }
 
-        if(!value.avoidScrollDown) {
+        if(!value.skipScrollToLastMessage) {
           scrollToLastMessage();
         }
 
@@ -219,36 +234,61 @@ const COMMANDS = ['clear'];
         break;
       case 'prependConversationHistory':
 
-        const messages = message.value.messages;
-        const firstLoad = message.value.firstLoad;
-        removeLoadingContainer();
-
-        let newHtml = '';
-
-        for(const message of messages) {
-          if(message.role === 'user') {
-            newHtml = `${getQuestionWrapper(userSvg, {value: message.content}, message.createdAt)}${newHtml}`;
-          }
-
-          if(message.role === 'assistant') {
-            newHtml = `${getResponseWrapper([getResponseTextHtml({ value: message.content, type: 'markdown'})], message.createdAt)}${newHtml}`
-          }
+        if(message.value.type === 'error') {
+          conversationList.innerHTML = `
+            <div id="conversation-load-error" class='response-text-error flex-col flex items-center py-5'>
+              <span>
+                Error loading conversation messages.
+              </span>
+              <button class="load-conversation-messages mt-4"><span class="text-uppercase p-2 hover:!bg-[var(--vscode-button-hoverBackground)]" style="color: var(--vscode-button-foreground); background-color: var(--vscode-button-background);"><span>Try again</span></span></button>
+            </div>
+          ${conversationList.innerHTML}`;
+          removeLoadingContainer();
+          return;
         }
 
-        conversationList.innerHTML = `${newHtml}${conversationList.innerHTML}`;
+        const messages = message.value.messages;
+        const firstLoad = message.value.firstLoad;
+
+        let newMessagesHtmlContent = '';
+        
+        for(const message of messages) {
+          if(message.role === 'user') {
+            newMessagesHtmlContent = `${getQuestionWrapper(userSvg, {value: message.content}, message.createdAt)}${newMessagesHtmlContent}`;
+          }
+          
+          if(message.role === 'assistant') {
+            newMessagesHtmlContent = `${getResponseWrapper([getResponseTextHtml({ value: message.content, type: 'markdown'})], message.createdAt)}${newMessagesHtmlContent}`
+          }
+        }
+        
+        conversationList.innerHTML = `${newMessagesHtmlContent}${conversationList.innerHTML}`;
+
+        const firstMessage = messages[0];
+        
+        removeLoadingContainer();
+        
+        if(firstMessage) {
+          const firstElementInList = findMessageByCreatedAt(firstMessage.createdAt);
+
+          const firstElementClientRect = firstElementInList.getBoundingClientRect();
+          conversationList.scrollTo({
+            top: firstElementClientRect.top + firstElementClientRect.height
+          });
+        }        
 
         const lastMessage = messages[messages.length - 1];
 
         if(firstLoad) {
           setTimeout(() => {
             scrollToLastMessage();
-          }, 100);
+          }, 0);
         }
         
         if(messages.length) {
           setTimeout(() => {
   
-            const firstChatElement = document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`);
+            const firstChatElement = findMessageByCreatedAt(lastMessage.createdAt);
   
             const o = new IntersectionObserver(([entry]) => {
   
@@ -265,7 +305,7 @@ const COMMANDS = ['clear'];
               threshold: 1.0,
             });
             o.observe(firstChatElement);
-          }, 400)
+          }, 0)
         }
 
         break;
@@ -357,6 +397,15 @@ const COMMANDS = ['clear'];
             targetButton.innerHTML = copySvg;
           }, 2000);
         });
+    } else if(targetButton.classList?.contains('load-conversation-messages')) {
+      const firstMessageOnChat = document.querySelector('#conversation-list > div[data-created-at]');
+
+      removeConversationLoadErr();
+      
+      vscode.postMessage({
+        type: 'getMoreConversationMessages',
+        value: firstMessageOnChat ? firstMessageOnChat.getAttribute('data-created-at') : ''
+      });
     }
   });
 

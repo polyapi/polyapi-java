@@ -7,6 +7,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
   private requestAbortController;
   private conversationHistoryFullyLoaded = false;
+  private firstMessagesLoaded = false;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -29,22 +30,17 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         value: {
           cancellable: false,
           prepend: true,
-          avoidScrollDown: true,
+          skipScrollToLastMessage: true,
         },
       });
 
       const lastMessageDateQs = lastMessageDate ? `&lastMessageDate=${lastMessageDate}` : '';
 
-
-      console.log('lastMessageDate: ', lastMessageDate);
-
-      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=10${lastMessageDateQs}`, {
+      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=5${lastMessageDateQs}`, {
         headers: {
           authorization: `Bearer ${apiKey}`,
         } as RawAxiosRequestHeaders,
       });
-
-      console.log('data: ', data);
 
       this.webView?.webview.postMessage({
         type: 'prependConversationHistory',
@@ -56,20 +52,16 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
 
       if (!data.length) {
         this.conversationHistoryFullyLoaded = true;
+      } else {
+        this.firstMessagesLoaded = true;
       }
     } catch (error) {
-      console.error(error);
-      /*
       this.webView?.webview.postMessage({
-        type: 'addResponseTexts',
-        value: [
-          {
-            type: 'error',
-            value: error.response?.data?.message || error.message,
-            error,
-          },
-        ],
-      }); */
+        type: 'prependConversationHistory',
+        value: {
+          type: 'error',
+        },
+      });
     }
   }
 
@@ -117,7 +109,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.onDidChangeVisibility(async () => {
       const visible = webviewView.visible;
-      if (visible && !this.conversationHistoryFullyLoaded) {
+      if (visible && !this.firstMessagesLoaded) {
         await this.getConversationHistory();
       }
     });
