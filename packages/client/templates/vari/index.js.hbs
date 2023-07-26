@@ -21,7 +21,7 @@ const getVariableHandlers = (clientID, getSocket) => {
     set(variableHandlers, path, {
       get: () => {
         if (secret) {
-          throw new Error('Cannot access secret variable from client. Use .onServer() instead within Poly function.');
+          throw new Error('Cannot access secret variable from client. Use .inject() instead within Poly function.');
         } else {
           return axios.get(
             `/variables/${id}/value`
@@ -68,7 +68,7 @@ const getVariableHandlers = (clientID, getSocket) => {
 
         return unregisterEventHandler;
       },
-      onServer: (path) => ({
+      inject: (path) => ({
         type: 'PolyVariable',
         id,
         path

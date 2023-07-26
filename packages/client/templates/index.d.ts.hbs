@@ -32,6 +32,9 @@ export interface ErrorEvent {
   data?: any;
   status?: number;
   statusText?: string;
+  functionId: string;
+  applicationId?: string;
+  userId?: string;
 }
 export interface ErrorHandlerOptions {
   applicationIds?: string[];

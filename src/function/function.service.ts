@@ -1436,7 +1436,7 @@ export class FunctionService implements OnModuleInit {
 
     const graphqlVariablesBody = isGraphQL ? JSON.parse(parsedBody.graphql.variables || '{}') : {};
 
-    const resolveArgumentParameterLimit = () => {
+    const resolvePayloadArguments = () => {
       if (functionArgs.length <= this.config.functionArgsParameterLimit) {
         return;
       }
@@ -1528,8 +1528,22 @@ export class FunctionService implements OnModuleInit {
       }
     };
 
-    resolveArgumentParameterLimit();
+    const resolveSecureArguments = () => {
+      functionArgs.forEach((arg) => {
+        if (arg.location === 'auth') {
+          if (newMetadata[arg.key]) {
+            newMetadata[arg.key].secure = true;
+          } else {
+            newMetadata[arg.key] = {
+              secure: true,
+            };
+          }
+        }
+      });
+    };
 
+    await resolvePayloadArguments();
+    await resolveSecureArguments();
     await resolveArgumentTypes();
 
     return newMetadata;

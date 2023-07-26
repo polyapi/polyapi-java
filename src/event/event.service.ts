@@ -91,7 +91,7 @@ export class EventService {
   ): Promise<boolean> {
     const handlerEvent = {
       ...error,
-      id,
+      functionId: id,
       applicationId,
       userId,
     };

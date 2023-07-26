@@ -38,11 +38,11 @@ declare module vari {
          * Gets variable data.
          * This is intended to be used in Poly functions, so the variable values are resolved on the server
          * without fetching them from the client.
-         * @param path The JSON path to the property within the value, e.g. `vari.products.shop.onServer('id')`
+         * @param path The JSON path to the property within the value, e.g. `vari.products.shop.inject('id')`
          * @example
-         * await poly.products.addItem(vari.products.shopId.onServer(), 'Toy car', 1)
+         * await poly.products.addItem(vari.products.shopId.inject(), 'Toy car', 1)
          */
-        onServer: (path?: string) => {{#if isObjectType}}any{{else}}{{{type}}}{{/if}};
+        inject: (path?: string) => {{#if isObjectType}}any{{else}}{{{type}}}{{/if}};
       }
     {{/each}}
     get: () => Promise<{{interfaceName}}Values>;
