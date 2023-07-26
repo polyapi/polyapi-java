@@ -89,7 +89,7 @@ export class ChatService {
       skip: cursor ? 1 : undefined,
     });
     return (await messages).map((m) => {
-      return { role: m.role, content: m.content, createdAt: m.createdAt, id: m.id, type: m.type };
+      return { role: m.role, content: m.content, createdAt: m.createdAt };
     });
   }
 }
