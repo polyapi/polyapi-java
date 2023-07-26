@@ -95,14 +95,23 @@ const COMMANDS = ['clear'];
       return html.documentElement.innerHTML;
     };
 
-    const getResponseWrapper = (content) => {
+    const getResponseWrapper = (content, createdAt = '') => {
       return `
-        <div class='p-4 self-end'>
+        <div class='p-4 self-end' ${createdAt ? `data-created-at="${createdAt}"` : ''}>
           <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
           <div class="prose prose-headings:font-normal prose-th:font-bold">
             ${content}            
           </div>
         </div>
+      `;
+    }
+
+    const getQuestionWrapper = (userSvg, message, createdAt = '') => {
+      return `
+      <div class='p-4 self-end relative' style='background: var(--vscode-input-background)' ${createdAt ? `data-created-at="${createdAt}"` : ''}>
+        <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
+        <div class='overflow-y-auto question-box'>${message.value}</div>
+      </div>
       `;
     }
 
@@ -137,43 +146,68 @@ const COMMANDS = ['clear'];
       });
     };
 
+    const removeLoadingContainer = () => {
+      const loadingContainer = document.querySelector('.loading-container');
+      loadingContainer?.remove();
+      sendMessageButton.removeAttribute('disabled');
+      messageInput.removeAttribute('data-avoid-send');
+    }
+
+    const getLoadingComponent = (withCancelButton = true) => {
+      return `<div class='loading-container p-4 self-end flex justify-between'>
+        ${loadingSvg}
+        ${withCancelButton ? `
+          <button id='cancel-request-button' class='rounded-lg p-1.5'>
+            ${cancelSvg}
+          </button>        
+        ` : ''}
+      </div>`;
+    }
+
+    console.log('on messagess', message);
+
     switch (message.type) {
       case 'addQuestion': {
-        conversationList.innerHTML +=
-          `<div class='p-4 self-end relative' style='background: var(--vscode-input-background)'>
-            <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
-            <div class='overflow-y-auto question-box'>${message.value}</div>
-          </div>`;
+        conversationList.innerHTML += getQuestionWrapper(userSvg, message);
         scrollToLastMessage();
         break;
       }
       case 'setLoading': {
+
+        const value = message.value || {
+          cancellable: true,
+          prepend: false,
+          avoidScrollDown: false,
+        }
+
         const loadingContainer = document.querySelector('.loading-container');
         sendMessageButton.setAttribute('disabled', 'disabled');
         messageInput.setAttribute('data-avoid-send', 'true');
 
+        console.log('loadingContainer: ', loadingContainer);
+
         if (!loadingContainer) {
-          conversationList.innerHTML +=
-            `<div class='loading-container p-4 self-end flex justify-between'>
-              ${loadingSvg}
-              <button id='cancel-request-button' class='rounded-lg p-1.5'>
-                ${cancelSvg}
-              </button>
-            </div>`;
+
+          if(message.value?.prepend) {
+            conversationList.innerHTML = `${getLoadingComponent(value.cancellable)}${conversationList.innerHTML}`;
+          } else {
+            conversationList.innerHTML += getLoadingComponent(value.cancellable);
+          }
         }
-        scrollToLastMessage();
+
+        if(!value.avoidScrollDown) {
+          scrollToLastMessage();
+        }
+
         break;
       }
       case 'addResponseTexts': {
         const texts = message.value;
-        const loadingContainer = document.querySelector('.loading-container');
 
-        loadingContainer?.remove();
+        removeLoadingContainer();
 
         conversationList.innerHTML += getResponseWrapper(texts.map(text => getResponseTextHtml(text)).join(''));
         scrollToLastMessage();
-        sendMessageButton.removeAttribute('disabled');
-        messageInput.removeAttribute('data-avoid-send');
         messageInput.focus();
         break;
       }
@@ -182,6 +216,58 @@ const COMMANDS = ['clear'];
         break;
       case 'focusMessageInput':
         messageInput?.focus();
+        break;
+      case 'prependConversationHistory':
+
+        const messages = message.value.messages;
+        const firstLoad = message.value.firstLoad;
+        removeLoadingContainer();
+
+        let newHtml = '';
+
+        for(const message of messages) {
+          if(message.role === 'user') {
+            newHtml = `${getQuestionWrapper(userSvg, {value: message.content}, message.createdAt)}${newHtml}`;
+          }
+
+          if(message.role === 'assistant') {
+            newHtml = `${getResponseWrapper([getResponseTextHtml({ value: message.content, type: 'markdown'})], message.createdAt)}${newHtml}`
+          }
+        }
+
+        conversationList.innerHTML = `${newHtml}${conversationList.innerHTML}`;
+
+        const lastMessage = messages[messages.length - 1];
+
+        if(firstLoad) {
+          setTimeout(() => {
+            scrollToLastMessage();
+          }, 100);
+        }
+        
+        if(messages.length) {
+          setTimeout(() => {
+  
+            const firstChatElement = document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`);
+  
+            const o = new IntersectionObserver(([entry]) => {
+  
+              if(entry.isIntersecting) {
+                vscode.postMessage({
+                  type: 'getMoreConversationMessages',
+                  value: lastMessage.createdAt,
+                });
+                o.disconnect();
+              }
+  
+            }, {
+              root: document.getElementById('conversation-list'),
+              threshold: 1.0,
+            });
+            o.observe(firstChatElement);
+          }, 400)
+        }
+
         break;
       default:
         break;

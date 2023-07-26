@@ -131,7 +131,7 @@
     "vscode:prepublish": "yarn run compile",
     "compile": "tsc -p ./ && tsc-alias -p ./tsconfig.json",
     "precompile": "yarn run lint",
-    "watch": "tsc -p ./ && tsc-alias -p tsconfig.json",
+    "watch": "tsc --watch -p ./ && tsc-alias -p ./tsconfig.json",
     "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts"
   },

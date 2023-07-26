@@ -83,9 +83,10 @@ export class ChatService {
 
     const messages = this.prisma.conversationMessage.findMany({
       where: { userId, type: 2, role: { in: ['user', 'assistant'] } },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: perPage,
       cursor: cursor ?? undefined,
+      skip: cursor ? 1 : undefined,
     });
     return (await messages).map((m) => {
       return { role: m.role, content: m.content, createdAt: m.createdAt, id: m.id, type: m.type };

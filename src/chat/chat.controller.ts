@@ -119,6 +119,7 @@ export class ChatController {
     @Req() req: AuthRequest,
     @MergeRequestData(['query'], new ValidationPipe({ validateCustomDecorators: true, transform: true })) pagination: Pagination,
   ): Promise<MessageDto[]> {
+
     const {
       perPage = '10',
       lastMessageDate = null,
@@ -126,6 +127,9 @@ export class ChatController {
 
     // returns the conversation history for this specific user
     const history = await this.service.getHistory(req.user.user?.id, Number(perPage), lastMessageDate);
+
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+
     return history;
   }
 }

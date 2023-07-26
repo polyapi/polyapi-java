@@ -6,10 +6,71 @@ import { getCredentialsFromExtension } from './common';
 export default class ChatViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
   private requestAbortController;
+  private conversationHistoryFullyLoaded = false;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
   ) {
+  }
+
+  private async getConversationHistory(firstLoad = true, lastMessageDate = '') {
+    const {
+      apiBaseUrl,
+      apiKey,
+    } = getCredentialsFromExtension();
+
+    if (!apiBaseUrl || !apiKey) {
+      return;
+    }
+
+    try {
+      this.webView?.webview.postMessage({
+        type: 'setLoading',
+        value: {
+          cancellable: false,
+          prepend: true,
+          avoidScrollDown: true,
+        },
+      });
+
+      const lastMessageDateQs = lastMessageDate ? `&lastMessageDate=${lastMessageDate}` : '';
+
+
+      console.log('lastMessageDate: ', lastMessageDate);
+
+      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=10${lastMessageDateQs}`, {
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+        } as RawAxiosRequestHeaders,
+      });
+
+      console.log('data: ', data);
+
+      this.webView?.webview.postMessage({
+        type: 'prependConversationHistory',
+        value: {
+          messages: data,
+          firstLoad,
+        },
+      });
+
+      if (!data.length) {
+        this.conversationHistoryFullyLoaded = true;
+      }
+    } catch (error) {
+      console.error(error);
+      /*
+      this.webView?.webview.postMessage({
+        type: 'addResponseTexts',
+        value: [
+          {
+            type: 'error',
+            value: error.response?.data?.message || error.message,
+            error,
+          },
+        ],
+      }); */
+    }
   }
 
   public resolveWebviewView(
@@ -44,6 +105,20 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           this.goToExtensionSettings();
           break;
         }
+        case 'getMoreConversationMessages': {
+          console.log('getMoreConversationMessages');
+          if (!this.conversationHistoryFullyLoaded) {
+            this.getConversationHistory(false, data.value);
+          }
+          break;
+        }
+      }
+    });
+
+    webviewView.onDidChangeVisibility(async () => {
+      const visible = webviewView.visible;
+      if (visible && !this.conversationHistoryFullyLoaded) {
+        await this.getConversationHistory();
       }
     });
   }
@@ -141,6 +216,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private getWebviewHtml(webview: vscode.Webview) {
+    console.log('refreshhss');
     const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'vscode.css'));
     const styleMainUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'main.css'));
     const mainJs = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'main.js'));
