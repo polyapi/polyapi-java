@@ -14,7 +14,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
   ) {
   }
 
-  private async getConversationHistory(firstLoad = true, lastMessageDate = '') {
+  private async getConversationHistory(lastMessageDate = '') {
     const {
       apiBaseUrl,
       apiKey,
@@ -46,13 +46,15 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         type: 'prependConversationHistory',
         value: {
           messages: data,
-          firstLoad,
+          firstLoad: !this.firstMessagesLoaded,
         },
       });
 
       if (!data.length) {
         this.conversationHistoryFullyLoaded = true;
-      } else {
+      }
+
+      if (!this.firstMessagesLoaded) {
         this.firstMessagesLoaded = true;
       }
     } catch (error) {
@@ -98,9 +100,8 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'getMoreConversationMessages': {
-          console.log('getMoreConversationMessages');
           if (!this.conversationHistoryFullyLoaded) {
-            this.getConversationHistory(false, data.value);
+            this.getConversationHistory(data.value);
           }
           break;
         }
@@ -155,8 +156,6 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         value: data.texts,
       });
     } catch (error) {
-      console.error(error);
-
       this.webView?.webview.postMessage({
         type: 'addResponseTexts',
         value: [
@@ -208,7 +207,6 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private getWebviewHtml(webview: vscode.Webview) {
-    console.log('refreshhss');
     const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'vscode.css'));
     const styleMainUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'main.css'));
     const mainJs = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'main.js'));
@@ -233,6 +231,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       </head>
       <body class='overflow-hidden'>
         <div class='flex flex-col h-screen'>
+        
           <div class='flex-1 overflow-y-auto' id='conversation-list' data-vscode-context='{"webviewSection": "conversationList", "preventDefaultContextMenuItems": true}'></div>
           <div class='p-2 flex items-center pb-4'>
             <div class='flex-1 message-input-wrapper'>

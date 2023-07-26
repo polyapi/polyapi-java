@@ -169,16 +169,35 @@ const COMMANDS = ['clear'];
         ` : ''}
       </div>`;
     }
-
-    const findMessageByCreatedAt = (createdAt) => {
-      return document.querySelector(`div[data-created-at="${createdAt}"]`);
-    }
-
     
-
-    console.log('on messagess', message);
+    let currentObserver = null; 
 
     const loadingContainer = document.querySelector('.loading-container');
+
+
+    const observeFirstMessage = (firstChatElement) => {
+      if(!firstChatElement) {
+        return;
+      }
+      setTimeout(() => {
+
+        currentObserver = new IntersectionObserver(([entry]) => {
+
+          if(entry.isIntersecting) {
+            vscode.postMessage({
+              type: 'getMoreConversationMessages',
+              value: firstChatElement.getAttribute('data-created-at'),
+            });
+            currentObserver.disconnect();
+          }
+
+        }, {
+          root: document.getElementById('conversation-list'),
+          threshold: 1.0,
+        });
+        currentObserver.observe(firstChatElement.querySelector('h2'));
+      }, 100)
+    }
 
     switch (message.type) {
       case 'addQuestion': {
@@ -224,6 +243,11 @@ const COMMANDS = ['clear'];
         conversationList.innerHTML += getResponseWrapper(texts.map(text => getResponseTextHtml(text)).join(''));
         scrollToLastMessage();
         messageInput.focus();
+        
+        currentObserver?.disconnect();
+
+        observeFirstMessage(document.querySelector('#conversation-list > div[data-created-at]'));
+
         break;
       }
       case 'clearConversation':
@@ -251,6 +275,8 @@ const COMMANDS = ['clear'];
         const firstLoad = message.value.firstLoad;
 
         let newMessagesHtmlContent = '';
+
+        const lastScrollHeight = document.querySelector('#conversation-list').scrollHeight;
         
         for(const message of messages) {
           if(message.role === 'user') {
@@ -267,14 +293,17 @@ const COMMANDS = ['clear'];
         const firstMessage = messages[0];
         
         removeLoadingContainer();
-        
-        if(firstMessage) {
-          const firstElementInList = findMessageByCreatedAt(firstMessage.createdAt);
 
-          const firstElementClientRect = firstElementInList.getBoundingClientRect();
-          conversationList.scrollTo({
-            top: firstElementClientRect.top + firstElementClientRect.height
-          });
+        if(firstMessage && !firstLoad) {
+          // Keep scroll in same position.
+          setTimeout(() => {
+
+            const scrollDiff = document.querySelector('#conversation-list').scrollHeight - lastScrollHeight;
+
+            document.querySelector('#conversation-list').scrollTop += scrollDiff;
+
+          }, 0);
+
         }        
 
         const lastMessage = messages[messages.length - 1];
@@ -284,28 +313,9 @@ const COMMANDS = ['clear'];
             scrollToLastMessage();
           }, 0);
         }
-        
+
         if(messages.length) {
-          setTimeout(() => {
-  
-            const firstChatElement = findMessageByCreatedAt(lastMessage.createdAt);
-  
-            const o = new IntersectionObserver(([entry]) => {
-  
-              if(entry.isIntersecting) {
-                vscode.postMessage({
-                  type: 'getMoreConversationMessages',
-                  value: lastMessage.createdAt,
-                });
-                o.disconnect();
-              }
-  
-            }, {
-              root: document.getElementById('conversation-list'),
-              threshold: 1.0,
-            });
-            o.observe(firstChatElement);
-          }, 0)
+          observeFirstMessage(document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`))
         }
 
         break;
