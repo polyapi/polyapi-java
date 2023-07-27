@@ -1,4 +1,4 @@
-import { get, set } from 'lodash';
+import { get, set, isEqual } from 'lodash';
 import crypto from 'crypto';
 import { ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Variable } from '@prisma/client';
@@ -214,7 +214,7 @@ export class VariableService {
         await this.secretService.set(environmentId, variable.id, value);
       }
 
-      if ((value !== undefined && value !== previousValue) || secret !== variable.secret) {
+      if ((value !== undefined && !isEqual(value, previousValue)) || secret !== variable.secret) {
         const currentValue = value || await this.getVariableValue(updatedVariable);
 
         this.logger.debug(`Sending change event for variable ${variable.id}.`);
@@ -225,7 +225,7 @@ export class VariableService {
           updatedBy,
           updateTime: Date.now(),
           updatedFields: [
-            value !== undefined && currentValue !== previousValue ? 'value' : null,
+            value !== undefined && !isEqual(currentValue, previousValue) ? 'value' : null,
             secret !== variable.secret ? 'secret' : null,
           ].filter(Boolean) as ('value' | 'secret')[],
           secret: secret as boolean,
