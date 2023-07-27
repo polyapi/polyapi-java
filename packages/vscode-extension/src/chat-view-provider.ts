@@ -160,6 +160,8 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         value: data.texts,
       });
     } catch (error) {
+      console.error(error);
+
       this.webView?.webview.postMessage({
         type: 'addResponseTexts',
         value: [
