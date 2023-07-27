@@ -114,6 +114,10 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         await this.getConversationHistory();
       }
     });
+
+    if (!this.firstMessagesLoaded) {
+      this.getConversationHistory();
+    }
   }
 
   private async sendPolyQuestionRequest(message: string) {

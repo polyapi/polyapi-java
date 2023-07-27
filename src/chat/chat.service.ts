@@ -92,7 +92,15 @@ export class ChatService {
       skip: cursor ? 1 : undefined,
     });
     return (await messages).map((m) => {
-      return { role: m.role, content: m.content, createdAt: m.createdAt };
+      return { role: m.role, content: this.parseQuestionContent(m.content), createdAt: m.createdAt };
     });
+  }
+
+  private parseQuestionContent(content: string) {
+    if (content.match(/Question:/ig)) {
+      this.logger.debug(`Parsing special question ${content}`);
+      return content.trim().split('Question:')[1].trim().replace(/^"/, '').replace(/"$/, '');
+    }
+    return content;
   }
 }
