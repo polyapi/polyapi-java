@@ -1,3 +1,6 @@
+### 0.1.42
+* Added conversation history to assistant.
+
 ### 0.1.41
 * Added /c command as alternative to /clear
 
