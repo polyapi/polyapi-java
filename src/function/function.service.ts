@@ -1516,7 +1516,7 @@ export class FunctionService implements OnModuleInit {
         }
       }
 
-      const renederedContent = mustache.render(body.raw || '{}', clonedArgumentValueMap, {}, {
+      const renderedContent = mustache.render(body.raw || '{}', clonedArgumentValueMap, {}, {
         escape(text) {
           return text;
         },
@@ -1524,7 +1524,7 @@ export class FunctionService implements OnModuleInit {
 
       return {
         ...body,
-        raw: JSON.stringify(JSON.parse(renederedContent)),
+        raw: JSON.stringify(JSON.parse(renderedContent)),
       };
     }
 
