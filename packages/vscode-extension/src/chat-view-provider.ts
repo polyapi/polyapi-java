@@ -178,9 +178,16 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    this.webView?.webview.postMessage({
-      type: 'clearConversation',
-    });
+    switch (command) {
+      case 'c':
+      case 'clear':
+        this.webView?.webview.postMessage({
+          type: 'clearConversation',
+        });
+        break;
+      default:
+        break;
+    }
 
     try {
       await axios.post(`${apiBaseUrl}/chat/command`, {

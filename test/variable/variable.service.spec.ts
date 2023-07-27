@@ -7,15 +7,15 @@ import { Visibility } from '@poly/model';
 import { PrismaService } from 'prisma/prisma.service';
 import { SecretService } from 'secret/secret.service';
 import {
+  aiServiceMock,
   authServiceMock,
   commonServiceMock,
   configServiceMock,
-  functionServiceMock,
   eventServiceMock,
+  functionServiceMock,
   prismaServiceMock,
   secretServiceMock,
   specsServiceMock,
-  aiServiceMock,
 } from '../mocks';
 import { resetMocks } from '../mocks/utils';
 import { ConfigService } from 'config/config.service';
@@ -641,6 +641,163 @@ describe('VariableService', () => {
       const value = Symbol('test');
       // @ts-ignore
       expect(service.getValueApproximation(value, true)).toBe('********');
+    });
+  });
+
+  describe('unwrapVariables', () => {
+    let authData;
+
+    beforeEach(() => {
+      authData = {};
+    });
+
+    test('passes primitive types', async () => {
+      const obj = 'test';
+      const result = await service.unwrapVariables(authData, obj);
+      expect(result).toBe('test');
+
+      const obj2 = 123;
+      const result2 = await service.unwrapVariables(authData, obj2);
+      expect(result2).toBe(123);
+    });
+
+    test('passes PolyVariable', async () => {
+      const obj = {
+        type: 'PolyVariable',
+        id: 'abc123',
+      };
+
+      authServiceMock.checkEnvironmentEntityAccess?.mockResolvedValueOnce();
+      jest.spyOn(service, 'findById').mockImplementationOnce(id => Promise.resolve({
+        id,
+      } as Variable));
+      jest.spyOn(service, 'getVariableValue').mockImplementationOnce(variable =>
+        Promise.resolve(variable.id === 'abc123' ? 'mockValue' : null),
+      );
+
+      const result = await service.unwrapVariables(authData, obj);
+
+      expect(result).toEqual('mockValue');
+    });
+
+    test('passes object with PolyVariable', async () => {
+      const obj = {
+        foo: {
+          type: 'PolyVariable',
+          id: 'abc123',
+        },
+      };
+
+      authServiceMock.checkEnvironmentEntityAccess?.mockResolvedValueOnce();
+      jest.spyOn(service, 'findById').mockImplementationOnce(id => Promise.resolve({
+        id,
+      } as Variable));
+      jest.spyOn(service, 'getVariableValue').mockImplementationOnce(variable =>
+        Promise.resolve(variable.id === 'abc123' ? 'mockValue' : null),
+      );
+
+      const result = await service.unwrapVariables(authData, obj);
+
+      expect(result).toEqual({
+        foo: 'mockValue',
+      });
+    });
+
+    test('passes nested PolyVariable', async () => {
+      const obj = {
+        foo: {
+          bar: {
+            type: 'PolyVariable',
+            id: 'xyz789',
+          },
+        },
+      };
+
+      authServiceMock.checkEnvironmentEntityAccess?.mockResolvedValueOnce();
+      jest.spyOn(service, 'findById').mockImplementationOnce(id => Promise.resolve({
+        id,
+      } as Variable));
+      jest.spyOn(service, 'getVariableValue').mockImplementationOnce(variable =>
+        Promise.resolve(variable.id === 'xyz789' ? 'mockNestedValue' : null),
+      );
+
+      const result = await service.unwrapVariables(authData, obj);
+
+      expect(result).toEqual({
+        foo: {
+          bar: 'mockNestedValue',
+        },
+      });
+    });
+
+    test('passes array with PolyVariable', async () => {
+      const obj = [
+        {
+          type: 'PolyVariable',
+          id: '123abc',
+        },
+        'test',
+      ];
+
+      authServiceMock.checkEnvironmentEntityAccess?.mockResolvedValueOnce();
+      jest.spyOn(service, 'findById').mockImplementationOnce(id => Promise.resolve({
+        id,
+      } as Variable));
+      jest.spyOn(service, 'getVariableValue').mockImplementationOnce(variable =>
+        Promise.resolve(variable.id === '123abc' ? 'mockArrayValue' : null),
+      );
+
+      const result = await service.unwrapVariables(authData, obj);
+
+      expect(result).toEqual([
+        'mockArrayValue',
+        'test',
+      ]);
+    });
+
+    test('throws error when variable is not accessible', async () => {
+      const obj = [
+        {
+          type: 'PolyVariable',
+          id: '123abc',
+        },
+        'test',
+      ];
+
+      authServiceMock.checkEnvironmentEntityAccess?.mockImplementationOnce(() => {
+        throw new Error('no access');
+      });
+      jest.spyOn(service, 'findById').mockImplementationOnce(id => Promise.resolve({
+        id,
+      } as Variable));
+      jest.spyOn(service, 'getVariableValue').mockImplementationOnce(variable =>
+        Promise.resolve(variable.id === '123abc' ? 'mockArrayValue' : null),
+      );
+
+      await expect(service.unwrapVariables(authData, obj)).rejects.toThrow('no access');
+    });
+
+    test('throws error when variable is not accessible via checkVariableAccess function', async () => {
+      const obj = [
+        {
+          type: 'PolyVariable',
+          id: '123abc',
+        },
+        'test',
+      ];
+
+      jest.spyOn(service, 'findById').mockImplementationOnce(id => Promise.resolve({
+        id,
+      } as Variable));
+      jest.spyOn(service, 'getVariableValue').mockImplementationOnce(variable =>
+        Promise.resolve(variable.id === '123abc' ? 'mockArrayValue' : null),
+      );
+
+      const checkAccess = () => {
+        throw new Error('no access');
+      };
+
+      await expect(service.unwrapVariables(authData, obj, checkAccess)).rejects.toThrow('no access');
     });
   });
 });

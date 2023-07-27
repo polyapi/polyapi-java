@@ -207,9 +207,7 @@ export class VariableService {
         },
       });
 
-      const previousValue = variable.secret
-        ? '********'
-        : await this.getVariableValue(variable);
+      const previousValue = await this.getVariableValue(variable);
 
       if (value) {
         this.logger.debug(`Updating variable ${variable.id} value`);
@@ -217,19 +215,17 @@ export class VariableService {
       }
 
       if ((value !== undefined && value !== previousValue) || secret !== variable.secret) {
-        const currentValue = secret
-          ? '********'
-          : value || await this.getVariableValue(updatedVariable);
+        const currentValue = value || await this.getVariableValue(updatedVariable);
 
         this.logger.debug(`Sending change event for variable ${variable.id}.`);
         await this.eventService.sendVariableChangeEvent(updatedVariable, {
           type: 'update',
-          previousValue,
-          currentValue,
+          previousValue: variable.secret ? '********' : previousValue,
+          currentValue: secret ? '********' : currentValue,
           updatedBy,
           updateTime: Date.now(),
           updatedFields: [
-            value !== undefined && value !== previousValue ? 'value' : null,
+            value !== undefined && currentValue !== previousValue ? 'value' : null,
             secret !== variable.secret ? 'secret' : null,
           ].filter(Boolean) as ('value' | 'secret')[],
           secret: secret as boolean,
@@ -334,17 +330,20 @@ export class VariableService {
     return contextValues;
   }
 
-  async unwrapVariables<T extends Record<string, any>>(authData: AuthData, obj: T): Promise<T> {
-    for (const key of Object.keys(obj)) {
-      const value = obj[key];
-      if (typeof value === 'object' && value.type === 'PolyVariable' && value.id) {
-        const variable = await this.findById(value.id, true);
+  async unwrapVariables<T>(authData: AuthData, obj: T, checkVariableAccess?: (variable: Variable) => Promise<void>): Promise<T> {
+    if (obj instanceof Object) {
+      if (obj['type'] === 'PolyVariable' && obj['id']) {
+        const variable = await this.findById(obj['id'], true);
         if (variable) {
+          await checkVariableAccess?.(variable);
           await this.authService.checkEnvironmentEntityAccess(variable, authData, true);
-          obj[key as keyof T] = await this.getVariableValue(variable, value.path);
+          return await this.getVariableValue(variable, obj['path']);
         }
-      } else if (typeof value === 'object') {
-        obj[key as keyof T] = await this.unwrapVariables(authData, value);
+      } else {
+        for (const key of Object.keys(obj)) {
+          const value = obj[key];
+          obj[key] = await this.unwrapVariables(authData, value, checkVariableAccess);
+        }
       }
     }
     return obj;

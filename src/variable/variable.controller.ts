@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { VariableService } from 'variable/variable.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -13,6 +25,7 @@ import {
 } from '@poly/model';
 import { AuthData, AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
+import { Variable } from '@prisma/client';
 
 @ApiSecurity('PolyApiKey')
 @Controller('variables')
@@ -120,6 +133,18 @@ export class VariableController {
         : Permission.ManageNonSecretVariables,
     );
 
+    const checkVariableAccess = async (variable: Variable) => {
+      if (variable.secret) {
+        try {
+          await this.authService.checkPermissions(req.user, Permission.ManageSecretVariables);
+        } catch (e) {
+          if (e instanceof ForbiddenException) {
+            throw new ForbiddenException('Cannot use a secret value to set a non-secret variable without \'manageSecretVariables\' permission.');
+          }
+        }
+      }
+    };
+
     return this.service.toDto(
       await this.service.updateVariable(
         req.user.environment.id,
@@ -128,7 +153,9 @@ export class VariableController {
         name,
         context,
         description,
-        value,
+        value !== undefined
+          ? await this.service.unwrapVariables<ValueType>(req.user, value, checkVariableAccess)
+          : undefined,
         visibility,
         secret,
       ),

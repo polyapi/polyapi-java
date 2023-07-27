@@ -158,7 +158,6 @@ def create_new_conversation(user_id: str) -> Conversation:
 
 
 def clear_conversations(user_id: str) -> None:
-    # CURRENTLY UNUSED!
     db = get_client()
     db.conversationmessage.delete_many(where={"userId": user_id})
 

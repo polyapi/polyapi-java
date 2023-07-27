@@ -1,3 +1,6 @@
+### 0.1.41
+* Added /c command as alternative to /clear
+
 ### 0.1.40
 * Fix infinite `typescript.restartTsServer` on edge-case.
 

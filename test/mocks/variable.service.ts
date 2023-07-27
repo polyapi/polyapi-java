@@ -11,4 +11,5 @@ export default {
   updateVariable: getFnMock<VariableService['updateVariable']>(),
   deleteVariable: getFnMock<VariableService['deleteVariable']>(),
   toDto: getFnMock<VariableService['toDto']>(),
+  unwrapVariables: getFnMock<VariableService['unwrapVariables']>().mockImplementation((authData, value) => Promise.resolve(value)),
 } as TypedMock<VariableService>;

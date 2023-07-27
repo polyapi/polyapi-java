@@ -1,4 +1,6 @@
-const COMMANDS = ['clear'];
+const COMMANDS = [
+  'clear', 'c'
+];
 
 (function() {
   const vscode = acquireVsCodeApi();
@@ -22,7 +24,7 @@ const COMMANDS = ['clear'];
     We need to apply https://tailwindcss.com/docs/typography-plugin  to tailwind css to avoid break markdown html styles,
     and because tailwind typography plugin comes with different font-size values we have to override them to match vs-code styles.
   */
-  
+
   tailwind.config = {
     theme: {
       extend: {
@@ -377,9 +379,9 @@ const COMMANDS = ['clear'];
   });
 
   document.addEventListener('click', e => {
-    const targetButton = e.target.closest('button');    
+    const targetButton = e.target.closest('button');
     const linkButton = e.target.closest('a');
-    
+
     if(linkButton) {
       if(linkButton.classList?.contains('go-to-settings')) {
         e.preventDefault();

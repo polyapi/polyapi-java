@@ -12,7 +12,7 @@ from app.description import (
 )
 from app.docs import documentation_question
 from app.typedefs import CompletionAnswer, DescInputDto, VarDescInputDto
-from app.utils import create_new_conversation, get_user, log
+from app.utils import clear_conversations, create_new_conversation, get_user, log
 from app.router import split_route_and_question
 
 bp = Blueprint("views", __name__)
@@ -103,6 +103,13 @@ def webhook_description() -> Response:
 def variable_description() -> Response:
     data: VarDescInputDto = request.get_json(force=True)
     return jsonify(get_variable_description(data))
+
+
+@bp.route("/clear-conversations", methods=["POST"])
+def clear_conversations_view() -> str:
+    user_id = request.get_json(force=True)["user_id"]
+    clear_conversations(user_id)
+    return "Conversation Cleared"
 
 
 @bp.route("/error")

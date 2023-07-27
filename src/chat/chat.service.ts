@@ -26,8 +26,11 @@ export class ChatService {
     const [commandName] = command.split(' ');
 
     switch (commandName) {
+      case 'c':
       case 'clear':
         await this.aiService.clearConversation(environmentId, userId);
+        break;
+      default:
         break;
     }
   }
