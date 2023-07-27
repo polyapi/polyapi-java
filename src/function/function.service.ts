@@ -1449,6 +1449,13 @@ export class FunctionService implements OnModuleInit {
     const clonedArgumentValueMap = cloneDeep(argumentValueMap);
 
     const sanitizeSringArgumentValue = (name: string, quoted: boolean) => {
+      const escapeRegularArgumentString = () => {
+        // Escape string values, we should  only escape double quotes to avoid breaking json syntax on mustache template.
+        const escapedString = (clonedArgumentValueMap[name] || '').replace(/"/g, '\\"');
+
+        clonedArgumentValueMap[name] = quoted ? escapedString : `"${escapedString}"`;
+      };
+
       try {
         const parsedValue = JSON.parse(clonedArgumentValueMap[name]);
 
@@ -1465,12 +1472,13 @@ export class FunctionService implements OnModuleInit {
           } else {
             clonedArgumentValueMap[name] = doubleStringifiedValue;
           }
+        } else {
+          // Valid JSON string case, they are stringified strings, like JSON.stringify('foo') = '"foo"'
+          escapeRegularArgumentString();
         }
       } catch (err) {
-        // Regular argument string, we only escape double quotes to avoid breaking json syntax on mustache template.
-        const escapedString = (clonedArgumentValueMap[name] || '').replace(/"/g, '\\"');
-
-        clonedArgumentValueMap[name] = quoted ? escapedString : `"${escapedString}"`;
+        // Invalid JSON but value it is still a string
+        escapeRegularArgumentString();
       }
     };
 
@@ -1508,9 +1516,7 @@ export class FunctionService implements OnModuleInit {
         }
       }
 
-      const unescapedBodyString = (body.raw || '').replace(/\\"/g, '"');
-
-      const renederedContent = mustache.render(unescapedBodyString || '{}', clonedArgumentValueMap, {}, {
+      const renederedContent = mustache.render(body.raw || '{}', clonedArgumentValueMap, {}, {
         escape(text) {
           return text;
         },
