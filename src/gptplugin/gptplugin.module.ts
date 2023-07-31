@@ -4,9 +4,10 @@ import { PrismaModule } from 'prisma/prisma.module';
 import { GptPluginService } from 'gptplugin/gptplugin.service';
 import { GptPluginController } from 'gptplugin/gptplugin.controller';
 import { FunctionModule } from 'function/function.module';
+import { AiModule } from 'ai/ai.module';
 
 @Module({
-  imports: [HttpModule, PrismaModule, FunctionModule],
+  imports: [HttpModule, PrismaModule, FunctionModule, AiModule],
   providers: [GptPluginService],
   controllers: [GptPluginController],
 })

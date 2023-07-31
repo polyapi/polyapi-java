@@ -4,9 +4,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Environment } from '@prisma/client';
 import { Request } from 'express';
 import { Visibility } from '@poly/model';
-import { functionServiceMock, httpServiceMock } from '../mocks';
+import { functionServiceMock, aiServiceMock } from '../mocks';
 import { FunctionService } from 'function/function.service';
-import { HttpService } from '@nestjs/axios';
+import { AiService } from 'ai/ai.service';
 
 const PLUGIN_CREATE_SPEC: PluginFunction = {
   id: '9d284b9d-c1a0-4d80-955d-9ef79343ddb7',
@@ -234,9 +234,13 @@ describe('GptPluginService', () => {
           provide: FunctionService,
           useValue: functionServiceMock,
         },
+        // {
+        //   provide: HttpService,
+        //   useValue: httpServiceMock,
+        // },
         {
-          provide: HttpService,
-          useValue: httpServiceMock,
+          provide: AiService,
+          useValue: aiServiceMock,
         },
       ],
     }).compile();
@@ -308,7 +312,7 @@ describe('GptPluginService', () => {
       // TODO run openapi spec validator in tests?
     });
 
-    it.skip('should fail for invalid functionId', async () => {
+    it('should fail for invalid functionId', async () => {
       const body = {
         slug: 'bad',
         name: 'Bad',
@@ -349,7 +353,7 @@ describe('GptPluginService', () => {
   });
 
   describe('getManifest', () => {
-    it.skip('should return the manifest for the environment', async () => {
+    it('should return the manifest for the environment', async () => {
       const plugin = await _createPlugin(prisma);
       const subdomain = (await prisma.environment.findFirstOrThrow({ where: { id: plugin.environmentId } })).subdomain;
       expect(subdomain).toBeTruthy();
@@ -357,6 +361,26 @@ describe('GptPluginService', () => {
       const req = { hostname: `mass-effect-${subdomain}.develop.polyapi.io` } as Request;
       const manifest = await service.getManifest(req);
       expect(manifest.api.url).toBeTruthy();
+    });
+  });
+
+  describe('chat', () => {
+    it('hit the AI servers', async () => {
+      const chatMock = aiServiceMock.pluginChat;
+      if (!chatMock) {
+        throw new Error('should be defined');
+      }
+      chatMock.mockReturnValue(new Promise((resolve) => resolve('Pong')));
+
+      const environment = await _createTestEnvironment(prisma);
+      const plugin = await _createPlugin(prisma);
+      const authData = {
+        key: '123',
+        environment,
+      };
+      const resp = await service.chat(authData, plugin.slug, 'hello world');
+      expect(chatMock).toHaveBeenCalledTimes(1);
+      expect(resp).toBe('Pong');
     });
   });
 });

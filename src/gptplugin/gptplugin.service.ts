@@ -3,7 +3,7 @@ import handlebars from 'handlebars';
 import _ from 'lodash';
 import convert from '@openapi-contrib/json-schema-to-openapi-schema';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
+import { AiService } from 'ai/ai.service';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ApiFunctionSpecification,
@@ -271,8 +271,7 @@ export class GptPluginService {
 
   constructor(
     private readonly functionService: FunctionService,
-    // TODO use with updatePlugin endpoint?
-    private readonly httpService: HttpService,
+    private readonly aiService: AiService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -480,5 +479,11 @@ export class GptPluginService {
       contact_email: contactEmail,
       legal_info_url: legalUrl,
     };
+  }
+
+  async chat(authData, slug: string, message: string) {
+    // validate the plugin is legit
+    await this.getPlugin(slug, authData.environment.id);
+    return await this.aiService.pluginChat(slug, message);
   }
 }

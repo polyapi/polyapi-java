@@ -36,6 +36,14 @@ export class GptPluginController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @Post('plugins/:slug/chat')
+  public async pluginChat(@Req() req: AuthRequest, @Param('slug') slug, @Body() body): Promise<unknown> {
+    slug = slug.toLowerCase();
+    const resp = await this.service.chat(req.user, slug, body.message);
+    return resp;
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Post('plugins')
   public async pluginCreateOrUpdate(@Req() req: AuthRequest, @Body() body: CreatePluginDto): Promise<unknown> {
     const plugin = await this.service.createOrUpdatePlugin(req.user.environment, body);
