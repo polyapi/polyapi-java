@@ -11,12 +11,11 @@ import { AiService } from 'ai/ai.service';
 const PLUGIN_CREATE_SPEC: PluginFunction = {
   id: '9d284b9d-c1a0-4d80-955d-9ef79343ddb7',
   operationId: 'createPlugin',
-  executePath: 'foobar',
+  executePath: '/functions/api/9d284b9d-c1a0-4d80-955d-9ef79343ddb7/execute',
   type: 'apiFunction',
   context: 'polyapi.plugins',
   name: 'create',
-  description:
-    "This API call allows users to create a new plugin on Poly API. The request payload includes the name, slug, icon URL, and descriptions for the model and marketplace. Additionally, users can specify which functions to include in the plugin. The response payload includes the newly created plugin's ID, slug, name, descriptions, icon URL, and function IDs. The plugin URL is also returned for easy access to the newly created plugin.",
+  description: 'This API call allows users',
   function: {
     arguments: [
       {
@@ -160,49 +159,6 @@ async function _createTestEnvironment(prisma) {
   return env;
 }
 
-async function _createApiFunction(prisma: PrismaService) {
-  const environment = await _createTestEnvironment(prisma);
-
-  const defaults = {
-    id: '123',
-    environmentId: environment.id,
-    name: 'twilio.sendSms',
-    context: 'comms.messaging',
-    description: 'send a text message',
-    method: 'GET',
-    url: 'http://example.com/twilio',
-    body: '{"mode":"urlencoded","urlencoded":[{"key":"To","value":"{{phone}}"},{"key":"From","value":"+17622396902"},{"key":"Body","value":"{{message}}"}]}',
-    response:
-      '{"body":"orale vato","num_segments":"1","direction":"outbound-api","from":"+17622396902","date_updated":"Tue, 21 Mar 2023 12:34:03 +0000","price":null,"error_message":null,"uri":"/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages/SM899acf9f2afdf9d8ca62a54fa4e29578.json","account_sid":"ACe562bccbc410295451a07d40747eb10b","num_media":"0","to":"+16504859634","date_created":"Tue, 21 Mar 2023 12:34:03 +0000","status":"queued","sid":"SM899acf9f2afdf9d8ca62a54fa4e29578","date_sent":null,"messaging_service_sid":null,"error_code":null,"price_unit":"USD","api_version":"2010-04-01","subresource_uris":{"media":"/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages/SM899acf9f2afdf9d8ca62a54fa4e29578/Media.json"}}',
-  };
-  return prisma.apiFunction.upsert({
-    where: { id: '123' },
-    update: defaults,
-    create: defaults,
-  });
-}
-
-async function _createServerFunction(prisma: PrismaService) {
-  const environment = await _createTestEnvironment(prisma);
-
-  const defaults = {
-    id: '456',
-    environmentId: environment.id,
-    name: 'sendProductUrlInSms',
-    context: 'products.shopify',
-    description: 'take a product ID and phone number',
-    arguments: '[{"name":"productId","type":"number"},{"name":"phoneNumber","type":"string"}]',
-    returnType: 'Promise<void>',
-    code: 'dummy',
-    serverSide: true,
-  };
-  return prisma.customFunction.upsert({
-    where: { id: '456' },
-    update: defaults,
-    create: defaults,
-  });
-}
-
 async function _createPlugin(prisma: PrismaService) {
   const environment = await _createTestEnvironment(prisma);
   const defaults = {
@@ -258,9 +214,10 @@ describe('GptPluginService', () => {
   });
 
   describe('getOpenApiSpec', () => {
-    it.skip('should render for an API Function', async () => {
+    it('should render for an API Function', async () => {
       await _createPlugin(prisma);
-      const apiFunc = await _createApiFunction(prisma);
+      // const apiFunc = await _createApiFunction(prisma);
+      jest.spyOn(service, '_getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([PLUGIN_CREATE_SPEC])));
 
       const environment = await _createTestEnvironment(prisma);
       const specStr = await service.getOpenApiSpec(
@@ -279,40 +236,17 @@ describe('GptPluginService', () => {
       expect(spec.servers[0].url).toBe(`https://mass-effect-${environment.subdomain}.develop.polyapi.io`);
 
       expect(Object.keys(spec.paths).length).toBe(1);
-      const path1 = spec.paths[`/functions/api/${apiFunc.id}/execute`];
-      expect(path1.post.summary).toBe('send a text message');
-      expect(path1.post.operationId).toBe('commsMessagingTwilioSendSms');
+      const path1 = spec.paths[`/functions/api/${PLUGIN_CREATE_SPEC.id}/execute`];
+      console.log(spec.paths);
+      expect(path1.post.summary).toBe('This API call allows users');
+      expect(path1.post.operationId).toBe('createPlugin');
 
-      const bodySchema = spec.components.schemas.commsMessagingTwilioSendSmsBody;
+      const bodySchema = spec.components.schemas.createPluginBody;
       expect(bodySchema).toBeTruthy();
-
-      // TODO run openapi spec validator in tests?
-    });
-
-    it.skip('should render for a Server Function', async () => {
-      await _createPlugin(prisma);
-      const serverFunc = await _createServerFunction(prisma);
-
-      const environment = await _createTestEnvironment(prisma);
-      const specStr = await service.getOpenApiSpec(
-        `mass-effect-${environment.subdomain}.develop.polyapi.io`,
-        'mass-effect',
-      );
-
-      const spec = JSON.parse(specStr);
-
-      expect(Object.keys(spec.paths).length).toBe(1);
-      const path1 = spec.paths[`/functions/server/${serverFunc.id}/execute`];
-      expect(path1.post.summary).toBe('take a product ID and phone number');
-      expect(path1.post.operationId).toBe('productsShopifySendProductUrlInSms');
-
-      const bodySchema = spec.components.schemas.productsShopifySendProductUrlInSmsBody;
-      expect(bodySchema).toBeTruthy();
-
-      // TODO run openapi spec validator in tests?
     });
 
     it('should fail for invalid functionId', async () => {
+      jest.spyOn(service, '_getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([])));
       const body = {
         slug: 'bad',
         name: 'Bad',

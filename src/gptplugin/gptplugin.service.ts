@@ -197,7 +197,7 @@ function _tweakSpecForPlugin(
   };
 }
 
-async function _apiFunctionMap(f: ApiFunction, functionService: FunctionService): Promise<PluginFunction> {
+export async function apiFunctionMap(f: ApiFunction, functionService: FunctionService): Promise<PluginFunction> {
   const details = await functionService.toApiFunctionSpecification(f);
   const pluginFunc = _tweakSpecForPlugin(f, details);
   return new Promise((resolve) => {
@@ -291,7 +291,7 @@ export class GptPluginService {
     const customFunctions = await this.functionService.getServerFunctions(environmentId, [], [], ids);
     // const authFunctions = await this.prisma.authFunction.findMany({ where: { publicId: { in: publicIds } } });
 
-    let promises = apiFunctions.map((apiFunction) => _apiFunctionMap(apiFunction, this.functionService));
+    let promises = apiFunctions.map((apiFunction) => apiFunctionMap(apiFunction, this.functionService));
     promises = promises.concat(
       customFunctions.map((customFunction) => _customFunctionMap(customFunction, this.functionService)),
     );
