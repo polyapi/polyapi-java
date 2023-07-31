@@ -152,6 +152,7 @@ model CustomFunction {
   requirements  String?     @map("requirements")
   trained       Boolean     @default(false)
   serverSide    Boolean     @default(false) @map("server_side")
+  apiKey        String?     @map("api_key")
   visibility    String      @default("ENVIRONMENT")
 
   @@map("custom_function")

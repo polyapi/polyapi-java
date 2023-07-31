@@ -5,7 +5,7 @@ import { cloneDeep } from 'lodash';
 
 export type IntrospectionJsonSchema = ReturnType<typeof fromIntrospectionQuery>
 
-export function getGraphqlQueryName(query: string) {
+export const getGraphqlQueryName = (query: string) => {
   const document = parse(query);
 
   let queryName = '';
@@ -17,9 +17,9 @@ export function getGraphqlQueryName(query: string) {
   }
 
   return queryName;
-}
+};
 
-export function getGraphqlVariables(query: string) {
+export const getGraphqlVariables = (query: string) => {
   const variables: VariableDefinitionNode[] = [];
 
   const document = parse(query);
@@ -33,9 +33,9 @@ export function getGraphqlVariables(query: string) {
   }
 
   return variables;
-}
+};
 
-export function getGraphqlIdentifier(query: string): string {
+export const getGraphqlIdentifier = (query: string): string => {
   let identifier = '';
 
   const document = parse(query);
@@ -64,27 +64,25 @@ export function getGraphqlIdentifier(query: string): string {
 
     return 0;
   }).join(',');
-}
+};
 
-function getArrayOfType(type: Record<string, any>, requiredItems: boolean) {
-  return {
-    type: 'array',
-    items: {
-      ...(!requiredItems
-        ? {
-            anyOf: [
-              type,
-              {
-                type: 'null',
-              },
-            ],
-          }
-        : type),
-    },
-  };
-}
+const getArrayOfType = (type: Record<string, any>, requiredItems: boolean) => ({
+  type: 'array',
+  items: {
+    ...(!requiredItems
+      ? {
+          anyOf: [
+            type,
+            {
+              type: 'null',
+            },
+          ],
+        }
+      : type),
+  },
+});
 
-function getType($schema: 'string', required: boolean, isList: boolean, requiredListItems: boolean, type: Record<string, any>, definitions?: any[]) {
+const getType = ($schema: 'string', required: boolean, isList: boolean, requiredListItems: boolean, type: Record<string, any>, definitions?: any[]) => {
   const finalType = '$ref' in type ? { $ref: type.$ref } : type;
   return {
     required,
@@ -102,19 +100,17 @@ function getType($schema: 'string', required: boolean, isList: boolean, required
       ...(definitions ? { definitions } : {}),
     },
   };
-}
+};
 
-export function getJsonSchemaFromIntrospectionQuery(introspection: IntrospectionQuery) {
-  return fromIntrospectionQuery(introspection, {
-    nullableArrayItems: true,
-  });
-}
+export const getJsonSchemaFromIntrospectionQuery = (introspection: IntrospectionQuery) => fromIntrospectionQuery(introspection, {
+  nullableArrayItems: true,
+});
 
-export function resolveGraphqlArgumentType(typeNode: TypeNode, introspectionJsonSchema: IntrospectionJsonSchema, isList = false, required = false, requiredListItems = false): {
-    required: boolean,
-    type: string,
-    typeSchema?: Record<string, any>
-  } {
+export const resolveGraphqlArgumentType = (typeNode: TypeNode, introspectionJsonSchema: IntrospectionJsonSchema, isList = false, required = false, requiredListItems = false): {
+  required: boolean,
+  type: string,
+  typeSchema?: Record<string, any>
+} => {
   const introspectionJsonSchemaCopy = cloneDeep(introspectionJsonSchema);
 
   const $schema = introspectionJsonSchemaCopy.$schema;
@@ -132,7 +128,7 @@ export function resolveGraphqlArgumentType(typeNode: TypeNode, introspectionJson
       return resolveGraphqlArgumentType(typeNode.type, introspectionJsonSchemaCopy, true, required, requiredListItems);
     }
   } else if (['Float', 'Int', 'String', 'Boolean', 'ID'].includes(typeNode.name.value)) {
-    // Here we check only default scalar types, see: https://graphql.org/learn/schema/#scalar-types
+  // Here we check only default scalar types, see: https://graphql.org/learn/schema/#scalar-types
 
     const namedType = typeNode.name.value;
 
@@ -174,10 +170,10 @@ export function resolveGraphqlArgumentType(typeNode: TypeNode, introspectionJson
   const customScalarType: typeof introspectionJsonSchema['type'] = ['number', 'string', 'boolean', 'object', 'array'];
 
   /*
-      Custom scalar type, should be set as `customScalarType`, since we can't guess what is the desired type on server side.
-      See graphql docs: https://graphql.org/learn/schema/#scalar-types
-      `graphql-2-json-schema` lib show us custom scalar types as `type: 'object'` without properties object.
-    */
+    Custom scalar type, should be set as `customScalarType`, since we can't guess what is the desired type on server side.
+    See graphql docs: https://graphql.org/learn/schema/#scalar-types
+    `graphql-2-json-schema` lib show us custom scalar types as `type: 'object'` without properties object.
+  */
   if (typeDefinition.type === 'object' && typeof typeDefinition.properties === 'undefined') {
     return getType($schema, required, isList, requiredListItems, customScalarType);
   }
@@ -219,4 +215,4 @@ export function resolveGraphqlArgumentType(typeNode: TypeNode, introspectionJson
 
   // Compound objects defined in graphql api type system.
   return getType($schema, required, isList, requiredListItems, { $ref: `#/definitions/${namedType}` }, introspectionJsonSchemaCopy.definitions);
-}
+};

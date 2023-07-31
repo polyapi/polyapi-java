@@ -148,19 +148,20 @@ const PLUGIN_CREATE_SPEC: PluginFunction = {
 // use these known TEST_PUBLIC_IDS so we can appropriately clear between tests
 const TEST_PUBLIC_IDS = ['123', '456'];
 
+// eslint-disable-next-line func-style
 function isEnvironment(env: Environment | null): asserts env is Environment {
   if (!env) throw new Error('environment is null!');
 }
 
-async function _createTestEnvironment(prisma) {
+const createTestEnvironment = async prisma => {
   // HACK we should really create an environment instead of clobbering whichever is first
   const env = prisma.environment.findFirst({ orderBy: { id: 'asc' } });
   isEnvironment(env);
   return env;
-}
+};
 
-async function _createPlugin(prisma: PrismaService) {
-  const environment = await _createTestEnvironment(prisma);
+const createPlugin = async function (prisma: PrismaService) {
+  const environment = await createTestEnvironment(prisma);
   const defaults = {
     name: 'Mass Effect',
     iconUrl: 'http://example.com/image.png',
@@ -175,7 +176,7 @@ async function _createPlugin(prisma: PrismaService) {
       ...defaults,
     },
   });
-}
+};
 
 describe('GptPluginService', () => {
   const prisma = new PrismaService();
@@ -215,11 +216,11 @@ describe('GptPluginService', () => {
 
   describe('getOpenApiSpec', () => {
     it('should render for an API Function', async () => {
-      await _createPlugin(prisma);
+      await createPlugin(prisma);
       // const apiFunc = await _createApiFunction(prisma);
-      jest.spyOn(service, '_getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([PLUGIN_CREATE_SPEC])));
+      jest.spyOn(service, 'getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([PLUGIN_CREATE_SPEC])));
 
-      const environment = await _createTestEnvironment(prisma);
+      const environment = await createTestEnvironment(prisma);
       const specStr = await service.getOpenApiSpec(
         `mass-effect-${environment.subdomain}.develop.polyapi.io`,
         'mass-effect',
@@ -246,7 +247,7 @@ describe('GptPluginService', () => {
     });
 
     it('should fail for invalid functionId', async () => {
-      jest.spyOn(service, '_getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([])));
+      jest.spyOn(service, 'getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([])));
       const body = {
         slug: 'bad',
         name: 'Bad',
@@ -254,7 +255,7 @@ describe('GptPluginService', () => {
         functionIds: ['bad'],
       };
 
-      const environment = await _createTestEnvironment(prisma);
+      const environment = await createTestEnvironment(prisma);
       try {
         await service.createOrUpdatePlugin(environment, body);
         expect(0).toBe(1); // force error here if no error thrown
@@ -288,7 +289,7 @@ describe('GptPluginService', () => {
 
   describe('getManifest', () => {
     it('should return the manifest for the environment', async () => {
-      const plugin = await _createPlugin(prisma);
+      const plugin = await createPlugin(prisma);
       const subdomain = (await prisma.environment.findFirstOrThrow({ where: { id: plugin.environmentId } })).subdomain;
       expect(subdomain).toBeTruthy();
 
@@ -306,8 +307,8 @@ describe('GptPluginService', () => {
       }
       chatMock.mockReturnValue(new Promise((resolve) => resolve('Pong')));
 
-      const environment = await _createTestEnvironment(prisma);
-      const plugin = await _createPlugin(prisma);
+      const environment = await createTestEnvironment(prisma);
+      const plugin = await createPlugin(prisma);
       const authData = {
         key: '123',
         environment,
