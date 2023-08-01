@@ -1,4 +1,4 @@
-import json
+# import json
 import requests
 
 assert requests
@@ -132,7 +132,9 @@ def _get_openapi_spec(plugin_id: str) -> Dict:
 
 
 def _get_body_schema_name(post: Dict) -> str:
-    schema_ref: str = post['requestBody']["content"]["application/json"]["schema"]["$ref"]
+    schema_ref: str = post["requestBody"]["content"]["application/json"]["schema"][
+        "$ref"
+    ]
     schema_name = schema_ref.rsplit("/", 1)[1]
     return schema_name
 
@@ -181,7 +183,7 @@ def get_plugin_chat(plugin_id: str, message: str) -> Dict:
 
 def _get_name_path_map(openapi: Dict) -> Dict:
     rv = {}
-    for path, data in openapi['paths'].items():
+    for path, data in openapi["paths"].items():
         print(path, data)
         rv[data["post"]["operationId"]] = path
     return rv
@@ -189,8 +191,8 @@ def _get_name_path_map(openapi: Dict) -> Dict:
 
 def execute_function(openapi: Dict, function_call: Dict):
     name_path_map = _get_name_path_map(openapi)
-    path = name_path_map[function_call['name']]
+    path = name_path_map[function_call["name"]]
     # TODO figure out how to add preface to path?
     domain = "https://megatronical.pagekite.me"
-    print(domain+path)
+    print(domain + path)
     # resp = requests.post(domain + path, data={"data": json.loads(function_call['arguments'])})

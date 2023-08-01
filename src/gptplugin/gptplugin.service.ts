@@ -332,7 +332,7 @@ export class GptPluginService {
       where: { slug_environmentId: { slug, environmentId: environment.id } },
     });
 
-    const functionIds = JSON.parse(plugin.functionIds);
+    const functionIds = plugin.functionIds ? JSON.parse(plugin.functionIds) : [];
     const functions = await this.getAllFunctions(plugin.environmentId, environment.tenantId, functionIds);
 
     // @ts-expect-error fixme

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import datetime
 import csv
+import os
 from typing import List, TypedDict
 from prisma import Prisma, register, get_client
 from prisma.models import User, ApiFunction, Environment
@@ -86,6 +87,21 @@ def load_functions(user: User) -> None:
             )
             print(f"Created {url_function_path(func)}")
 
+    if not db.apifunction.find_first(where={"name": "twilioSendSms"}):
+        db.apifunction.create(data=dict(
+            environmentId=environment.id,
+            context="comms.messaging",
+            name="twilioSendSms",
+            description="This API call allows sends SMS messages through Twilio's messaging service.",
+            method="POST",
+            body='{"mode":"urlencoded","urlencoded":[{"key":"To","value":"{{My_Phone_Number}}"},{"key":"From","value":"+17622396902"},{"key":"Body","value":"{{message}}"}]}',
+            url='https://api.twilio.com/2010-04-01/Accounts/ACe562bccbc410295451a07d40747eb10b/Messages.json',
+            auth=os.environ.get("TWILIO_AUTH"),
+            responseType='{"$schema":"http://json-schema.org/draft-06/schema#","definitions":{"SubresourceUris":{"type":"object","additionalProperties":false,"properties":{"media":{"type":"string"}},"required":["media"],"title":"SubresourceUris"}},"type":"object","additionalProperties":false,"properties":{"body":{"type":"string"},"num_segments":{"type":"string","format":"integer"},"direction":{"type":"string"},"from":{"type":"string"},"date_updated":{"type":"string"},"price":{"type":"null"},"error_message":{"type":"null"},"uri":{"type":"string"},"account_sid":{"type":"string"},"num_media":{"type":"string","format":"integer"},"to":{"type":"string"},"date_created":{"type":"string"},"status":{"type":"string"},"sid":{"type":"string"},"date_sent":{"type":"null"},"messaging_service_sid":{"type":"null"},"error_code":{"type":"null"},"price_unit":{"type":"string"},"api_version":{"type":"string","format":"date"},"subresource_uris":{"$ref":"#/definitions/SubresourceUris"}},"required":["account_sid","api_version","body","date_created","date_sent","date_updated","direction","error_code","error_message","from","messaging_service_sid","num_media","num_segments","price","price_unit","sid","status","subresource_uris","to","uri"],"title":"ResponseType"}',
+            argumentsMetadata='{}',
+            visibility="PUBLIC")
+        )
+
 
 def united_get_status_get_or_create(user: User, load=True) -> ApiFunction:
     if load:
@@ -109,5 +125,6 @@ if __name__ == "__main__":
         print("Admin user not found. Please run Poly server first for initialization.")
         exit(1)
 
+    db.tenant.update_many(where={}, data={"publicVisibilityAllowed": True})
     load_functions(user)
     db.disconnect()

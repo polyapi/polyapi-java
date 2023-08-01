@@ -26,21 +26,6 @@ SPEC = {
     },
 }
 
-OPENAPI_FUNC = {
-    "name": "comms.messaging.twilioSendSms",
-    "description": "This API call allows sends SMS messages through Twilio's messaging service.",
-    "parameters": {
-        "type": "object",
-        # TODO get from plugin spec?
-        # "commsMessagingTwilioSendSmsBody": { "type": "object", "properties": { "My_Phone_Number": { "type": "string" }, "message": { "type": "string" } }, "required": [ "My_Phone_Number", "message" ]
-        "properties": {
-            "My_Phone_Number": {"type": "string", "description": ""},
-            "message": {"type": "string", "description": ""},
-        },
-        "required": ["My_Phone_Number", "message"],
-    },
-}
-
 MOCK_PLUGIN_OPENAPI = {
     "openapi": "3.0.1",
     "info": {
