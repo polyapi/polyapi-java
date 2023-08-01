@@ -1,34 +1,12 @@
-# import json
+import os
+import json
 import requests
 
 assert requests
 from typing import Dict, List
 import openai
-from app.typedefs import MessageDict, PropertySpecification, SpecificationDto
+from app.typedefs import MessageDict
 
-SPEC = {
-    "id": "ec66c324-80fe-4d9a-a5fa-2f7f38384155",
-    "type": "apiFunction",
-    "context": "comms.messaging",
-    "name": "twilioSendSms",
-    "description": "This API call allows sends SMS messages through Twilio's messaging service. The user can specify the number of the recipient as a string using the coutry code as string with no spaces, for example +16504859634, as well as the message body. The response payload returns detailed information about the status of the message, including its unique identifier and any error messages. This function does not require twilio credentials as they are alreayd store server side.",
-    "function": {
-        "arguments": [
-            {
-                "name": "My_Phone_Number",
-                "description": "",
-                "required": True,
-                "type": {"kind": "primitive", "type": "string"},
-            },
-            {
-                "name": "message",
-                "description": "",
-                "required": True,
-                "type": {"kind": "primitive", "type": "string"},
-            },
-        ],
-    },
-}
 
 MOCK_OPENAPI = {
     "openapi": "3.0.1",
@@ -39,7 +17,7 @@ MOCK_OPENAPI = {
     },
     "servers": [{"url": "https://service-nexus-1a0400cf.develop-k8s.polyapi.io"}],
     "paths": {
-        "/functions/api/ec66c324-80fe-4d9a-a5fa-2f7f38384155/execute": {
+        "/functions/api/a43bd64b-1b83-4b4f-824c-441bac050957/execute": {
             "post": {
                 "summary": "This API call allows sends SMS messages through Twilio",
                 "operationId": "commsMessagingTwilioSendSms",
@@ -89,41 +67,6 @@ MOCK_OPENAPI = {
         }
     },
 }
-
-
-def get_all_specs(function_ids) -> List[SpecificationDto]:
-    return [SPEC]  # type: ignore
-
-
-def _get_type(arg: PropertySpecification) -> str:
-    return "string"
-
-
-def _get_parameters(spec: SpecificationDto):
-    assert spec["function"]
-    args = spec["function"]["arguments"]
-    properties = {}
-    required = []
-    for arg in args:
-        properties[arg["name"]] = {
-            "type": _get_type(arg),
-            "description": arg["description"],
-        }
-        if arg["required"]:
-            required.append(arg["name"])
-
-    parameters = {"type": "object", "properties": properties}
-    return parameters, required
-
-
-def spec_to_openai_function(spec: SpecificationDto) -> Dict:
-    parameters, required = _get_parameters(spec)
-    return {
-        "name": f"{spec['context']}{spec['name']}",
-        "description": spec["description"],
-        "parameters": parameters,
-        "required": required,
-    }
 
 
 def _get_openapi_spec(plugin_id: str) -> Dict:
@@ -177,8 +120,8 @@ def get_plugin_chat(plugin_id: str, message: str) -> Dict:
         temperature=0.2,
     )
     function_call = resp["choices"][0]["message"]["function_call"]
-    execute_function(openapi, function_call)
-    return {"answer": "TODO"}
+    resp = execute_function(openapi, function_call)
+    return resp
 
 
 def _get_name_path_map(openapi: Dict) -> Dict:
@@ -194,5 +137,9 @@ def execute_function(openapi: Dict, function_call: Dict):
     path = name_path_map[function_call["name"]]
     # TODO figure out how to add preface to path?
     domain = "https://megatronical.pagekite.me"
-    print(domain + path)
-    # resp = requests.post(domain + path, data={"data": json.loads(function_call['arguments'])})
+    # TODO get this token somewhere else!
+    headers = {"Authorization": f"Bearer {os.environ.get('POLY_BEARER_TOKEN', 'FIXME')}"}
+    resp = requests.post(domain + path, data=json.loads(function_call['arguments']), headers=headers)
+    print(resp.content)
+    assert resp.status_code == 201
+    return {"answer": "TODO"}
