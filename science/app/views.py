@@ -11,6 +11,7 @@ from app.description import (
     get_webhook_description,
 )
 from app.docs import documentation_question, update_vector
+from app.plugin import get_plugin_chat
 from app.typedefs import CompletionAnswer, DescInputDto, VarDescInputDto
 from app.utils import clear_conversations, create_new_conversation, get_user, log
 from app.router import split_route_and_question
@@ -103,6 +104,13 @@ def webhook_description() -> Response:
 def variable_description() -> Response:
     data: VarDescInputDto = request.get_json(force=True)
     return jsonify(get_variable_description(data))
+
+
+@bp.route("/plugin-chat", methods=["POST"])
+def plugin_chat() -> Response:
+    data = request.get_json(force=True)
+    resp = get_plugin_chat(data['pluginId'], data['message'])
+    return jsonify(resp)
 
 
 @bp.route("/docs/update-vector", methods=["POST"])
