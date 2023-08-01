@@ -1,4 +1,4 @@
-import { CustomObjectsApi } from '@kubernetes/client-node';
+import { CustomObjectsApi, KubeConfig } from '@kubernetes/client-node';
 import { CloudEvent, emitterFor, EmitterFunction, httpTransport } from 'cloudevents';
 import { Logger } from '@nestjs/common';
 import { Cache } from 'cache-manager';
@@ -6,7 +6,6 @@ import crypto from 'crypto';
 import { ConfigService } from 'config/config.service';
 import { TriggerProvider } from 'trigger/provider/trigger-provider';
 import { TriggerDestination, TriggerDto, TriggerSource } from '@poly/model';
-import { makeCustomObjectsApiClient } from 'kubernetes/client';
 
 const TRIGGERS_GROUP = 'eventing.knative.dev';
 const TRIGGERS_VERSION = 'v1';
@@ -66,8 +65,20 @@ export class KNativeTriggerProvider implements TriggerProvider {
   async init() {
     this.logger.debug('Initializing KNative trigger provider...');
     this.logger.debug('Initializing Kubernetes API client...');
+    const kc = new KubeConfig();
 
-    this.k8sApi = makeCustomObjectsApiClient();
+    if (process.env.KUBE_CONFIG_USE_DEFAULT === 'true') {
+      this.logger.debug('Loading Kubernetes config from default location...');
+      kc.loadFromDefault();
+    } else if (process.env.KUBE_CONFIG_FILE_PATH) {
+      this.logger.debug(`Loading Kubernetes config from ${process.env.KUBE_CONFIG_FILE_PATH}...`);
+      kc.loadFromFile(process.env.KUBE_CONFIG_FILE_PATH);
+    } else {
+      this.logger.debug('Loading Kubernetes config from cluster...');
+      kc.loadFromCluster();
+    }
+
+    this.k8sApi = kc.makeApiClient(CustomObjectsApi);
   }
 
   toDto(triggerDef: KNativeTriggerDef): TriggerDto {

@@ -59,12 +59,12 @@ type Schema = {
   argumentsRequired?: string[];
 };
 
-const rsplit = (s: string, sep: string, maxsplit: number): string[] => {
+function rsplit(s: string, sep: string, maxsplit: number): string[] {
   const split = s.split(sep);
   return [split.slice(0, -maxsplit).join(sep)].concat(split.slice(-maxsplit));
-};
+}
 
-const slugify = (str: string): string => {
+function slugify(str: string): string {
   return String(str)
     .normalize('NFKD') // split accented characters into their base characters and diacritical marks
     .replace(/[\u0300-\u036f]/g, '') // remove all the accents, which happen to be all in the \u03xx UNICODE block.
@@ -73,9 +73,9 @@ const slugify = (str: string): string => {
     .replace(/[^a-z0-9 -]/g, '') // remove non-alphanumeric characters
     .replace(/\s+/g, '-') // replace spaces with hyphens
     .replace(/-+/g, '-'); // remove consecutive hyphens
-};
+}
 
-const getSlugSubdomain = (host: string): [string, string] => {
+function _getSlugSubdomain(host: string): [string, string] {
   const slugEnv = host.split('.')[0];
   const parts = rsplit(slugEnv, '-', 1);
   let slug = parts[0];
@@ -86,9 +86,9 @@ const getSlugSubdomain = (host: string): [string, string] => {
     subdomain = '69a4f5f0';
   }
   return [slug, subdomain];
-};
+}
 
-const getExecuteType = (t: string): string => {
+function _getExecuteType(t: string): string {
   switch (t) {
     case 'apiFunction':
       return 'api';
@@ -99,9 +99,9 @@ const getExecuteType = (t: string): string => {
     default:
       return 'unknown';
   }
-};
+}
 
-const getArgumentsRequired = (args: PropertySpecification[]): string[] => {
+function _getArgumentsRequired(args: PropertySpecification[]): string[] {
   const rv: string[] = [];
   for (const arg of args) {
     if (arg.required) {
@@ -109,9 +109,9 @@ const getArgumentsRequired = (args: PropertySpecification[]): string[] => {
     }
   }
   return rv;
-};
+}
 
-const getOpenApiType = (t: PropertyType): string => {
+const _getOpenApiType = (t: PropertyType): string => {
   if (t.kind === 'void') {
     return 'string';
   } else if (t.kind === 'plain') {
@@ -130,18 +130,18 @@ const getOpenApiType = (t: PropertyType): string => {
   }
 };
 
-const cleanupProperties = (properties: object) => {
+function _cleanupProperties(properties: object) {
   for (const [key, value] of Object.entries(properties)) {
     if (value.$ref) {
       delete properties[key];
     }
   }
-};
+}
 
-const getResponseSchema = async (f: PluginFunction) => {
+async function _getResponseSchema(f: PluginFunction) {
   // @ts-expect-error: it's ok
   const jsonSchema = f.function.returnType.schema;
-  const type = getOpenApiType(f.function.returnType);
+  const type = _getOpenApiType(f.function.returnType);
 
   let converted: null | OpenApiResponse = null;
   if (jsonSchema && type === 'object') {
@@ -156,23 +156,23 @@ const getResponseSchema = async (f: PluginFunction) => {
   };
   if (converted?.properties) {
     schema.properties = converted.properties;
-    cleanupProperties(schema.properties);
+    _cleanupProperties(schema.properties);
   }
 
   return {
     name: `${f.operationId}Response`,
     schema: JSON.stringify(schema, null, 2),
   };
-};
+}
 
-const getOperationId = (f: NameContext): string => {
+const _getOperationId = (f: NameContext): string => {
   // HACK this could be way more efficient, oh well
   let parts: string[] = [...f.context.split('.'), ...f.name.split('.')];
   parts = parts.map((s) => _.startCase(s));
   return _.camelCase(parts.join(''));
 };
 
-const trimDescription = (desc: string | undefined): string => {
+function _trimDescription(desc: string | undefined): string {
   if (!desc) {
     return '';
   }
@@ -182,41 +182,41 @@ const trimDescription = (desc: string | undefined): string => {
     return desc.substring(0, 250);
   }
   return desc;
-};
+}
 
-const tweakSpecForPlugin = (
+function _tweakSpecForPlugin(
   f: AnyFunction,
   details: ApiFunctionSpecification | CustomFunctionSpecification | ServerFunctionSpecification,
-): PluginFunction => {
-  details.description = trimDescription(details.description);
-  const executeType = getExecuteType(details.type);
+): PluginFunction {
+  details.description = _trimDescription(details.description);
+  const executeType = _getExecuteType(details.type);
   return {
     executePath: `/functions/${executeType}/${f.id}/execute`,
-    operationId: getOperationId(f),
+    operationId: _getOperationId(f),
     ...details,
   };
-};
+}
 
-const apiFunctionMap = async (f: ApiFunction, functionService: FunctionService): Promise<PluginFunction> => {
+async function _apiFunctionMap(f: ApiFunction, functionService: FunctionService): Promise<PluginFunction> {
   const details = await functionService.toApiFunctionSpecification(f);
-  const pluginFunc = tweakSpecForPlugin(f, details);
+  const pluginFunc = _tweakSpecForPlugin(f, details);
   return new Promise((resolve) => {
     resolve(pluginFunc);
   });
-};
+}
 
-const customFunctionMap = async (f: CustomFunction, functionService: FunctionService): Promise<PluginFunction> => {
+async function _customFunctionMap(f: CustomFunction, functionService: FunctionService): Promise<PluginFunction> {
   const details = await functionService.toCustomFunctionSpecification(f);
-  const pluginFunc = tweakSpecForPlugin(f, details);
+  const pluginFunc = _tweakSpecForPlugin(f, details);
   return new Promise((resolve) => {
     resolve(pluginFunc);
   });
-};
+}
 
-const getProperties = (props: PropertySpecification[]) => {
+function _getProperties(props: PropertySpecification[]) {
   const rv: object = {};
   for (const prop of props) {
-    const type = getOpenApiType(prop.type);
+    const type = _getOpenApiType(prop.type);
     const name = prop.name;
     rv[name] = { type };
     if (prop.description) {
@@ -225,36 +225,39 @@ const getProperties = (props: PropertySpecification[]) => {
     if (type === 'object' && prop.type.kind === 'object') {
       const { properties, schema } = prop.type;
       if (properties && properties.length > 0) {
-        rv[name].properties = getProperties(properties);
-        rv[name].required = getArgumentsRequired(properties);
+        rv[name].properties = _getProperties(properties);
+        rv[name].required = _getArgumentsRequired(properties);
       } else if (schema) {
         rv[name] = _.omit(schema, '$schema');
       }
     }
   }
   return rv;
-};
+}
 
-const validateName = (name: string): string => {
+function _validateName(name: string): string {
   if (name.length > 30) {
     throw new BadRequestException('Name too long. Max name length is 30 characters!');
   }
   return name;
-};
+}
 
-const _validateDesc = (desc: string): string => {
+function _validateDesc(desc: string): string {
   if (desc.length > 120) {
     throw new BadRequestException('Desc too long. Max desc length is 120 characters!');
   }
   return desc;
-};
+}
 
-const _noValidation = (input) => input;
+function _noValidation(input) {
+  // dont do any validation, just return the input
+  return input;
+}
 
 const SIMPLE_PLUGIN_FIELDS: { [key: string]: null | CallableFunction } = {
   contactEmail: null,
   legalUrl: null,
-  name: validateName,
+  name: _validateName,
   descriptionForMarketplace: _validateDesc,
   descriptionForModel: _validateDesc,
   iconUrl: null,
@@ -272,7 +275,7 @@ export class GptPluginService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async getAllFunctions(environmentId: string, tenantId: string, ids: string[]): Promise<PluginFunction[]> {
+  async _getAllFunctions(environmentId: string, tenantId: string, ids: string[]): Promise<PluginFunction[]> {
     // TODO lets filter these down to just supported functions?
     const apiFunctions = await this.functionService.getApiFunctions(
       environmentId,
@@ -288,9 +291,9 @@ export class GptPluginService {
     const customFunctions = await this.functionService.getServerFunctions(environmentId, [], [], ids);
     // const authFunctions = await this.prisma.authFunction.findMany({ where: { publicId: { in: publicIds } } });
 
-    let promises = apiFunctions.map((apiFunction) => apiFunctionMap(apiFunction, this.functionService));
+    let promises = apiFunctions.map((apiFunction) => _apiFunctionMap(apiFunction, this.functionService));
     promises = promises.concat(
-      customFunctions.map((customFunction) => customFunctionMap(customFunction, this.functionService)),
+      customFunctions.map((customFunction) => _customFunctionMap(customFunction, this.functionService)),
     );
 
     const functions = Promise.all(promises);
@@ -323,19 +326,19 @@ export class GptPluginService {
   }
 
   async getOpenApiSpec(hostname: string, slug: string): Promise<string> {
-    const [, subdomain] = getSlugSubdomain(hostname);
+    const [, subdomain] = _getSlugSubdomain(hostname);
     const environment = await this.prisma.environment.findUniqueOrThrow({ where: { subdomain } });
     const plugin = await this.prisma.gptPlugin.findUniqueOrThrow({
       where: { slug_environmentId: { slug, environmentId: environment.id } },
     });
 
     const functionIds = JSON.parse(plugin.functionIds);
-    const functions = await this.getAllFunctions(plugin.environmentId, environment.tenantId, functionIds);
+    const functions = await this._getAllFunctions(plugin.environmentId, environment.tenantId, functionIds);
 
     // @ts-expect-error: filter gets rid of nulls
     const bodySchemas: Schema[] = functions.map((f) => this.getBodySchema(f)).filter((s) => s !== null);
 
-    const responseSchemas = await Promise.all(functions.map((f) => getResponseSchema(f)));
+    const responseSchemas = await Promise.all(functions.map((f) => _getResponseSchema(f)));
 
     const template = handlebars.compile(this.loadTemplate());
     return template({ plugin, hostname, functions, bodySchemas, responseSchemas });
@@ -347,8 +350,8 @@ export class GptPluginService {
     }
     const schema = {
       type: 'object',
-      properties: getProperties(f.function.arguments),
-      required: getArgumentsRequired(f.function.arguments),
+      properties: _getProperties(f.function.arguments),
+      required: _getArgumentsRequired(f.function.arguments),
     };
     return {
       name: `${f.operationId}Body`,
@@ -372,7 +375,7 @@ export class GptPluginService {
     const functionIds = body.functionIds ? JSON.stringify(body.functionIds) : '';
 
     if (body.functionIds) {
-      const functions = await this.getAllFunctions(environment.id, environment.tenantId, body.functionIds);
+      const functions = await this._getAllFunctions(environment.id, environment.tenantId, body.functionIds);
       if (functions.length !== body.functionIds.length) {
         const badFunctionIds: string[] = [];
         const goodFunctionIds = functions.map((f) => f.id);
@@ -389,11 +392,6 @@ export class GptPluginService {
 
     // ok lets go ahead and create or update!
     const update = {};
-
-    if (body.name) {
-      update['name'] = validateName(body.name);
-    }
-
     if (functionIds) {
       update['functionIds'] = functionIds;
     }
@@ -414,7 +412,7 @@ export class GptPluginService {
         ...update,
         // list them all explicitly so we pass type checking and can set defaults
         slug: body.slug,
-        name: validateName(body.name ? body.name : body.slug),
+        name: _validateName(body.name ? body.name : body.slug),
         contactEmail: body.contactEmail ? body.contactEmail : 'info@polyapi.io',
         legalUrl: body.legalUrl ? body.legalUrl : 'https://polyapi.io/legal',
         iconUrl: body.iconUrl ? body.iconUrl : POLY_DEFAULT_ICON_URL,
@@ -426,7 +424,7 @@ export class GptPluginService {
 
   async getManifest(req: Request) {
     const host = req.hostname;
-    const [slug, subdomain] = getSlugSubdomain(host);
+    const [slug, subdomain] = _getSlugSubdomain(host);
     const environment = await this.prisma.environment.findUniqueOrThrow({ where: { subdomain } });
 
     // make sure this is valid plugin host

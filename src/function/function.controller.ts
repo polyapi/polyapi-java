@@ -19,7 +19,7 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
   ApiFunctionResponseDto,
   CreateApiFunctionDto,
-  CreateCustomFunctionDto, CreateServerFunctionResponseDto,
+  CreateCustomFunctionDto,
   ExecuteApiFunctionDto,
   ExecuteCustomFunctionDto,
   ExecuteCustomFunctionQueryParams,
@@ -259,26 +259,15 @@ export class FunctionController {
 
   @UseGuards(PolyAuthGuard)
   @Post('/server')
-  async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<CreateServerFunctionResponseDto> {
+  async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {
     const { context = '', name, description = '', code } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
-      const customFunction = await this.service.createCustomFunction(
-        req.user.environment,
-        context,
-        name,
-        description,
-        code,
-        true,
-        req.user.key,
+      return this.service.customFunctionToDetailsDto(
+        await this.service.createCustomFunction(req.user.environment, context, name, description, code, true, req.user.key),
       );
-      return {
-        ...this.service.customFunctionToDetailsDto(customFunction),
-        status: customFunction.status,
-        message: customFunction.message,
-      };
     } catch (e) {
       throw new BadRequestException(e.message);
     }
@@ -358,10 +347,10 @@ export class FunctionController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/all/update')
-  async updateAllServerFunctions() {
-    this.service.updateAllServerFunctions()
+  async updateAllServerFunctions(@Req() req: AuthRequest) {
+    this.service.updateAllServerFunctions(req.user.environment, req.user.key)
       .then(() => {
-        this.logger.debug('All functions are being updated in background...');
+        this.logger.debug('All functions are being updated in background.');
       });
     return 'Functions are being updated in background. Please check logs for more details.';
   }

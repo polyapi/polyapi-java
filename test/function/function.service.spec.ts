@@ -16,7 +16,7 @@ import {
   prismaServiceMock,
   specsServiceMock,
   variableServiceMock,
-  configVariableServiceMock, authServiceMock,
+  configVariableServiceMock,
 } from '../mocks';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConfigService } from 'config/config.service';
@@ -26,7 +26,6 @@ import { AiService } from 'ai/ai.service';
 import { VariableService } from 'variable/variable.service';
 import { Visibility } from '@poly/model';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
-import { AuthService } from 'auth/auth.service';
 
 describe('FunctionService', () => {
   let functionService: FunctionService;
@@ -72,10 +71,6 @@ describe('FunctionService', () => {
           provide: ConfigVariableService,
           useValue: configVariableServiceMock,
         },
-        {
-          provide: AuthService,
-          useValue: authServiceMock,
-        }
       ],
     }).compile();
 

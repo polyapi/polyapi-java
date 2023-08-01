@@ -52,7 +52,6 @@ module.exports = {
     'eol-last': 'error',
     'eqeqeq': ['error', 'always', { null: 'ignore' }],
     'func-call-spacing': ['error', 'never'],
-    'func-style': ['error', 'expression', { allowArrowFunctions: true }],
     'generator-star-spacing': ['error', { before: true, after: true }],
     'indent': ['error', 2, {
       SwitchCase: 1,
