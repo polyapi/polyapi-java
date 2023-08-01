@@ -1502,6 +1502,10 @@ export class FunctionService implements OnModuleInit {
       const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];
       const quotedArgsMatchResult = bodyString.match(quotedArgsRegexp) || [];
 
+      this.logger.debug(`Arguments metadata for sanitization: ${JSON.stringify(argumentsMetadata)}`);
+      this.logger.debug(`Sanitizing unquoted arguments: ${JSON.stringify(unquotedArgsMatchResult)}`);
+      this.logger.debug(`Sanitizing quoted arguments: ${JSON.stringify(quotedArgsMatchResult)}`);
+
       for (const unquotedArg of unquotedArgsMatchResult) {
         pushFoundArg(unquotedArg, false);
       }
@@ -1511,7 +1515,7 @@ export class FunctionService implements OnModuleInit {
       }
 
       for (const arg of foundArgs) {
-        if (argumentsMetadata[arg.name].type === 'string') {
+        if (argumentsMetadata[arg.name]?.type === 'string') {
           sanitizeSringArgumentValue(arg.name, arg.quoted);
         }
       }
@@ -1521,6 +1525,8 @@ export class FunctionService implements OnModuleInit {
           return text;
         },
       });
+
+      this.logger.debug(`Rendered content after sanitization: ${renderedContent}`);
 
       return {
         ...body,
