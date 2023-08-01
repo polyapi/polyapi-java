@@ -275,7 +275,7 @@ export class GptPluginService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async _getAllFunctions(environmentId: string, tenantId: string, ids: string[]): Promise<PluginFunction[]> {
+  async getAllFunctions(environmentId: string, tenantId: string, ids: string[]): Promise<PluginFunction[]> {
     // TODO lets filter these down to just supported functions?
     const apiFunctions = await this.functionService.getApiFunctions(
       environmentId,
@@ -333,9 +333,9 @@ export class GptPluginService {
     });
 
     const functionIds = JSON.parse(plugin.functionIds);
-    const functions = await this._getAllFunctions(plugin.environmentId, environment.tenantId, functionIds);
+    const functions = await this.getAllFunctions(plugin.environmentId, environment.tenantId, functionIds);
 
-    // @ts-expect-error: filter gets rid of nulls
+    // @ts-expect-error fixme
     const bodySchemas: Schema[] = functions.map((f) => this.getBodySchema(f)).filter((s) => s !== null);
 
     const responseSchemas = await Promise.all(functions.map((f) => _getResponseSchema(f)));
@@ -375,7 +375,7 @@ export class GptPluginService {
     const functionIds = body.functionIds ? JSON.stringify(body.functionIds) : '';
 
     if (body.functionIds) {
-      const functions = await this._getAllFunctions(environment.id, environment.tenantId, body.functionIds);
+      const functions = await this.getAllFunctions(environment.id, environment.tenantId, body.functionIds);
       if (functions.length !== body.functionIds.length) {
         const badFunctionIds: string[] = [];
         const goodFunctionIds = functions.map((f) => f.id);
