@@ -1501,7 +1501,7 @@ export class FunctionService implements OnModuleInit {
 
       const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];
       const quotedArgsMatchResult = bodyString.match(quotedArgsRegexp) || [];
-
+      this.logger.debug(`Arguments value map for sanitization: ${JSON.stringify(argumentValueMap)}`);
       this.logger.debug(`Arguments metadata for sanitization: ${JSON.stringify(argumentsMetadata)}`);
       this.logger.debug(`Sanitizing unquoted arguments: ${JSON.stringify(unquotedArgsMatchResult)}`);
       this.logger.debug(`Sanitizing quoted arguments: ${JSON.stringify(quotedArgsMatchResult)}`);
