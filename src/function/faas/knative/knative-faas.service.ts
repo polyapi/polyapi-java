@@ -244,10 +244,57 @@ export class KNativeFaasService implements FaasService {
 
     this.logger.debug(`Creating KNative service for function '${id}'...`);
 
-    
-
     const workingDir = `${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
-    this.logger.debug(`Variable workingDir:'${workingDir}`);
+
+    const options = {
+      apiVersion: 'serving.knative.dev/v1',
+      kind: 'Service',
+      metadata: {
+        name: this.getFunctionName(id),
+        namespace: this.config.faasNamespace,
+      },
+      spec: {
+        template: {
+          spec: {
+            containers: [
+              {
+                image: `${imageName}`,
+                volumeMounts: [
+                  {
+                    mountPath: '/workspace/function',
+                    name: 'functions-volume',
+                    readOnly: true,
+                  },
+                ],
+                env: [
+                  {
+                    name: 'POLY_API_BASE_URL',
+                    value: this.config.faasPolyServerUrl,
+                  },
+                  {
+                    name: 'POLY_API_KEY',
+                    value: apiKey,
+                  },
+                ],
+                command: ['/bin/sh', '-c'],
+                args: ['/cnb/lifecycle/launcher "npx poly generate && npm start"'],
+                workingDir: `/workspace/function/${workingDir}`,
+              },
+            ],
+            volumes: [
+              {
+                name: 'functions-volume',
+                persistentVolumeClaim: {
+                  claimName: this.config.faasPvcName,
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    this.logger.debug(`createNamespacedCustomObject options - ${JSON.stringify(options)}`);
 
     try {
       await this.k8sApi.createNamespacedCustomObject(
@@ -255,53 +302,7 @@ export class KNativeFaasService implements FaasService {
         SERVING_VERSION,
         this.config.faasNamespace,
         SERVICES_NAME,
-        {
-          apiVersion: 'serving.knative.dev/v1',
-          kind: 'Service',
-          metadata: {
-            name: this.getFunctionName(id),
-            namespace: this.config.faasNamespace,
-          },
-          spec: {
-            template: {
-              spec: {
-                containers: [
-                  {
-                    image: `${imageName}`,
-                    volumeMounts: [
-                      {
-                        mountPath: '/workspace/function',
-                        name: 'functions-volume',
-                        readOnly: true,
-                      },
-                    ],
-                    env: [
-                      {
-                        name: 'POLY_API_BASE_URL',
-                        value: this.config.faasPolyServerUrl,
-                      },
-                      {
-                        name: 'POLY_API_KEY',
-                        value: apiKey,
-                      },
-                    ],
-                    command: ['/bin/sh', '-c'],
-                    args: ['/cnb/lifecycle/launcher "npx poly generate && npm start"'],
-                    workingDir: `/workspace/function/${workingDir}`,
-                  },
-                ],
-                volumes: [
-                  {
-                    name: 'functions-volume',
-                    persistentVolumeClaim: {
-                      claimName: this.config.faasPvcName,
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        },
+        options,
       );
       this.logger.debug(`KNative service for function '${id}' created. Function deployed.`);
     } catch (e) {
