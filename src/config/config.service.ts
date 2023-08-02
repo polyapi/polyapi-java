@@ -103,6 +103,10 @@ export class ConfigService {
     return this.get('FAAS_DOCKER_CONTAINER_REGISTRY', 'ghcr.io/polyapi/poly-alpha');
   }
 
+  get faasDockerImageFunctionNode(): string {
+    return this.get('FAAS_DOCKER_IMAGE_FUNCTION_NODE');
+  }
+
   get faasDockerUsername(): string {
     return this.get('FAAS_DOCKER_USERNAME');
   }
@@ -113,6 +117,22 @@ export class ConfigService {
 
   get faasDockerConfigFile(): string {
     return this.get('FAAS_DOCKER_CONFIG_FILE', `${process.env.HOME}/.docker/config.json`);
+  }
+
+  get faasFunctionsBasePath(): string {
+    return this.get('FAAS_FUNCTIONS_BASE_PATH', process.env.FUNCTIONS_BASE_FOLDER || `${process.cwd()}/server-functions`);
+  }
+
+  get faasNamespace(): string {
+    return this.get('FAAS_NAMESPACE', 'default');
+  }
+
+  get faasPvcName(): string {
+    return this.get('FAAS_PVC_NAME', 'poly-functions');
+  }
+
+  get faasPreinstalledNpmPackages(): string[] {
+    return this.get('FAAS_PREINSTALLED_NPM_PACKAGES', '').split(',');
   }
 
   get vaultAddress(): string {

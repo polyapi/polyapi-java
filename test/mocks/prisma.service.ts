@@ -20,12 +20,11 @@ type PrismaAction =
   | 'aggregate'
   | 'count';
 
-function getEntityMock<Entity extends PrismaEntities>(
+const getEntityMock = <Entity extends PrismaEntities>(
   entity: Entity, // eslint-disable-line
 ): Partial<{
   [key in PrismaAction]: ReturnType<typeof getFnMock>; // eslint-disable-line
-}> {
-  return {
+}> => ({
     findUnique: getFnMock<PrismaService[Entity]['findUnique']>(),
     findMany: getFnMock<PrismaService[Entity]['findMany']>(),
     findFirst: getFnMock<PrismaService[Entity]['findFirst']>(),
@@ -37,8 +36,7 @@ function getEntityMock<Entity extends PrismaEntities>(
     deleteMany: getFnMock<PrismaService[Entity]['deleteMany']>(),
     aggregate: getFnMock<PrismaService[Entity]['aggregate']>(),
     count: getFnMock<PrismaService[Entity]['count']>(),
-  };
-}
+  });
 
 export default {
   $transaction: getFnMock<PrismaService['$transaction']>(),
