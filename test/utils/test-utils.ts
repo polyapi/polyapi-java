@@ -62,20 +62,16 @@ export const mockedAuthData: AuthData = {
 };
 
 /**
- * Get mocked `PolyAuthGuard`.
- */
-export function getMockedPolyAuthGuard(user: AuthData = mockedAuthData): TypedMock<PolyAuthGuard> {
-  return {
-    canActivate: getFnMock<PolyAuthGuard['canActivate']>().mockImplementation(async (context: ExecutionContext) => {
-      context.switchToHttp().getRequest().user = user;
-      return true;
-    }),
-  };
-}
-
-/**
  * Get typed mock using `jest.fn`.
  */
-export function getFnMock<T extends(...args: any) => any>() {
-  return jest.fn<ReturnType<T>, Parameters<T>>();
-}
+export const getFnMock = <T extends(...args: any) => any>() => jest.fn<ReturnType<T>, Parameters<T>>();
+
+/**
+ * Get mocked `PolyAuthGuard`.
+ */
+export const getMockedPolyAuthGuard = (user: AuthData = mockedAuthData): TypedMock<PolyAuthGuard> => ({
+  canActivate: getFnMock<PolyAuthGuard['canActivate']>().mockImplementation(async (context: ExecutionContext) => {
+    context.switchToHttp().getRequest().user = user;
+    return true;
+  }),
+});

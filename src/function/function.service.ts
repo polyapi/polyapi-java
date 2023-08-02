@@ -33,7 +33,7 @@ import {
   Method,
   PostmanVariableEntry,
   PropertySpecification,
-  PropertyType,
+  PropertyType, Role,
   ServerFunctionSpecification,
   TrainingDataGeneration,
   Variables,
@@ -56,6 +56,7 @@ import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { VariableService } from 'variable/variable.service';
 import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
 import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospectionQuery, resolveGraphqlArgumentType } from './graphql/utils';
+import { AuthService } from 'auth/auth.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -65,6 +66,11 @@ mustache.escape = (text) => {
   } else {
     return text;
   }
+};
+
+type CreateCustomFunctionResult = CustomFunction & {
+  status: 'deployed' | 'deploying',
+  message?: string,
 };
 
 @Injectable()
@@ -83,6 +89,7 @@ export class FunctionService implements OnModuleInit {
     private readonly specsService: SpecsService,
     private readonly configVariableService: ConfigVariableService,
     private readonly variableService: VariableService,
+    private readonly authService: AuthService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
   }
@@ -304,7 +311,9 @@ export class FunctionService implements OnModuleInit {
           );
 
           if (!name) {
-            name = aiName ? this.commonService.sanitizeNameIdentifier(aiName) : this.commonService.sanitizeNameIdentifier(requestName);
+            name = aiName
+              ? this.commonService.sanitizeNameIdentifier(aiName)
+              : this.commonService.sanitizeNameIdentifier(requestName);
           }
           if (!context && !apiFunction?.context) {
             context = this.commonService.sanitizeContextIdentifier(aiContext);
@@ -728,7 +737,7 @@ export class FunctionService implements OnModuleInit {
     customCode: string,
     serverFunction: boolean,
     apiKey: string,
-  ) {
+  ): Promise<CreateCustomFunctionResult> {
     const {
       code,
       args,
@@ -813,6 +822,8 @@ export class FunctionService implements OnModuleInit {
           returnType,
           synchronous,
           requirements: JSON.stringify(requirements),
+          serverSide: serverFunction,
+          apiKey: serverFunction ? apiKey : null,
         },
       });
     }
@@ -820,25 +831,59 @@ export class FunctionService implements OnModuleInit {
     if (serverFunction) {
       this.logger.debug(`Creating server side custom function ${name}`);
 
-      try {
-        await this.faasService.createFunction(customFunction.id, environment.tenantId, environment.id, name, code, requirements, apiKey);
-        customFunction = await this.prisma.customFunction.update({
+      const revertServerFunctionFlag = async () => {
+        await this.prisma.customFunction.update({
           where: {
-            id: customFunction.id,
+            id: customFunction?.id,
           },
           data: {
-            serverSide: true,
+            serverSide: false,
+            apiKey: null,
           },
         });
+      };
+
+      try {
+        const {
+          status,
+          message,
+          waitForDeploy,
+        } = await this.faasService.createFunction(
+          customFunction.id,
+          environment.tenantId,
+          environment.id,
+          name,
+          code,
+          requirements,
+          apiKey,
+        );
+
+        if (waitForDeploy) {
+          waitForDeploy
+            .catch(async e => {
+              this.logger.error(`Error creating server side custom function ${name}: ${e.message}. Function created as client side.`);
+              await revertServerFunctionFlag();
+            });
+        }
+
+        return {
+          ...customFunction,
+          status,
+          message,
+        };
       } catch (e) {
         this.logger.error(
           `Error creating server side custom function ${name}: ${e.message}. Function created as client side.`,
         );
+        await revertServerFunctionFlag();
         throw e;
       }
     }
 
-    return customFunction;
+    return {
+      ...customFunction,
+      status: 'deployed',
+    };
   }
 
   async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null) {
@@ -980,21 +1025,40 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  async updateAllServerFunctions(environment: Environment, apiKey: string) {
-    this.logger.debug(`Updating all server functions in environment ${environment.id}...`);
+  async updateAllServerFunctions() {
+    this.logger.debug('Updating all server functions...');
     const serverFunctions = await this.prisma.customFunction.findMany({
       where: {
-        environmentId: environment.id,
         serverSide: true,
+      },
+      include: {
+        environment: true,
       },
     });
 
     for (const serverFunction of serverFunctions) {
+      const getApiKey = async () => {
+        if (serverFunction.apiKey) {
+          return serverFunction.apiKey;
+        }
+        const apiKeys = await this.authService.getAllApiKeys(serverFunction.environmentId);
+        const adminApiKey = apiKeys.find((apiKey) => apiKey.user?.role === Role.Admin);
+        return adminApiKey?.key;
+      };
+
+      const apiKey = serverFunction.apiKey || await getApiKey();
+      if (!apiKey) {
+        this.logger.error(`No API key found for server function ${serverFunction.id}`);
+        continue;
+      }
+
       this.logger.debug(`Updating server function ${serverFunction.id}...`);
       await this.faasService.updateFunction(
         serverFunction.id,
-        environment.tenantId,
-        environment.id,
+        serverFunction.environment.tenantId,
+        serverFunction.environment.id,
+        serverFunction.name,
+        serverFunction.code,
         JSON.parse(serverFunction.requirements || '[]'),
         apiKey,
       );

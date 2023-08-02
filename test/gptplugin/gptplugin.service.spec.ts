@@ -149,19 +149,20 @@ const PLUGIN_CREATE_SPEC: PluginFunction = {
 // use these known TEST_PUBLIC_IDS so we can appropriately clear between tests
 const TEST_PUBLIC_IDS = ['123', '456'];
 
+// eslint-disable-next-line func-style
 function isEnvironment(env: Environment | null): asserts env is Environment {
   if (!env) throw new Error('environment is null!');
 }
 
-async function _createTestEnvironment(prisma) {
+const createTestEnvironment = async prisma => {
   // HACK we should really create an environment instead of clobbering whichever is first
   const env = prisma.environment.findFirst({ orderBy: { id: 'asc' } });
   isEnvironment(env);
   return env;
-}
+};
 
-async function _createApiFunction(prisma: PrismaService) {
-  const environment = await _createTestEnvironment(prisma);
+const createApiFunction = async (prisma: PrismaService) => {
+  const environment = await createTestEnvironment(prisma);
 
   const defaults = {
     id: '123',
@@ -180,10 +181,10 @@ async function _createApiFunction(prisma: PrismaService) {
     update: defaults,
     create: defaults,
   });
-}
+};
 
-async function _createServerFunction(prisma: PrismaService) {
-  const environment = await _createTestEnvironment(prisma);
+const createServerFunction = async (prisma: PrismaService) => {
+  const environment = await createTestEnvironment(prisma);
 
   const defaults = {
     id: '456',
@@ -201,10 +202,10 @@ async function _createServerFunction(prisma: PrismaService) {
     update: defaults,
     create: defaults,
   });
-}
+};
 
-async function _createPlugin(prisma: PrismaService) {
-  const environment = await _createTestEnvironment(prisma);
+const createPlugin = async (prisma: PrismaService) => {
+  const environment = await createTestEnvironment(prisma);
   const defaults = {
     name: 'Mass Effect',
     iconUrl: 'http://example.com/image.png',
@@ -219,7 +220,7 @@ async function _createPlugin(prisma: PrismaService) {
       ...defaults,
     },
   });
-}
+};
 
 describe('GptPluginService', () => {
   const prisma = new PrismaService();
@@ -255,10 +256,10 @@ describe('GptPluginService', () => {
 
   describe('getOpenApiSpec', () => {
     it.skip('should render for an API Function', async () => {
-      await _createPlugin(prisma);
-      const apiFunc = await _createApiFunction(prisma);
+      await createPlugin(prisma);
+      const apiFunc = await createApiFunction(prisma);
 
-      const environment = await _createTestEnvironment(prisma);
+      const environment = await createTestEnvironment(prisma);
       const specStr = await service.getOpenApiSpec(
         `mass-effect-${environment.subdomain}.develop.polyapi.io`,
         'mass-effect',
@@ -286,10 +287,10 @@ describe('GptPluginService', () => {
     });
 
     it.skip('should render for a Server Function', async () => {
-      await _createPlugin(prisma);
-      const serverFunc = await _createServerFunction(prisma);
+      await createPlugin(prisma);
+      const serverFunc = await createServerFunction(prisma);
 
-      const environment = await _createTestEnvironment(prisma);
+      const environment = await createTestEnvironment(prisma);
       const specStr = await service.getOpenApiSpec(
         `mass-effect-${environment.subdomain}.develop.polyapi.io`,
         'mass-effect',
@@ -316,7 +317,7 @@ describe('GptPluginService', () => {
         functionIds: ['bad'],
       };
 
-      const environment = await _createTestEnvironment(prisma);
+      const environment = await createTestEnvironment(prisma);
       try {
         await service.createOrUpdatePlugin(environment, body);
         expect(0).toBe(1); // force error here if no error thrown
@@ -350,7 +351,7 @@ describe('GptPluginService', () => {
 
   describe('getManifest', () => {
     it.skip('should return the manifest for the environment', async () => {
-      const plugin = await _createPlugin(prisma);
+      const plugin = await createPlugin(prisma);
       const subdomain = (await prisma.environment.findFirstOrThrow({ where: { id: plugin.environmentId } })).subdomain;
       expect(subdomain).toBeTruthy();
 
