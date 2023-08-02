@@ -242,9 +242,10 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`Deleting function '${id}' before deploying to avoid conflicts...`);
     await this.deleteFunction(id, tenantId, environmentId, false);
 
-    const functionPath = this.getFunctionPath(id, tenantId, environmentId, true);
-
     this.logger.debug(`Creating KNative service for function '${id}'...`);
+
+    const workingDir = `${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
+
     try {
       await this.k8sApi.createNamespacedCustomObject(
         SERVING_GROUP,
@@ -268,7 +269,6 @@ export class KNativeFaasService implements FaasService {
                       {
                         mountPath: '/workspace/function',
                         name: 'functions-volume',
-                        subPath: `${functionPath}/function`,
                         readOnly: true,
                       },
                     ],
@@ -284,6 +284,7 @@ export class KNativeFaasService implements FaasService {
                     ],
                     command: ['/bin/sh', '-c'],
                     args: ['/cnb/lifecycle/launcher "npx poly generate && npm start"'],
+                    workingDir: `/workspace/function/${workingDir}`,
                   },
                 ],
                 volumes: [
