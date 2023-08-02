@@ -244,7 +244,10 @@ export class KNativeFaasService implements FaasService {
 
     this.logger.debug(`Creating KNative service for function '${id}'...`);
 
+    
+
     const workingDir = `${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
+    this.logger.debug(`Variable workingDir:'${workingDir}`);
 
     try {
       await this.k8sApi.createNamespacedCustomObject(
