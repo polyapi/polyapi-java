@@ -8,6 +8,7 @@ assert requests
 from typing import Dict, List
 import openai
 from app.typedefs import ChatGptChoice, MessageDict
+from prisma import get_client
 
 
 MOCK_OPENAPI = {
@@ -129,11 +130,18 @@ MOCK_OPENAPI = {
 }
 
 
-def _get_openapi_url(plugin_id: str) -> str:
-    return "https://service-nexus-1a0400cf.develop-k8s.polyapi.io/plugins/service-nexus/openapi"
+def _get_openapi_url(plugin_id: int) -> str:
+    db = get_client()
+    plugin = db.gptplugin.find_unique(
+        where={"id": plugin_id}, include={"environment": True}
+    )
+    if not plugin or not plugin.environment:
+        raise NotImplementedError(f"Plugin with id {plugin_id} doesn't exist, how?")
+    url = f"https://{plugin.slug}-{plugin.environment.subdomain}.develop-k8s.polyapi.io/plugins/{plugin.slug}/openapi"
+    return url
 
 
-def _get_openapi_spec(plugin_id: str) -> Dict:
+def _get_openapi_spec(plugin_id: int) -> Dict:
     openapi_url = _get_openapi_url(plugin_id)
     resp = requests.get(openapi_url)
     assert resp.status_code == 200
@@ -160,7 +168,7 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
     return rv
 
 
-def get_plugin_chat(plugin_id: str, message: str) -> List[MessageDict]:
+def get_plugin_chat(plugin_id: int, message: str) -> List[MessageDict]:
     """get the plugin
     get the function ids
     get them from db

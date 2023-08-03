@@ -4,7 +4,7 @@ import csv
 import os
 from typing import List, TypedDict
 from prisma import Prisma, register, get_client
-from prisma.models import User, ApiFunction, Environment
+from prisma.models import User, ApiFunction, Environment, GptPlugin
 from app.utils import url_function_path
 
 
@@ -54,6 +54,23 @@ def test_environment_get_or_create() -> Environment:
             }
         )
     return user
+
+
+def test_plugin_get_or_create(slug: str) -> GptPlugin:
+    environment = test_environment_get_or_create()
+    db = get_client()
+    plugin = db.gptplugin.find_first(where={"slug": slug})
+    if not plugin:
+        plugin = db.gptplugin.create(
+            data={
+                "slug": slug,
+                "name": "Service Nexus",
+                "environmentId": environment.id,
+                "iconUrl": "",
+                "functionIds": "",
+            }
+        )
+    return plugin
 
 
 def load_functions(user: User) -> None:

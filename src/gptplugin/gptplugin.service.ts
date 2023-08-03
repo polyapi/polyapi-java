@@ -489,7 +489,7 @@ export class GptPluginService {
 
   async chat(authData, slug: string, message: string) {
     // validate the plugin is legit
-    await this.getPlugin(slug, authData.environment.id);
-    return await this.aiService.pluginChat(slug, message);
+    const plugin = await this.getPlugin(slug, authData.environment.id);
+    return await this.aiService.pluginChat(plugin.id, message);
   }
 }
