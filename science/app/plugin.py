@@ -134,8 +134,8 @@ def get_plugin_chat(plugin_id: str, message: str) -> List[MessageDict]:
             messages=messages,
             functions=functions,
             temperature=0.2)
-        answer_msg = resp2['choices'][0]['message']
-        messages.append(answer_msg)
+        answer_msg = dict(resp2['choices'][0]['message'])
+        messages.append(answer_msg)  # type: ignore
         return messages
     else:
         return [choice["message"]]
