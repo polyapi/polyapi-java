@@ -30,7 +30,7 @@ const checkForLibraryInstalled = () => {
   vscode.commands.executeCommand('setContext', 'polyLibraryInstalled', installed);
 };
 
-function checkCredentials() {
+const checkCredentials = () => {
   const initCredentials = getCredentialsFromExtension();
   if (initCredentials.apiBaseUrl && initCredentials.apiKey) {
     saveCredentialsOnClientLibrary(initCredentials.apiBaseUrl, initCredentials.apiKey);
@@ -49,7 +49,7 @@ function checkCredentials() {
       }
     }
   });
-}
+};
 
 export const start = () => {
   polySpecsChanged({});

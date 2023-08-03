@@ -69,6 +69,12 @@ const COMMANDS = [
 
   setInitialMessageInputHeight();
 
+  const removeConversationLoadError = () => {
+    const conversationLoadError = document.getElementById('conversation-load-error');
+
+    conversationLoadError?.remove();
+  }
+
   window.addEventListener('message', (event) => {
     const message = event.data;
 
@@ -97,14 +103,23 @@ const COMMANDS = [
       return html.documentElement.innerHTML;
     };
 
-    const getResponseWrapper = (content) => {
+    const getResponseWrapper = (content, createdAt = '') => {
       return `
-        <div class='p-4 self-end'>
+        <div class='p-4 self-end' ${createdAt ? `data-created-at="${createdAt}"` : ''}>
           <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
           <div class="prose prose-headings:font-normal prose-th:font-bold">
             ${content}            
           </div>
         </div>
+      `;
+    }
+
+    const getQuestionWrapper = (message, createdAt = '') => {
+      return `
+      <div class='p-4 self-end relative' style='background: var(--vscode-input-background)' ${createdAt ? `data-created-at="${createdAt}"` : ''}>
+        <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
+        <div class='overflow-y-auto question-box'>${message.value}</div>
+      </div>
       `;
     }
 
@@ -139,44 +154,102 @@ const COMMANDS = [
       });
     };
 
+    const removeLoadingContainer = () => {
+      const loadingContainer = document.querySelector('.loading-container');
+      loadingContainer?.remove();
+      sendMessageButton.removeAttribute('disabled');
+      messageInput.removeAttribute('data-avoid-send');
+    }
+
+    const getLoadingComponent = (withCancelButton = true) => {
+      return `<div class='loading-container p-4 self-end flex justify-between'>
+        ${loadingSvg}
+        ${withCancelButton ? `
+          <button id='cancel-request-button' class='rounded-lg p-1.5'>
+            ${cancelSvg}
+          </button>        
+        ` : ''}
+      </div>`;
+    }
+    
+    let currentObserver = null; 
+
+    const loadingContainer = document.querySelector('.loading-container');
+
+
+    const observeFirstMessage = (firstChatElement) => {
+      if(!firstChatElement) {
+        return;
+      }
+      setTimeout(() => {
+
+        currentObserver = new IntersectionObserver(([entry]) => {
+
+          if(entry.isIntersecting) {
+            vscode.postMessage({
+              type: 'getMoreConversationMessages',
+              value: firstChatElement.getAttribute('data-created-at'),
+            });
+            currentObserver.disconnect();
+          }
+
+        }, {
+          root: document.getElementById('conversation-list'),
+          threshold: 1.0,
+        });
+        currentObserver.observe(firstChatElement.querySelector('h2'));
+      }, 100)
+    }
+
     switch (message.type) {
       case 'addQuestion': {
-        conversationList.innerHTML +=
-          `<div class='p-4 self-end relative' style='background: var(--vscode-input-background)'>
-            <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
-            <div class='overflow-y-auto question-box'>${message.value}</div>
-          </div>`;
+        conversationList.innerHTML += getQuestionWrapper(message);
         scrollToLastMessage();
         break;
       }
       case 'setLoading': {
-        const loadingContainer = document.querySelector('.loading-container');
+
+        const value = message.value || {
+          cancellable: true,
+          prepend: false,
+          skipScrollToLastMessage: false,
+        }
+        
+        if(value.prepend) {
+          removeConversationLoadError();
+        }
+
         sendMessageButton.setAttribute('disabled', 'disabled');
         messageInput.setAttribute('data-avoid-send', 'true');
 
         if (!loadingContainer) {
-          conversationList.innerHTML +=
-            `<div class='loading-container p-4 self-end flex justify-between'>
-              ${loadingSvg}
-              <button id='cancel-request-button' class='rounded-lg p-1.5'>
-                ${cancelSvg}
-              </button>
-            </div>`;
+
+          if(message.value?.prepend) {
+            conversationList.innerHTML = `${getLoadingComponent(value.cancellable)}${conversationList.innerHTML}`;
+          } else {
+            conversationList.innerHTML += getLoadingComponent(value.cancellable);
+          }
         }
-        scrollToLastMessage();
+
+        if(!value.skipScrollToLastMessage) {
+          scrollToLastMessage();
+        }
+
         break;
       }
       case 'addResponseTexts': {
         const texts = message.value;
-        const loadingContainer = document.querySelector('.loading-container');
 
-        loadingContainer?.remove();
+        removeLoadingContainer();
 
         conversationList.innerHTML += getResponseWrapper(texts.map(text => getResponseTextHtml(text)).join(''));
         scrollToLastMessage();
-        sendMessageButton.removeAttribute('disabled');
-        messageInput.removeAttribute('data-avoid-send');
         messageInput.focus();
+        
+        currentObserver?.disconnect();
+
+        observeFirstMessage(document.querySelector('#conversation-list > div[data-created-at]'));
+
         break;
       }
       case 'clearConversation':
@@ -184,6 +257,69 @@ const COMMANDS = [
         break;
       case 'focusMessageInput':
         messageInput?.focus();
+        break;
+      case 'prependConversationHistory':
+
+        if(message.value.type === 'error') {
+          conversationList.innerHTML = `
+            <div id="conversation-load-error" class='response-text-error flex-col flex items-center py-5'>
+              <span>
+                Error loading conversation messages.
+              </span>
+              <button class="load-conversation-messages mt-4"><span class="text-uppercase p-2 hover:!bg-[var(--vscode-button-hoverBackground)]" style="color: var(--vscode-button-foreground); background-color: var(--vscode-button-background);"><span>Try again</span></span></button>
+            </div>
+          ${conversationList.innerHTML}`;
+          removeLoadingContainer();
+          return;
+        }
+
+        const messages = message.value.messages;
+        const firstLoad = message.value.firstLoad;
+
+        let newMessagesHtmlContent = '';
+
+        const lastScrollHeight = document.querySelector('#conversation-list').scrollHeight;
+        
+        for(const message of messages) {
+          if(message.role === 'user') {
+            newMessagesHtmlContent = `${getQuestionWrapper({value: message.content}, message.createdAt)}${newMessagesHtmlContent}`;
+          }
+          
+          if(message.role === 'assistant') {
+            newMessagesHtmlContent = `${getResponseWrapper([getResponseTextHtml({ value: message.content, type: 'markdown'})], message.createdAt)}${newMessagesHtmlContent}`
+          }
+        }
+        
+        conversationList.innerHTML = `${newMessagesHtmlContent}${conversationList.innerHTML}`;
+
+        const firstMessage = messages[0];
+        
+        removeLoadingContainer();
+
+        if(firstMessage && !firstLoad) {
+          // Keep scroll in same position.
+          setTimeout(() => {
+
+            const scrollDiff = document.querySelector('#conversation-list').scrollHeight - lastScrollHeight;
+
+            document.querySelector('#conversation-list').scrollTop += scrollDiff;
+
+          }, 0);
+
+        }        
+
+        const lastMessage = messages[messages.length - 1];
+
+        if(firstLoad) {
+          setTimeout(() => {
+            scrollToLastMessage();
+          }, 0);
+        }
+
+        if(messages.length) {
+          observeFirstMessage(document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`))
+        }
+
         break;
       default:
         break;
@@ -273,6 +409,15 @@ const COMMANDS = [
             targetButton.innerHTML = copySvg;
           }, 2000);
         });
+    } else if(targetButton.classList?.contains('load-conversation-messages')) {
+      const firstMessageOnChat = document.querySelector('#conversation-list > div[data-created-at]');
+
+      removeConversationLoadError();
+      
+      vscode.postMessage({
+        type: 'getMoreConversationMessages',
+        value: firstMessageOnChat ? firstMessageOnChat.getAttribute('data-created-at') : ''
+      });
     }
   });
 

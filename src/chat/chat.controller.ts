@@ -10,6 +10,7 @@ import {
   Get,
   Header,
   Query,
+  ValidationPipe,
 } from '@nestjs/common';
 import {
   SendQuestionDto,
@@ -19,6 +20,7 @@ import {
   TeachSystemPromptResponseDto,
   Role,
   Permission,
+  Pagination,
 } from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { ChatService } from 'chat/chat.service';
@@ -27,6 +29,8 @@ import { AiService } from 'ai/ai.service';
 import { AuthRequest } from 'common/types';
 import { UserService } from 'user/user.service';
 import { AuthService } from 'auth/auth.service';
+import { MessageDto } from '@poly/model';
+import { MergeRequestData } from 'common/decorators';
 
 @ApiSecurity('PolyApiKey')
 @Controller('chat')
@@ -113,9 +117,16 @@ export class ChatController {
   @Get('/history')
   public async chatHistory(
     @Req() req: AuthRequest,
-  ) {
+    @MergeRequestData(['query'], new ValidationPipe({ validateCustomDecorators: true, transform: true })) pagination: Pagination,
+  ): Promise<MessageDto[]> {
+    const {
+      perPage = '10',
+      firstMessageDate = null,
+    } = pagination;
+
     // returns the conversation history for this specific user
-    const history = await this.service.getHistory(req.user.user?.id);
+    const history = await this.service.getHistory(req.user.user?.id, Number(perPage), firstMessageDate);
+
     return history;
   }
 }

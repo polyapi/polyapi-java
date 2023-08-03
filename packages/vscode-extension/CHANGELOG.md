@@ -1,3 +1,6 @@
+### 0.1.44
+* Added conversation history to assistant.
+
 ### 0.1.43
 * Fix missing lodash lib.
 

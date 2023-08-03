@@ -3,12 +3,6 @@ import { ChatText } from '@poly/model';
 import { PrismaService } from 'prisma/prisma.service';
 import { AiService } from 'ai/ai.service';
 
-type MessageDict = {
-  role: string;
-  content: string;
-  createdAt: Date;
-};
-
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
@@ -72,18 +66,29 @@ export class ChatService {
     return parts.join('\n\n');
   }
 
-  async getHistory(userId: string | undefined): Promise<MessageDict[]> {
+  async getHistory(userId: string | undefined, perPage = 10, firstMessageDate: Date | null = null) {
     if (!userId) {
       return [];
     }
 
-    const messages = this.prisma.conversationMessage.findMany({
-      where: { userId, type: 2 },
+    const messages = await this.prisma.conversationMessage.findMany({
+      where: { userId, type: 2, role: { in: ['user', 'assistant'] } },
       orderBy: { createdAt: 'desc' },
-      take: 30,
+      take: perPage,
+      cursor: firstMessageDate ? { createdAt: firstMessageDate } : undefined,
+      skip: firstMessageDate ? 1 : undefined,
     });
-    return (await messages).map((m) => {
-      return { role: m.role, content: m.content, createdAt: m.createdAt };
+
+    return messages.map((message) => {
+      return { role: message.role, content: this.parseQuestionContent(message.content), createdAt: message.createdAt };
     });
+  }
+
+  private parseQuestionContent(content: string) {
+    if (content.match(/Question:/ig)) {
+      this.logger.debug(`Parsing special question ${content}`);
+      return content.trim().split('Question:')[1].trim().replace(/^"/, '').replace(/"$/, '');
+    }
+    return content;
   }
 }

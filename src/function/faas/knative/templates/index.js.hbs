@@ -1,36 +1,7 @@
-const poly = require('polyapi');
+const func = require('./function');
 
 const handle = async (context, body) => {
-  const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
-  const args = context.cloudevent ? [body.data] : body.args;
-
-  if (context.cloudevent) {
-    context.log.info(`Received cloudevent: id=${context.cloudevent.id}, time=${context.cloudevent.time}, type=${context.cloudevent.type}, source=${context.cloudevent.source}`);
-  }
-
-  {{{code}}}
-
-  try {
-    const result = await {{name}}(...args);
-
-    if (context.cloudevent) {
-      return {
-        statusCode: 204
-      };
-    } else {
-      return {
-        body: result
-      };
-    }
-  } catch (e) {
-    return {
-      body: {
-        message: e.message,
-        stack: e.stack
-      },
-      statusCode: 500
-    };
-  }
+  return await func(context, body);
 }
 
 module.exports = { handle };

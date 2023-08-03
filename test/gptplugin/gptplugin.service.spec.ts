@@ -148,16 +148,17 @@ const PLUGIN_CREATE_SPEC: PluginFunction = {
 // use these known TEST_PUBLIC_IDS so we can appropriately clear between tests
 const TEST_PUBLIC_IDS = ['123', '456'];
 
+// eslint-disable-next-line func-style
 function isEnvironment(env: Environment | null): asserts env is Environment {
   if (!env) throw new Error('environment is null!');
 }
 
-async function createTestEnvironment(prisma) {
+const createTestEnvironment = async prisma => {
   // HACK we should really create an environment instead of clobbering whichever is first
   const env = prisma.environment.findFirst({ orderBy: { id: 'asc' } });
   isEnvironment(env);
   return env;
-}
+};
 
 const createPlugin = async function (prisma: PrismaService) {
   const environment = await createTestEnvironment(prisma);

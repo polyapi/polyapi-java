@@ -3,13 +3,70 @@ import axios from 'axios';
 import { RawAxiosRequestHeaders } from 'axios/index';
 import { getCredentialsFromExtension } from './common';
 
+const PER_PAGE = 5;
+
 export default class ChatViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
   private requestAbortController;
+  private conversationHistoryFullyLoaded = false;
+  private firstMessagesLoaded = false;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
   ) {
+  }
+
+  private async getConversationHistory(firstMessageDate = '') {
+    const {
+      apiBaseUrl,
+      apiKey,
+    } = getCredentialsFromExtension();
+
+    if (!apiBaseUrl || !apiKey) {
+      return;
+    }
+
+    try {
+      this.webView?.webview.postMessage({
+        type: 'setLoading',
+        value: {
+          cancellable: false,
+          prepend: true,
+          skipScrollToLastMessage: true,
+        },
+      });
+
+      const firstMessageDateQueryParam = firstMessageDate ? `&firstMessageDate=${firstMessageDate}` : '';
+
+      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=${PER_PAGE}${firstMessageDateQueryParam}`, {
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+        } as RawAxiosRequestHeaders,
+      });
+
+      this.webView?.webview.postMessage({
+        type: 'prependConversationHistory',
+        value: {
+          messages: data,
+          firstLoad: !this.firstMessagesLoaded,
+        },
+      });
+
+      if (!data.length) {
+        this.conversationHistoryFullyLoaded = true;
+      }
+
+      if (!this.firstMessagesLoaded) {
+        this.firstMessagesLoaded = true;
+      }
+    } catch (error) {
+      this.webView?.webview.postMessage({
+        type: 'prependConversationHistory',
+        value: {
+          type: 'error',
+        },
+      });
+    }
   }
 
   public resolveWebviewView(
@@ -44,8 +101,25 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           this.goToExtensionSettings();
           break;
         }
+        case 'getMoreConversationMessages': {
+          if (!this.conversationHistoryFullyLoaded) {
+            this.getConversationHistory(data.value);
+          }
+          break;
+        }
       }
     });
+
+    webviewView.onDidChangeVisibility(async () => {
+      const visible = webviewView.visible;
+      if (visible && !this.firstMessagesLoaded) {
+        await this.getConversationHistory();
+      }
+    });
+
+    if (!this.firstMessagesLoaded) {
+      this.getConversationHistory();
+    }
   }
 
   private async sendPolyQuestionRequest(message: string) {
@@ -172,6 +246,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       </head>
       <body class='overflow-hidden'>
         <div class='flex flex-col h-screen'>
+        
           <div class='flex-1 overflow-y-auto' id='conversation-list' data-vscode-context='{"webviewSection": "conversationList", "preventDefaultContextMenuItems": true}'></div>
           <div class='p-2 flex items-center pb-4'>
             <div class='flex-1 message-input-wrapper'>
