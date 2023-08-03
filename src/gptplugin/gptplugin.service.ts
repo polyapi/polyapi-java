@@ -2,7 +2,7 @@ import fs from 'fs';
 import handlebars from 'handlebars';
 import _ from 'lodash';
 import convert from '@openapi-contrib/json-schema-to-openapi-schema';
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { AiService } from 'ai/ai.service';
 import { PrismaService } from 'prisma/prisma.service';
 import {
@@ -363,7 +363,7 @@ export class GptPluginService {
         include,
       });
     } catch {
-      throw new NotFoundException(`Plugin with slug ${slug} not found!`);
+      throw new BadRequestException(`Plugin with slug ${slug} not found!`);
     }
   }
 
