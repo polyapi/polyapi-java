@@ -130,8 +130,12 @@ class T(DbTestCase):
     # def test_get_plugin_chat(self):
     #     chat_create.return_value = "foobar"
     @patch("app.plugin.openai.ChatCompletion.create")
+    @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
-    def test_get_plugin_chat(self, requests_get: Mock, chat_create: Mock):
+    def test_get_plugin_chat(self, requests_get: Mock, requests_post: Mock, chat_create: Mock):
+        requests_post.return_value = Mock(
+            status_code=201, json=lambda: {"answer": "Message sent"}
+        )
         requests_get.return_value = Mock(
             status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
         )
@@ -151,10 +155,3 @@ class T(DbTestCase):
             "This API call allows sends SMS messages through Twilio",
         )
         self.assertTrue(func["parameters"])
-
-    # def test_spec_to_openapi_function(self):
-    #     func = spec_to_openai_function(SPEC)
-    #     properties = func["parameters"]["properties"]
-    #     self.assertEqual(func["name"], "")
-    #     self.assertEqual(properties["My_Phone_Number"]["type"], "string")
-    #     self.assertEqual(properties["message"]["type"], "string")

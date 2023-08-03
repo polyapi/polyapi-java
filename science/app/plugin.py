@@ -71,6 +71,9 @@ MOCK_OPENAPI = {
 
 def _get_openapi_spec(plugin_id: str) -> Dict:
     # requests.get()
+    # openapi_url = "https://service-nexus-1a0400cf.develop-k8s.polyapi.io/plugins/service-nexus/openapi"
+    # resp = requests.get(openapi_url)
+
     return MOCK_OPENAPI
 
 
@@ -83,9 +86,6 @@ def _get_body_schema_name(post: Dict) -> str:
 
 
 def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
-    # openapi_url = "https://service-nexus-1a0400cf.develop-k8s.polyapi.io/plugins/service-nexus/openapi"
-    # resp = requests.get(openapi_url)
-
     rv = []
     for path, data in openapi["paths"].items():
         post = data["post"]
@@ -120,7 +120,9 @@ def get_plugin_chat(plugin_id: str, message: str) -> Dict:
         temperature=0.2,
     )
     function_call = resp["choices"][0]["message"]["function_call"]
-    resp = execute_function(openapi, function_call)
+    # TODO pass in this token
+    token = os.environ.get('POLY_BEARER_TOKEN', 'FIXME')
+    resp = execute_function(token, openapi, function_call)
     return resp
 
 
@@ -132,14 +134,12 @@ def _get_name_path_map(openapi: Dict) -> Dict:
     return rv
 
 
-def execute_function(openapi: Dict, function_call: Dict):
+def execute_function(token: str, openapi: Dict, function_call: Dict):
     name_path_map = _get_name_path_map(openapi)
     path = name_path_map[function_call["name"]]
     # TODO figure out how to add preface to path?
     domain = "https://megatronical.pagekite.me"
-    # TODO get this token somewhere else!
-    headers = {"Authorization": f"Bearer {os.environ.get('POLY_BEARER_TOKEN', 'FIXME')}"}
+    headers = {"Authorization": f"Bearer {token}"}
     resp = requests.post(domain + path, data=json.loads(function_call['arguments']), headers=headers)
-    print(resp.content)
     assert resp.status_code == 201
     return {"answer": "TODO"}
