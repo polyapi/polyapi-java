@@ -204,7 +204,7 @@ model Conversation {
 // store all the messages in a conversation
 model ConversationMessage {
   id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+  createdAt DateTime @unique() @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @map("user_id")
   name      String   @default("") // not used for now. in future, will allow the user to have multiple conversations

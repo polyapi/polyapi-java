@@ -5,7 +5,7 @@ export class Pagination {
     @IsOptional()
     @IsDate()
     @Type(() => Date)
-    lastMessageDate: Date;
+    firstMessageDate: Date;
     @IsOptional()
     @IsNumberString()
     perPage: string;

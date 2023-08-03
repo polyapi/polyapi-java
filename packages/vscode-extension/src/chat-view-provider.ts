@@ -16,7 +16,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
   ) {
   }
 
-  private async getConversationHistory(lastMessageDate = '') {
+  private async getConversationHistory(firstMessageDate = '') {
     const {
       apiBaseUrl,
       apiKey,
@@ -36,9 +36,9 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         },
       });
 
-      const lastMessageDateQueryParam = lastMessageDate ? `&lastMessageDate=${lastMessageDate}` : '';
+      const firstMessageDateQueryParam = firstMessageDate ? `&firstMessageDate=${firstMessageDate}` : '';
 
-      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=${PER_PAGE}${lastMessageDateQueryParam}`, {
+      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=${PER_PAGE}${firstMessageDateQueryParam}`, {
         headers: {
           authorization: `Bearer ${apiKey}`,
         } as RawAxiosRequestHeaders,

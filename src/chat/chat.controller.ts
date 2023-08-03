@@ -121,11 +121,11 @@ export class ChatController {
   ): Promise<MessageDto[]> {
     const {
       perPage = '10',
-      lastMessageDate = null,
+      firstMessageDate = null,
     } = pagination;
 
     // returns the conversation history for this specific user
-    const history = await this.service.getHistory(req.user.user?.id, Number(perPage), lastMessageDate);
+    const history = await this.service.getHistory(req.user.user?.id, Number(perPage), firstMessageDate);
 
     return history;
   }
