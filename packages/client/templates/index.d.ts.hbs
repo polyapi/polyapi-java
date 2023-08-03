@@ -23,8 +23,7 @@ export interface ApiFunctionResponse<T> {
 export interface GraphqlAPIFunctionResponse<T> {
   status: number;
   headers: Record<string, string>;
-  errors?: any[];
-  data?: T;
+  data: Partial<T & { errors?: any[]}>
 }
 
 export interface ErrorEvent {

@@ -359,7 +359,7 @@ export class FunctionService implements OnModuleInit {
 
     let responseType: string;
     try {
-      responseType = await this.getResponseType(isGraphQL ? response.data : response, payload);
+      responseType = await this.getResponseType(response, payload);
     } catch (e) {
       if (e instanceof PathError) {
         throw new BadRequestException(e.message);
@@ -538,14 +538,6 @@ export class FunctionService implements OnModuleInit {
                     )}`,
                   );
                 }
-
-                if (isGraphql) {
-                  return {
-                    errors: payloadResponse.errors,
-                    data: payloadResponse.data,
-                  };
-                }
-
                 return payloadResponse;
               } catch (e) {
                 return response;
@@ -558,16 +550,6 @@ export class FunctionService implements OnModuleInit {
               status: response.status,
               headers: response.headers,
             };
-
-            const processedData = processData();
-
-            if (isGraphql) {
-              return {
-                ...finalResponse,
-                data: processedData.data,
-                errors: processedData.errors,
-              } as ApiFunctionResponseDto;
-            }
 
             return {
               ...finalResponse,
