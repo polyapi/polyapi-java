@@ -46,7 +46,35 @@ MOCK_OPENAPI = {
                     }
                 },
             }
-        }
+        },
+        "/functions/api/83704918-28d0-4c7f-8897-7e27ad291c96/execute": {
+            "post": {
+                "summary": "Create a new incident in ServiceNow with details like priority, state, short description, impact, urgency, and assignment group. Returns the created incident with its unique identifier (sys_id) and other incident details.",
+                "operationId": "serviceNowIncidentsCreate",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/serviceNowIncidentsCreateBody"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "201": {
+                        "description": "Create a new incident in ServiceNow with details like priority, state, short description, impact, urgency, and assignment group. Returns the created incident with its unique identifier (sys_id) and other incident details.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/serviceNowIncidentsCreateResponse"
+                                }
+                            }
+                        },
+                    }
+                },
+            }
+        },
     },
     "components": {
         "schemas": {
@@ -65,6 +93,36 @@ MOCK_OPENAPI = {
                     "body": {"type": "string"},
                     "from": {"type": "string"},
                 },
+            },
+            "serviceNowIncidentsCreateBody": {
+                "type": "object",
+                "properties": {
+                    "payload": {
+                        "type": "object",
+                        "properties": {
+                            "impact": {"type": "number"},
+                            "priority": {"type": "number"},
+                            "businessImpact": {"type": "string"},
+                            "businessUrgency": {"type": "number"},
+                            "businessSeverity": {"type": "number"},
+                            "escalationRequest": {"type": "string"},
+                        },
+                        "required": [
+                            "impact",
+                            "priority",
+                            "businessImpact",
+                            "businessUrgency",
+                            "businessSeverity",
+                            "escalationRequest",
+                        ],
+                    }
+                },
+                "required": ["payload"],
+            },
+            "serviceNowIncidentsCreateResponse": {
+                "type": "object",
+                "description": "response",
+                "properties": {},
             },
         }
     },
@@ -121,23 +179,29 @@ def get_plugin_chat(plugin_id: str, message: str) -> List[MessageDict]:
         functions=functions,
         temperature=0.2,
     )
-    choice: ChatGptChoice = resp['choices'][0]
+    choice: ChatGptChoice = resp["choices"][0]
     function_call = choice["message"].get("function_call")
     if function_call:
+        # lets execute the function_call and return the results
         function_call = dict(function_call)
-        token = os.environ.get('POLY_BEARER_TOKEN', 'FIXME')
-        function_call_msg = choice['message']
+        token = os.environ.get("POLY_BEARER_TOKEN", "FIXME")
+        function_call_msg = choice["message"]
         function_msg = execute_function(token, openapi, function_call)
         messages.extend([function_call_msg, function_msg])
         resp2 = openai.ChatCompletion.create(
             model=CHAT_GPT_MODEL,
             messages=messages,
             functions=functions,
-            temperature=0.2)
-        answer_msg = dict(resp2['choices'][0]['message'])
+            temperature=0.2,
+        )
+        answer_msg = dict(resp2["choices"][0]["message"])
         messages.append(answer_msg)  # type: ignore
+        messages = messages[
+            1:
+        ]  # lets pop off the first question, the user already knows it
         return messages
     else:
+        # no function call, just return OpenAI's answer
         return [choice["message"]]
 
 
@@ -154,5 +218,7 @@ def execute_function(token: str, openapi: Dict, function_call: Dict) -> MessageD
     # TODO figure out how to add preface to path?
     domain = "https://megatronical.pagekite.me"
     headers = {"Authorization": f"Bearer {token}"}
-    resp = requests.post(domain + path, data=json.loads(function_call['arguments']), headers=headers)
-    return MessageDict(role="function", name=function_call['name'], content=resp.text)
+    resp = requests.post(
+        domain + path, data=json.loads(function_call["arguments"]), headers=headers
+    )
+    return MessageDict(role="function", name=function_call["name"], content=resp.text)

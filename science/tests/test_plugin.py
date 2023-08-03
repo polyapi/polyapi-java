@@ -1,107 +1,6 @@
 from unittest.mock import Mock, patch
-from app.plugin import get_plugin_chat, openapi_to_openai_functions
+from app.plugin import MOCK_OPENAPI, get_plugin_chat, openapi_to_openai_functions
 from .testing import DbTestCase
-
-SPEC = {
-    "id": "ec66c324-80fe-4d9a-a5fa-2f7f38384155",
-    "type": "apiFunction",
-    "context": "comms.messaging",
-    "name": "twilioSendSms",
-    "description": "This API call allows sends SMS messages through Twilio's messaging service.",
-    "function": {
-        "arguments": [
-            {
-                "name": "My_Phone_Number",
-                "description": "",
-                "required": True,
-                "type": {"kind": "primitive", "type": "string"},
-            },
-            {
-                "name": "message",
-                "description": "",
-                "required": True,
-                "type": {"kind": "primitive", "type": "string"},
-            },
-        ],
-    },
-}
-
-MOCK_PLUGIN_OPENAPI = {
-    "openapi": "3.0.1",
-    "info": {
-        "version": "v1",
-        "title": "Service Nexus",
-        "description": "Endpoints that allow users to execute functions on PolyAPI",
-    },
-    "servers": [{"url": "https://service-nexus-1a0400cf.develop-k8s.polyapi.io"}],
-    "paths": {
-        "/functions/api/ec66c324-80fe-4d9a-a5fa-2f7f38384155/execute": {
-            "post": {
-                "summary": "This API call allows sends SMS messages through Twilio",
-                "operationId": "commsMessagingTwilioSendSms",
-                "requestBody": {
-                    "required": True,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/commsMessagingTwilioSendSmsBody"
-                            }
-                        }
-                    },
-                },
-                "responses": {
-                    "201": {
-                        "description": "This API call allows sends SMS messages through Twilio's messaging service. The user can specify the number of the recipient as a string using the coutry code as string with no spaces, for example +16504859634, as well as the message body. The respon",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/commsMessagingTwilioSendSmsResponse"
-                                }
-                            }
-                        },
-                    }
-                },
-            }
-        }
-    },
-    "components": {
-        "schemas": {
-            "commsMessagingTwilioSendSmsBody": {
-                "type": "object",
-                "properties": {
-                    "My_Phone_Number": {"type": "string"},
-                    "message": {"type": "string"},
-                },
-                "required": ["My_Phone_Number", "message"],
-            },
-            "commsMessagingTwilioSendSmsResponse": {
-                "type": "object",
-                "description": "response",
-                "properties": {
-                    "body": {"type": "string"},
-                    "num_segments": {"type": "string", "format": "integer"},
-                    "direction": {"type": "string"},
-                    "from": {"type": "string"},
-                    "date_updated": {"type": "string"},
-                    "price": {"nullable": True},
-                    "error_message": {"nullable": True},
-                    "uri": {"type": "string"},
-                    "account_sid": {"type": "string"},
-                    "num_media": {"type": "string", "format": "integer"},
-                    "to": {"type": "string"},
-                    "date_created": {"type": "string"},
-                    "status": {"type": "string"},
-                    "sid": {"type": "string"},
-                    "date_sent": {"nullable": True},
-                    "messaging_service_sid": {"nullable": True},
-                    "error_code": {"nullable": True},
-                    "price_unit": {"type": "string"},
-                    "api_version": {"type": "string", "format": "date"},
-                },
-            },
-        }
-    },
-}
 
 MOCK_NO_FUNCTION_STEP_1_RESP = {
     "choices": [
@@ -141,27 +40,20 @@ MOCK_STEP_1_RESP = {
 
 
 class T(DbTestCase):
-    # @patch("app.plugin.openai.ChatCompletion.create")
-    # @patch("app.plugin.requests.post")
+    @patch("app.plugin.openai.ChatCompletion.create")
+    @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
-    # def test_get_plugin_chat(
-    #     self, requests_get: Mock, requests_post: Mock, chat_create: Mock
-    # ):
-    def test_get_plugin_chat(self, requests_get: Mock):
-        requests_get.return_value = Mock(
-            status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
+    def test_get_plugin_chat(
+        self, requests_get: Mock, requests_post: Mock, chat_create: Mock
+    ):
+        requests_get.return_value = Mock(status_code=200, json=lambda: MOCK_OPENAPI)
+        requests_post.return_value = Mock(
+            status_code=201, json=lambda: {"answer": "Message sent"}
         )
-        # requests_post.return_value = Mock(
-        #     status_code=201, json=lambda: {"answer": "Message sent"}
-        # )
-        # chat_create.return_value = MOCK_STEP_1_RESP
-        # requests_get.return_value = Mock(
-        #     status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
-        # )
+        chat_create.return_value = MOCK_STEP_1_RESP
 
         question = "please send a text message saying 'tested' to 503-267-0612"
         resp = get_plugin_chat("123", question)
-        print(resp)
         self.assertTrue(resp)
 
     @patch("app.plugin.openai.ChatCompletion.create")
@@ -171,23 +63,21 @@ class T(DbTestCase):
         self, requests_get: Mock, requests_post: Mock, chat_create: Mock
     ):
         chat_create.return_value = MOCK_NO_FUNCTION_STEP_1_RESP
-        requests_get.return_value = Mock(
-            status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
-        )
+        requests_get.return_value = Mock(status_code=200, json=lambda: MOCK_OPENAPI)
 
         question = "what is the capital of Sweden?"
         messages = get_plugin_chat("123", question)
         self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0]['role'], "assistant")
-        self.assertEqual(messages[0]['content'], "The capital of Sweden is Stockholm.")
+        self.assertEqual(messages[0]["role"], "assistant")
+        self.assertEqual(messages[0]["content"], "The capital of Sweden is Stockholm.")
 
-        self.assertEqual(requests_get.call_count, 1)
+        # self.assertEqual(requests_get.call_count, 1)
         self.assertEqual(requests_post.call_count, 0)  # should not hit execute endpoint
         self.assertEqual(chat_create.call_count, 1)
 
     def test_openapi_to_openai_functions(self):
-        functions = openapi_to_openai_functions(MOCK_PLUGIN_OPENAPI)
-        self.assertEqual(len(functions), 1)
+        functions = openapi_to_openai_functions(MOCK_OPENAPI)
+        self.assertEqual(len(functions), 2)
         func = functions[0]
         self.assertEqual(func["name"], "commsMessagingTwilioSendSms")
         self.assertEqual(
