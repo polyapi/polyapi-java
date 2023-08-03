@@ -118,7 +118,8 @@ def _join_content(
 def spec_prompt(spec: SpecificationDto, *, include_return_type=False) -> str:
     desc = spec.get("description", "")
     if spec["type"] == "serverVariable":
-        path = f"vari.{spec['context']}.{spec['name']}"
+        path = f"// secret: {spec['variable']['secret']}\n"  # type: ignore
+        path += f"vari.{spec['context']}.{spec['name']}"
     else:
         path = func_path_with_args(spec)
 
@@ -267,14 +268,22 @@ Use any combination of only the following functions to answer my question:
 
 BEST_FUNCTION_VARIABLES_TEMPLATE = """Use any combination of the following variables as arguments to those functions:
 
-{variable_str}
+%s
+
+To import vari:
+
+`import {vari} from 'polyapi'`
 
 Each variable has the following methods:
 
-* .get()  // get the value of the variable
-* .onUpdate()  // execute function when the variable is updated
-* .update()  // update the value of the variable
+* async .get()  // get the value of the variable
+* async .update()  // update the value of the variable
+* async .onUpdate()  // execute function when the variable is updated
 * .inject()  // use the variable inside a poly function to be injected on the poly server at the time of execution
+
+When passing a variable as an argument to a poly function, please prefer the `inject` method over the `get` method. Inject is more efficient.
+
+If the variable is secret: True, then the variable ONLY has access to the `inject` method.
 """
 
 
@@ -302,9 +311,7 @@ def get_best_function_example(
     messages = [MessageDict(role="user", content=best_functions_prompt)]
 
     if variables:
-        best_variables_prompt = BEST_FUNCTION_VARIABLES_TEMPLATE.format(
-            variable_str="\n\n".join(spec_prompt(v) for v in variables)
-        )
+        best_variables_prompt = BEST_FUNCTION_VARIABLES_TEMPLATE % "\n\n".join(spec_prompt(v) for v in variables)
         messages.append(MessageDict(role="user", content=best_variables_prompt))
 
     question_msg = MessageDict(

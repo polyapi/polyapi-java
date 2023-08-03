@@ -3,7 +3,7 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.1.42",
+  "version": "0.1.44",
   "publisher": "PolyAPICorp",
   "engines": {
     "vscode": "^1.75.0"
@@ -34,16 +34,12 @@
         "poly.apiBaseUrl": {
           "type": "string",
           "default": "https://staging.polyapi.io",
-          "description": "API base URL for Poly server",
-          "pattern": "https?:\\/\\/(?:w{1,3}\\.)?[^\\s.]+(?:\\.[a-z]+)*(?::\\d+)?(?![^<]*(?:<\\/\\w+>|\\/?>))",
-          "patternErrorMessage": "Must provide a valid url."
+          "description": "API base URL for Poly server"
         },
         "poly.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API key for Poly server",
-          "pattern": ".+",
-          "patternErrorMessage": "Must provide an api key."
+          "description": "API key for Poly server"
         }
       }
     },

@@ -279,9 +279,11 @@ const getJSONSchemas = async (interfaceDeclarations: Record<string, ts.Interface
   return schemas;
 };
 
-const wrapIntoArraySchema = (schema: string): string => {
+const wrapIntoArraySchema = (schemaString: string): string => {
+  const schema = JSON.parse(schemaString);
   return JSON.stringify({
     type: 'array',
-    items: omit(JSON.parse(schema), '$schema'),
+    items: omit(schema, '$schema', 'definitions'),
+    definitions: schema.definitions,
   });
 };

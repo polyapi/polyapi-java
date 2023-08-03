@@ -19,6 +19,7 @@ const initSwagger = (app: INestApplication) => {
   SwaggerModule.setup('swagger', app, document);
 };
 
+// eslint-disable-next-line func-style
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -26,7 +27,7 @@ async function bootstrap() {
     transform: false,
   }));
 
-  app.useBodyParser('json', { limit: '3mb' });
+  app.useBodyParser('json', { limit: '10mb' });
 
   const config = app.get(ConfigService);
 

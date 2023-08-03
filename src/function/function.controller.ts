@@ -19,7 +19,7 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
   ApiFunctionResponseDto,
   CreateApiFunctionDto,
-  CreateCustomFunctionDto,
+  CreateCustomFunctionDto, CreateServerFunctionResponseDto,
   ExecuteApiFunctionDto,
   ExecuteCustomFunctionDto,
   ExecuteCustomFunctionQueryParams,
@@ -73,8 +73,7 @@ export class FunctionController {
       templateUrl,
       templateBody,
       id = null,
-      inferArgTypesFromPostmanGraphqlVariables = false,
-      urlString,
+      introspectionResponse = null,
     } = data;
     const environmentId = req.user.environment.id;
 
@@ -103,8 +102,7 @@ export class FunctionController {
         method,
         templateUrl,
         templateBody,
-        inferArgTypesFromPostmanGraphqlVariables,
-        urlString,
+        introspectionResponse,
         templateAuth,
       ),
     );
@@ -261,15 +259,26 @@ export class FunctionController {
 
   @UseGuards(PolyAuthGuard)
   @Post('/server')
-  async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {
+  async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<CreateServerFunctionResponseDto> {
     const { context = '', name, description = '', code } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
     try {
-      return this.service.customFunctionToDetailsDto(
-        await this.service.createCustomFunction(req.user.environment, context, name, description, code, true, req.user.key),
+      const customFunction = await this.service.createCustomFunction(
+        req.user.environment,
+        context,
+        name,
+        description,
+        code,
+        true,
+        req.user.key,
       );
+      return {
+        ...this.service.customFunctionToDetailsDto(customFunction),
+        status: customFunction.status,
+        message: customFunction.message,
+      };
     } catch (e) {
       throw new BadRequestException(e.message);
     }
@@ -349,10 +358,10 @@ export class FunctionController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/all/update')
-  async updateAllServerFunctions(@Req() req: AuthRequest) {
-    this.service.updateAllServerFunctions(req.user.environment, req.user.key)
+  async updateAllServerFunctions() {
+    this.service.updateAllServerFunctions()
       .then(() => {
-        this.logger.debug('All functions are being updated in background.');
+        this.logger.debug('All functions are being updated in background...');
       });
     return 'Functions are being updated in background. Please check logs for more details.';
   }

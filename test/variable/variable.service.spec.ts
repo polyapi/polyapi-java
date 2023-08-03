@@ -172,17 +172,25 @@ describe('VariableService', () => {
   });
 
   describe('updateVariable', () => {
-    const updatedVariable = {
+    const updatedSecretVariable = {
       ...testVariable,
+      secret: true,
+    };
+    const updatedNonSecretVariable = {
+      ...testVariable,
+      secret: false,
     };
 
     beforeEach(() => {
-      prismaServiceMock.variable.update?.mockResolvedValueOnce(updatedVariable);
-      prismaServiceMock.variable.count?.mockImplementationOnce(() => Promise.resolve(0) as any);
+      prismaServiceMock.variable.count?.mockImplementation(() => Promise.resolve(0) as any);
+      commonServiceMock.sanitizeNameIdentifier?.mockImplementationOnce((name) => name);
+      commonServiceMock.sanitizeContextIdentifier?.mockImplementationOnce((context) => context);
       secretServiceMock.get?.mockResolvedValue('previousValue12345');
+      functionServiceMock.getFunctionsWithVariableArgument?.mockResolvedValue([]);
     });
 
     it('should not call secretService.set when variable value is not passed', async () => {
+      prismaServiceMock.variable.update?.mockResolvedValue(updatedNonSecretVariable);
       await service.updateVariable(
         'environmentId12345',
         'updater12345',
@@ -199,6 +207,7 @@ describe('VariableService', () => {
     });
 
     it('should not call eventService.sendVariableChangeEvent when variable no value nor secret is passed', async () => {
+      prismaServiceMock.variable.update?.mockResolvedValue(updatedSecretVariable);
       await service.updateVariable(
         'environmentId12345',
         'updater12345',
@@ -215,6 +224,7 @@ describe('VariableService', () => {
     });
 
     it('should call secretService.set when variable value is passed', async () => {
+      prismaServiceMock.variable.update?.mockResolvedValue(updatedNonSecretVariable);
       await service.updateVariable(
         'environmentId12345',
         'updater12345',
@@ -230,7 +240,7 @@ describe('VariableService', () => {
       expect(secretServiceMock.set).toBeCalledWith('environmentId12345', 'id12345', 'value12345');
     });
 
-    it('should call eventService.sendVariableChangeEvent when variable value is passed and variable is not secret', async () => {
+    it('should not call getFunctionsWithVariableArgument when variable name nor context is not changed', async () => {
       await service.updateVariable(
         'environmentId12345',
         'updater12345',
@@ -243,7 +253,56 @@ describe('VariableService', () => {
         false,
       );
 
-      expect(eventServiceMock.sendVariableChangeEvent).toBeCalledWith(updatedVariable, {
+      expect(functionServiceMock.getFunctionsWithVariableArgument).not.toBeCalled();
+    });
+
+    it('should call getFunctionsWithVariableArgument when variable name changed', async () => {
+      await service.updateVariable(
+        'environmentId12345',
+        'updater12345',
+        testVariable,
+        'updatedName12345',
+        'context12345',
+        'description12345',
+        'value12345',
+        Visibility.Environment,
+        false,
+      );
+
+      expect(functionServiceMock.getFunctionsWithVariableArgument).toBeCalledWith('environmentId12345', 'context12345.name12345');
+    });
+
+    it('should call getFunctionsWithVariableArgument when variable context changed', async () => {
+      await service.updateVariable(
+        'environmentId12345',
+        'updater12345',
+        testVariable,
+        'name12345',
+        'updatedContext12345',
+        'description12345',
+        'value12345',
+        Visibility.Environment,
+        false,
+      );
+
+      expect(functionServiceMock.getFunctionsWithVariableArgument).toBeCalledWith('environmentId12345', 'context12345.name12345');
+    });
+
+    it('should call eventService.sendVariableChangeEvent when variable value is passed and variable is not secret', async () => {
+      prismaServiceMock.variable.update?.mockResolvedValue(updatedNonSecretVariable);
+      await service.updateVariable(
+        'environmentId12345',
+        'updater12345',
+        testVariable,
+        'name12345',
+        'context12345',
+        'description12345',
+        'value12345',
+        Visibility.Environment,
+        false,
+      );
+
+      expect(eventServiceMock.sendVariableChangeEvent).toBeCalledWith(updatedNonSecretVariable, {
         type: 'update',
         currentValue: 'value12345',
         previousValue: expect.not.stringMatching('previousValue12345'),
@@ -256,6 +315,7 @@ describe('VariableService', () => {
     });
 
     it('should call eventService.sendVariableChangeEvent when variable value is passed and variable is secret with masked values', async () => {
+      prismaServiceMock.variable.update?.mockResolvedValue(updatedSecretVariable);
       await service.updateVariable(
         'environmentId12345',
         'updater12345',
@@ -268,7 +328,7 @@ describe('VariableService', () => {
         true,
       );
 
-      expect(eventServiceMock.sendVariableChangeEvent).toBeCalledWith(updatedVariable, {
+      expect(eventServiceMock.sendVariableChangeEvent).toBeCalledWith(updatedSecretVariable, {
         type: 'update',
         currentValue: expect.not.stringMatching('value12345'),
         previousValue: expect.not.stringMatching('previousValue12345'),
@@ -278,6 +338,73 @@ describe('VariableService', () => {
         secret: true,
         updatedFields: ['value'],
       });
+    });
+
+    it('should call eventService.sendVariableChangeEvent when variable value is object not equal to previous value', async () => {
+      const previousValue = {
+        value: 'previousValue12345',
+        items: ['item1', 'item3'],
+      };
+      secretServiceMock.get?.mockResolvedValue(previousValue);
+      prismaServiceMock.variable.update?.mockResolvedValue(updatedNonSecretVariable);
+
+      const updatedValue = {
+        ...previousValue,
+        value: 'value12345',
+      };
+      await service.updateVariable(
+        'environmentId12345',
+        'updater12345',
+        {
+          ...testVariable,
+          secret: false,
+        },
+        'name12345',
+        'context12345',
+        'description12345',
+        updatedValue,
+        Visibility.Environment,
+        undefined,
+      );
+
+      expect(eventServiceMock.sendVariableChangeEvent).toBeCalledWith(updatedNonSecretVariable, {
+        type: 'update',
+        currentValue: updatedValue,
+        previousValue,
+        updatedBy: 'updater12345',
+        updateTime: expect.any(Number),
+        path: 'context12345.name12345',
+        secret: false,
+        updatedFields: ['value'],
+      });
+    });
+
+    it('should not call eventService.sendVariableChangeEvent when variable value is object equal to previous value', async () => {
+      const value = {
+        value: 'value12345',
+        items: ['item1', 'item3'],
+      };
+      secretServiceMock.get?.mockResolvedValue(value);
+      prismaServiceMock.variable.update?.mockResolvedValueOnce(updatedNonSecretVariable);
+
+      await service.updateVariable(
+        'environmentId12345',
+        'updater12345',
+        {
+          ...testVariable,
+          secret: false,
+        },
+        'name12345',
+        'context12345',
+        'description12345',
+        {
+          ...value,
+        },
+        Visibility.Environment,
+        false,
+      );
+
+      expect(eventServiceMock.sendVariableChangeEvent).not.toBeCalled();
     });
   });
 

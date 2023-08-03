@@ -77,6 +77,7 @@ class SpecificationDto(TypedDict):
     name: str
     description: str
     function: Optional[FunctionSpecification]
+    # variables have variable: {"secret": boolean} and NO function
     type: Literal['apiFunction', 'customFunction', 'serverFunction', 'authFunction', 'webhookHandle', 'serverVariable']
 
 

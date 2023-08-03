@@ -8,3 +8,4 @@ export * from './create-custom-function.dto';
 export * from './create-auth-function.dto';
 export * from './auth-function-event-handler.dto';
 export * from './execute-custom-function.dto';
+export * from './create-server-function-response.dto';

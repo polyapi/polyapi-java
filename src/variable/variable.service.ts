@@ -1,4 +1,4 @@
-import { get, set } from 'lodash';
+import { get, set, isEqual } from 'lodash';
 import crypto from 'crypto';
 import { ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Variable } from '@prisma/client';
@@ -185,6 +185,19 @@ export class VariableService {
       throw new ConflictException(`Variable with name '${name}' and context '${context}' already exists`);
     }
 
+    const pathChanged = `${variable.context}.${variable.name}` !== `${context}.${name}`;
+    if (pathChanged) {
+      const functionsWithVariableArgument = await this.functionService.getFunctionsWithVariableArgument(
+        variable.environmentId,
+        `${variable.context}.${variable.name}`,
+      );
+      if (functionsWithVariableArgument.length) {
+        throw new ConflictException(
+          `Cannot change name and/or context of Variable as it is used in function(s): ${functionsWithVariableArgument.map((f) => f.id).join(', ')}`,
+        );
+      }
+    }
+
     description = description === '' && value
       ? (await this.aiService.getVariableDescription(name, context, secret, JSON.stringify(value))).description
       : description;
@@ -214,7 +227,7 @@ export class VariableService {
         await this.secretService.set(environmentId, variable.id, value);
       }
 
-      if ((value !== undefined && value !== previousValue) || secret !== variable.secret) {
+      if ((value !== undefined && !isEqual(value, previousValue)) || secret !== variable.secret) {
         const currentValue = value || await this.getVariableValue(updatedVariable);
 
         this.logger.debug(`Sending change event for variable ${variable.id}.`);
@@ -225,7 +238,7 @@ export class VariableService {
           updatedBy,
           updateTime: Date.now(),
           updatedFields: [
-            value !== undefined && currentValue !== previousValue ? 'value' : null,
+            value !== undefined && !isEqual(currentValue, previousValue) ? 'value' : null,
             secret !== variable.secret ? 'secret' : null,
           ].filter(Boolean) as ('value' | 'secret')[],
           secret: secret as boolean,
@@ -240,7 +253,10 @@ export class VariableService {
   async deleteVariable(variable: Variable, deletedBy: string): Promise<void> {
     this.logger.debug(`Deleting variable ${variable.id}`);
 
-    const functionsWithVariableArgument = await this.functionService.getFunctionsWithVariableArgument(`${variable.context}.${variable.name}`);
+    const functionsWithVariableArgument = await this.functionService.getFunctionsWithVariableArgument(
+      variable.environmentId,
+      `${variable.context}.${variable.name}`,
+    );
     if (functionsWithVariableArgument.length) {
       throw new ConflictException(
         `Variable cannot be deleted as it is used in function(s): ${functionsWithVariableArgument.map((f) => f.id).join(', ')}`,

@@ -3,7 +3,7 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { PrismaService } from 'prisma/prisma.service';
-import { SystemPrompt } from '@prisma/client';
+import { SystemPrompt, DocSection } from '@prisma/client';
 import {
   FunctionCompletionDto,
   FunctionDescriptionDto,
@@ -94,7 +94,12 @@ export class AiService {
     );
   }
 
-  async getVariableDescription(name: string, context: string, secret: boolean, value: string): Promise<VariableDescriptionDto> {
+  async getVariableDescription(
+    name: string,
+    context: string,
+    secret: boolean,
+    value: string,
+  ): Promise<VariableDescriptionDto> {
     this.logger.debug(`Getting description for variable: ${name}`);
 
     return await lastValueFrom(
@@ -122,7 +127,10 @@ export class AiService {
   private processScienceServerError() {
     return (error) => {
       this.logger.error(`Error while communicating with Science server: ${error}`);
-      throw new HttpException(error.response?.data || error.message, error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        error.response?.data || error.message,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     };
   }
 
@@ -147,5 +155,18 @@ export class AiService {
         content: prompt,
       },
     });
+  }
+
+  async updateDocVector(doc: DocSection): Promise<DocSection> {
+    const p = new Promise<DocSection>((resolve) => {
+      resolve(doc);
+    });
+    const url = `${this.config.scienceServerBaseUrl}/docs/update-vector`;
+    await lastValueFrom(
+      this.httpService.post(url, {
+        id: doc.id,
+      }),
+    );
+    return p;
   }
 }

@@ -1,5 +1,11 @@
-### 0.1.42
+### 0.1.44
 * Added conversation history to assistant.
+
+### 0.1.43
+* Fix missing lodash lib.
+
+### 0.1.42
+* Removed pattern checks for configuration properties
 
 ### 0.1.41
 * Added /c command as alternative to /clear

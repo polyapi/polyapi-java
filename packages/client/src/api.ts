@@ -3,7 +3,7 @@ import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import https from 'https';
 import dotenv from 'dotenv';
-import { FunctionDetailsDto, Specification } from '@poly/model';
+import { CreateServerFunctionResponseDto, FunctionDetailsDto, Specification } from '@poly/model';
 
 dotenv.config();
 
@@ -47,7 +47,7 @@ export const createServerFunction = async (
   code: string,
 ) => {
   return (
-    await axios.post<any, AxiosResponse<FunctionDetailsDto>>(
+    await axios.post<any, AxiosResponse<CreateServerFunctionResponseDto>>(
       `${process.env.POLY_API_BASE_URL}/functions/server`,
       {
         context,

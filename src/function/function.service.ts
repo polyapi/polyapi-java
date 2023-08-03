@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { HttpService } from '@nestjs/axios';
-import { catchError, from, lastValueFrom, map, of } from 'rxjs';
+import { catchError, from, lastValueFrom, map } from 'rxjs';
 import mustache from 'mustache';
 import { stripComments } from 'jsonc-parser';
 import { ApiFunction, CustomFunction, Environment } from '@prisma/client';
@@ -33,7 +33,7 @@ import {
   Method,
   PostmanVariableEntry,
   PropertySpecification,
-  PropertyType,
+  PropertyType, Role,
   ServerFunctionSpecification,
   TrainingDataGeneration,
   Variables,
@@ -54,8 +54,9 @@ import { ApiFunctionArguments } from './types';
 import { uniqBy, mergeWith, omit, isPlainObject, cloneDeep } from 'lodash';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { VariableService } from 'variable/variable.service';
-import { getIntrospectionQuery, IntrospectionQuery, VariableDefinitionNode } from 'graphql';
+import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
 import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospectionQuery, resolveGraphqlArgumentType } from './graphql/utils';
+import { AuthService } from 'auth/auth.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -65,6 +66,11 @@ mustache.escape = (text) => {
   } else {
     return text;
   }
+};
+
+type CreateCustomFunctionResult = CustomFunction & {
+  status: 'deployed' | 'deploying',
+  message?: string,
 };
 
 @Injectable()
@@ -83,6 +89,7 @@ export class FunctionService implements OnModuleInit {
     private readonly specsService: SpecsService,
     private readonly configVariableService: ConfigVariableService,
     private readonly variableService: VariableService,
+    private readonly authService: AuthService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
   }
@@ -167,8 +174,7 @@ export class FunctionService implements OnModuleInit {
     method: Method,
     templateUrl: string,
     templateBody: Body,
-    inferArgTypesFromPostmanGraphqlVariables = false,
-    urlString: string,
+    introspectionResponse: IntrospectionQuery | null,
     templateAuth?: Auth,
   ): Promise<ApiFunction> {
     if (!(statusCode >= HttpStatus.OK && statusCode < HttpStatus.AMBIGUOUS)) {
@@ -189,9 +195,8 @@ export class FunctionService implements OnModuleInit {
     const finalBody = JSON.stringify(this.getBodyWithContentFiltered(templateBody));
     const finalHeaders = JSON.stringify(this.getFilteredHeaders(templateHeaders));
     const graphqlIdentifier = isGraphQL ? getGraphqlIdentifier(templateBody.graphql.query) : '';
-    const graphqlIntrospectionResponse = isGraphQL && !inferArgTypesFromPostmanGraphqlVariables
-      ? JSON.stringify(await this.getGraphqlIntrospectionData(urlString))
-      : null;
+
+    const graphqlIntrospectionResponse = introspectionResponse ? JSON.stringify(introspectionResponse) : null;
 
     if (id === null) {
       const templateBaseUrl = templateUrl.split('?')[0];
@@ -306,7 +311,9 @@ export class FunctionService implements OnModuleInit {
           );
 
           if (!name) {
-            name = aiName ? this.commonService.sanitizeNameIdentifier(aiName) : this.commonService.sanitizeNameIdentifier(requestName);
+            name = aiName
+              ? this.commonService.sanitizeNameIdentifier(aiName)
+              : this.commonService.sanitizeNameIdentifier(requestName);
           }
           if (!context && !apiFunction?.context) {
             context = this.commonService.sanitizeContextIdentifier(aiContext);
@@ -730,7 +737,7 @@ export class FunctionService implements OnModuleInit {
     customCode: string,
     serverFunction: boolean,
     apiKey: string,
-  ) {
+  ): Promise<CreateCustomFunctionResult> {
     const {
       code,
       args,
@@ -815,6 +822,8 @@ export class FunctionService implements OnModuleInit {
           returnType,
           synchronous,
           requirements: JSON.stringify(requirements),
+          serverSide: serverFunction,
+          apiKey: serverFunction ? apiKey : null,
         },
       });
     }
@@ -822,25 +831,59 @@ export class FunctionService implements OnModuleInit {
     if (serverFunction) {
       this.logger.debug(`Creating server side custom function ${name}`);
 
-      try {
-        await this.faasService.createFunction(customFunction.id, environment.tenantId, environment.id, name, code, requirements, apiKey);
-        customFunction = await this.prisma.customFunction.update({
+      const revertServerFunctionFlag = async () => {
+        await this.prisma.customFunction.update({
           where: {
-            id: customFunction.id,
+            id: customFunction?.id,
           },
           data: {
-            serverSide: true,
+            serverSide: false,
+            apiKey: null,
           },
         });
+      };
+
+      try {
+        const {
+          status,
+          message,
+          waitForDeploy,
+        } = await this.faasService.createFunction(
+          customFunction.id,
+          environment.tenantId,
+          environment.id,
+          name,
+          code,
+          requirements,
+          apiKey,
+        );
+
+        if (waitForDeploy) {
+          waitForDeploy
+            .catch(async e => {
+              this.logger.error(`Error creating server side custom function ${name}: ${e.message}. Function created as client side.`);
+              await revertServerFunctionFlag();
+            });
+        }
+
+        return {
+          ...customFunction,
+          status,
+          message,
+        };
       } catch (e) {
         this.logger.error(
           `Error creating server side custom function ${name}: ${e.message}. Function created as client side.`,
         );
+        await revertServerFunctionFlag();
         throw e;
       }
     }
 
-    return customFunction;
+    return {
+      ...customFunction,
+      status: 'deployed',
+    };
   }
 
   async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null) {
@@ -982,21 +1025,40 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  async updateAllServerFunctions(environment: Environment, apiKey: string) {
-    this.logger.debug(`Updating all server functions in environment ${environment.id}...`);
+  async updateAllServerFunctions() {
+    this.logger.debug('Updating all server functions...');
     const serverFunctions = await this.prisma.customFunction.findMany({
       where: {
-        environmentId: environment.id,
         serverSide: true,
+      },
+      include: {
+        environment: true,
       },
     });
 
     for (const serverFunction of serverFunctions) {
+      const getApiKey = async () => {
+        if (serverFunction.apiKey) {
+          return serverFunction.apiKey;
+        }
+        const apiKeys = await this.authService.getAllApiKeys(serverFunction.environmentId);
+        const adminApiKey = apiKeys.find((apiKey) => apiKey.user?.role === Role.Admin);
+        return adminApiKey?.key;
+      };
+
+      const apiKey = serverFunction.apiKey || await getApiKey();
+      if (!apiKey) {
+        this.logger.error(`No API key found for server function ${serverFunction.id}`);
+        continue;
+      }
+
       this.logger.debug(`Updating server function ${serverFunction.id}...`);
       await this.faasService.updateFunction(
         serverFunction.id,
-        environment.tenantId,
-        environment.id,
+        serverFunction.environment.tenantId,
+        serverFunction.environment.id,
+        serverFunction.name,
+        serverFunction.code,
         JSON.parse(serverFunction.requirements || '[]'),
         apiKey,
       );
@@ -1054,12 +1116,13 @@ export class FunctionService implements OnModuleInit {
     return body.mode === 'graphql';
   }
 
-  async getFunctionsWithVariableArgument(variablePath: string) {
+  async getFunctionsWithVariableArgument(environmentId: string, variablePath: string) {
     return this.prisma.apiFunction.findMany({
       where: {
         argumentsMetadata: {
           contains: `"variable":"${variablePath}"`,
         },
+        environmentId,
       },
     });
   }
@@ -1514,7 +1577,7 @@ export class FunctionService implements OnModuleInit {
             } else {
               const graphqlVariableBodyValue = graphqlVariablesBody[graphqlVariableName];
 
-              if (graphqlVariableBodyValue) {
+              if (typeof graphqlVariableBodyValue !== 'undefined') {
                 const [type, typeSchema] = await this.resolveArgumentType(JSON.stringify(graphqlVariableBodyValue));
 
                 assignNewMetadata(arg, type, typeSchema);
@@ -1708,25 +1771,6 @@ export class FunctionService implements OnModuleInit {
     return type === 'object' ? JSON.stringify(typeSchema) : type;
   }
 
-  private async getGraphqlIntrospectionData(url: string) {
-    return lastValueFrom<IntrospectionQuery>(
-      this.httpService.request({
-        url,
-        method: 'POST',
-        data: {
-          query: getIntrospectionQuery(),
-        },
-      }).pipe(
-        map(response => response.data.data),
-      ).pipe(
-        catchError((error: AxiosError) => {
-          this.logger.error(`Error while introspecting graphql API. ${error}`);
-          return of(null);
-        }),
-      ),
-    );
-  }
-
   private filterJSONComments(jsonString: string) {
     return stripComments(jsonString);
   }
@@ -1789,6 +1833,10 @@ export class FunctionService implements OnModuleInit {
 
       const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];
       const quotedArgsMatchResult = bodyString.match(quotedArgsRegexp) || [];
+      this.logger.debug(`Arguments value map for sanitization: ${JSON.stringify(argumentValueMap)}`);
+      this.logger.debug(`Arguments metadata for sanitization: ${JSON.stringify(argumentsMetadata)}`);
+      this.logger.debug(`Sanitizing unquoted arguments: ${JSON.stringify(unquotedArgsMatchResult)}`);
+      this.logger.debug(`Sanitizing quoted arguments: ${JSON.stringify(quotedArgsMatchResult)}`);
 
       for (const unquotedArg of unquotedArgsMatchResult) {
         pushFoundArg(unquotedArg, false);
@@ -1799,7 +1847,7 @@ export class FunctionService implements OnModuleInit {
       }
 
       for (const arg of foundArgs) {
-        if (argumentsMetadata[arg.name].type === 'string') {
+        if (argumentsMetadata[arg.name]?.type === 'string') {
           sanitizeSringArgumentValue(arg.name, arg.quoted);
         }
       }
@@ -1809,6 +1857,8 @@ export class FunctionService implements OnModuleInit {
           return text;
         },
       });
+
+      this.logger.debug(`Rendered content after sanitization: ${renderedContent}`);
 
       return {
         ...body,

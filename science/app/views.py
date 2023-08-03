@@ -10,7 +10,7 @@ from app.description import (
     get_variable_description,
     get_webhook_description,
 )
-from app.docs import documentation_question
+from app.docs import documentation_question, update_vector
 from app.typedefs import CompletionAnswer, DescInputDto, VarDescInputDto
 from app.utils import clear_conversations, create_new_conversation, get_user, log
 from app.router import split_route_and_question
@@ -103,6 +103,12 @@ def webhook_description() -> Response:
 def variable_description() -> Response:
     data: VarDescInputDto = request.get_json(force=True)
     return jsonify(get_variable_description(data))
+
+
+@bp.route("/docs/update-vector", methods=["POST"])
+def docs_update_vector() -> str:
+    data = request.get_json(force=True)
+    return update_vector(data['id'])
 
 
 @bp.route("/clear-conversations", methods=["POST"])

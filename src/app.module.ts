@@ -30,6 +30,7 @@ import { SecretModule } from 'secret/secret.module';
 import { ConfigService } from 'config/config.service';
 import { MigrationModule } from 'migration/migration.module';
 import { TriggerModule } from 'trigger/trigger.module';
+import { DocsModule } from 'docs/docs.module';
 
 const isRedisAvailable = async (url: string): Promise<boolean> => {
   const redisOptions: RedisOptions = {
@@ -96,6 +97,7 @@ const logger = new Logger('AppModule');
     SecretModule,
     MigrationModule,
     TriggerModule,
+    DocsModule,
   ],
   exports: [ConfigModule],
 })

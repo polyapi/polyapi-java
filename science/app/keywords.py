@@ -119,7 +119,7 @@ def keywords_similar(
 
     keywords = remove_blacklist(keywords)
 
-    similarity_score = fuzz.token_set_ratio(keywords, func_str)
+    similarity_score = fuzz.partial_token_set_ratio(keywords, func_str)
     if debug:
         log(keywords, similarity_score, func_str)
 

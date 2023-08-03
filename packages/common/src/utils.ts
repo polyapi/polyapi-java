@@ -1,9 +1,7 @@
 import type { PropertySpecification, PropertyType } from '@poly/model';
 
-import { isPlainObject } from 'lodash';
-
 export const isPlainObjectPredicate = (value: unknown): value is object => {
-  return isPlainObject(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export const toTypeDeclaration = (type: PropertyType, synchronous = true) => {

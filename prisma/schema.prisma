@@ -152,6 +152,7 @@ model CustomFunction {
   requirements  String?     @map("requirements")
   trained       Boolean     @default(false)
   serverSide    Boolean     @default(false) @map("server_side")
+  apiKey        String?     @map("api_key")
   visibility    String      @default("ENVIRONMENT")
 
   @@map("custom_function")
@@ -274,6 +275,8 @@ model GptPlugin {
   functionIds               String // json array of function publicIds for now
   environment               Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   environmentId             String      @map("environment_id")
+  authType                  String      @map("auth_type") @default("user_http")
+  authToken                 String      @default("")  //
 
   @@unique(fields: [slug, environmentId])
   @@map("gpt_plugin")
@@ -299,4 +302,14 @@ model Migration {
   fileName  String   @map("file_name")
 
   @@map("migration")
+}
+
+model DocSection {
+  // a section of our documentation
+  // for now all documentation is related to Poly
+  // but in future this might be tenanted and used for customer docs
+  id        String   @id @default(uuid())
+  title     String   @default("")
+  text      String   @default("")
+  vector    String   @default("")  // JSON of OpenAI embedding vector of the title+text
 }

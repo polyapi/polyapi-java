@@ -11,4 +11,6 @@ export class CreatePluginDto {
   descriptionForMarketplace?: string;
   descriptionForModel?: string;
   functionIds?: string[];
+  authType?: string;
+  authToken?: string;
 }
