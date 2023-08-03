@@ -2,7 +2,7 @@ import fs from 'fs';
 import handlebars from 'handlebars';
 import _ from 'lodash';
 import convert from '@openapi-contrib/json-schema-to-openapi-schema';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AiService } from 'ai/ai.service';
 import { PrismaService } from 'prisma/prisma.service';
 import {
@@ -358,12 +358,12 @@ export class GptPluginService {
 
   async getPlugin(slug: string, environmentId, include: any = null): Promise<GptPlugin> {
     try {
-      return this.prisma.gptPlugin.findUniqueOrThrow({
+      return await this.prisma.gptPlugin.findUniqueOrThrow({
         where: { slug_environmentId: { slug, environmentId } },
         include,
       });
     } catch {
-      throw new BadRequestException(`Plugin with slug ${slug} not found!`);
+      throw new NotFoundException(`Plugin with slug ${slug} not found!`);
     }
   }
 
