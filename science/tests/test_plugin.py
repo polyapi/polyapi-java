@@ -54,6 +54,11 @@ class T(DbTestCase):
 
         question = "please send a text message saying 'tested' to 503-267-0612"
         resp = get_plugin_chat("123", question)
+
+        self.assertEqual(requests_get.call_count, 1)
+        self.assertEqual(requests_post.call_count, 1)  # should hit execute endpoint
+        self.assertEqual(chat_create.call_count, 2)
+
         self.assertTrue(resp)
 
     @patch("app.plugin.openai.ChatCompletion.create")
@@ -71,7 +76,7 @@ class T(DbTestCase):
         self.assertEqual(messages[0]["role"], "assistant")
         self.assertEqual(messages[0]["content"], "The capital of Sweden is Stockholm.")
 
-        # self.assertEqual(requests_get.call_count, 1)
+        self.assertEqual(requests_get.call_count, 1)
         self.assertEqual(requests_post.call_count, 0)  # should not hit execute endpoint
         self.assertEqual(chat_create.call_count, 1)
 

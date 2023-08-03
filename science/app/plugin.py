@@ -129,12 +129,15 @@ MOCK_OPENAPI = {
 }
 
 
-def _get_openapi_spec(plugin_id: str) -> Dict:
-    # requests.get()
-    # openapi_url = "https://service-nexus-1a0400cf.develop-k8s.polyapi.io/plugins/service-nexus/openapi"
-    # resp = requests.get(openapi_url)
+def _get_openapi_url(plugin_id: str) -> str:
+    return "https://service-nexus-1a0400cf.develop-k8s.polyapi.io/plugins/service-nexus/openapi"
 
-    return MOCK_OPENAPI
+
+def _get_openapi_spec(plugin_id: str) -> Dict:
+    openapi_url = _get_openapi_url(plugin_id)
+    resp = requests.get(openapi_url)
+    assert resp.status_code == 200
+    return resp.json()
 
 
 def _get_body_schema_name(post: Dict) -> str:
