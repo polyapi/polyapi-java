@@ -83,8 +83,10 @@ class SpecificationDto(TypedDict):
 
 class MessageDict(TypedDict, total=False):
     role: str
-    content: str
+    content: Optional[str]
     type: int
+    name: NotRequired[str]
+    function_call: NotRequired[Dict]
 
 
 class ChatGptChoice(TypedDict):

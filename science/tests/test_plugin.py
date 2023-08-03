@@ -104,9 +104,16 @@ MOCK_PLUGIN_OPENAPI = {
 }
 
 MOCK_NO_FUNCTION_STEP_1_RESP = {
-    "index": 0,
-    "message": {"role": "assistant", "content": "The capital of Sweden is Stockholm."},
-    "finish_reason": "stop",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "The capital of Sweden is Stockholm.",
+            },
+            "finish_reason": "stop",
+        }
+    ]
 }
 
 
@@ -137,20 +144,46 @@ class T(DbTestCase):
     # @patch("app.plugin.openai.ChatCompletion.create")
     # @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
-    # def test_get_plugin_chat(self, requests_get: Mock, requests_post: Mock, chat_create: Mock):
+    # def test_get_plugin_chat(
+    #     self, requests_get: Mock, requests_post: Mock, chat_create: Mock
+    # ):
     def test_get_plugin_chat(self, requests_get: Mock):
+        requests_get.return_value = Mock(
+            status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
+        )
         # requests_post.return_value = Mock(
         #     status_code=201, json=lambda: {"answer": "Message sent"}
         # )
         # chat_create.return_value = MOCK_STEP_1_RESP
+        # requests_get.return_value = Mock(
+        #     status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
+        # )
+
+        question = "please send a text message saying 'tested' to 503-267-0612"
+        resp = get_plugin_chat("123", question)
+        print(resp)
+        self.assertTrue(resp)
+
+    @patch("app.plugin.openai.ChatCompletion.create")
+    @patch("app.plugin.requests.post")
+    @patch("app.plugin.requests.get")
+    def test_get_plugin_chat_general(
+        self, requests_get: Mock, requests_post: Mock, chat_create: Mock
+    ):
+        chat_create.return_value = MOCK_NO_FUNCTION_STEP_1_RESP
         requests_get.return_value = Mock(
             status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
         )
 
-        # question = "please send a text message saying 'tested' to 503-267-0612"
-        question = "what is the capitol of Sweden?"
-        resp = get_plugin_chat("123", question)
-        self.assertTrue(resp)
+        question = "what is the capital of Sweden?"
+        messages = get_plugin_chat("123", question)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]['role'], "assistant")
+        self.assertEqual(messages[0]['content'], "The capital of Sweden is Stockholm.")
+
+        self.assertEqual(requests_get.call_count, 1)
+        self.assertEqual(requests_post.call_count, 0)  # should not hit execute endpoint
+        self.assertEqual(chat_create.call_count, 1)
 
     def test_openapi_to_openai_functions(self):
         functions = openapi_to_openai_functions(MOCK_PLUGIN_OPENAPI)

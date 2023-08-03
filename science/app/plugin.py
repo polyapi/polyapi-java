@@ -2,10 +2,12 @@ import os
 import json
 import requests
 
+from app.constants import CHAT_GPT_MODEL
+
 assert requests
 from typing import Dict, List
 import openai
-from app.typedefs import MessageDict
+from app.typedefs import ChatGptChoice, MessageDict
 
 
 MOCK_OPENAPI = {
@@ -97,7 +99,7 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
     return rv
 
 
-def get_plugin_chat(plugin_id: str, message: str) -> Dict:
+def get_plugin_chat(plugin_id: str, message: str) -> List[MessageDict]:
     """get the plugin
     get the function ids
     get them from db
@@ -114,33 +116,43 @@ def get_plugin_chat(plugin_id: str, message: str) -> Dict:
     functions = openapi_to_openai_functions(openapi)
     messages = [MessageDict(role="user", content=message)]
     resp = openai.ChatCompletion.create(
-        model="gpt-4-0613",
+        model=CHAT_GPT_MODEL,
         messages=messages,
         functions=functions,
         temperature=0.2,
     )
-    print(resp["choices"][0])
-    function_call = resp["choices"][0]["message"].get("function_call")
-    # TODO pass in this token
-    token = os.environ.get('POLY_BEARER_TOKEN', 'FIXME')
-    resp = execute_function(token, openapi, function_call)
-    return resp
+    choice: ChatGptChoice = resp['choices'][0]
+    function_call = choice["message"].get("function_call")
+    if function_call:
+        function_call = dict(function_call)
+        token = os.environ.get('POLY_BEARER_TOKEN', 'FIXME')
+        function_call_msg = choice['message']
+        function_msg = execute_function(token, openapi, function_call)
+        messages.extend([function_call_msg, function_msg])
+        resp2 = openai.ChatCompletion.create(
+            model=CHAT_GPT_MODEL,
+            messages=messages,
+            functions=functions,
+            temperature=0.2)
+        answer_msg = resp2['choices'][0]['message']
+        messages.append(answer_msg)
+        return messages
+    else:
+        return [choice["message"]]
 
 
 def _get_name_path_map(openapi: Dict) -> Dict:
     rv = {}
     for path, data in openapi["paths"].items():
-        print(path, data)
         rv[data["post"]["operationId"]] = path
     return rv
 
 
-def execute_function(token: str, openapi: Dict, function_call: Dict):
+def execute_function(token: str, openapi: Dict, function_call: Dict) -> MessageDict:
     name_path_map = _get_name_path_map(openapi)
     path = name_path_map[function_call["name"]]
     # TODO figure out how to add preface to path?
     domain = "https://megatronical.pagekite.me"
     headers = {"Authorization": f"Bearer {token}"}
     resp = requests.post(domain + path, data=json.loads(function_call['arguments']), headers=headers)
-    assert resp.status_code == 201
-    return {"answer": "TODO"}
+    return MessageDict(role="function", name=function_call['name'], content=resp.text)
