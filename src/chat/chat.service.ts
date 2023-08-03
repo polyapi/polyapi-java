@@ -84,15 +84,16 @@ export class ChatService {
       });
     }
 
-    const messages = this.prisma.conversationMessage.findMany({
+    const messages = await this.prisma.conversationMessage.findMany({
       where: { userId, type: 2, role: { in: ['user', 'assistant'] } },
       orderBy: { createdAt: 'desc' },
       take: perPage,
       cursor: cursor ?? undefined,
       skip: cursor ? 1 : undefined,
     });
-    return (await messages).map((m) => {
-      return { role: m.role, content: this.parseQuestionContent(m.content), createdAt: m.createdAt };
+
+    return messages.map((message) => {
+      return { role: message.role, content: this.parseQuestionContent(message.content), createdAt: message.createdAt };
     });
   }
 

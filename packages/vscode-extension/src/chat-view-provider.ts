@@ -3,6 +3,8 @@ import axios from 'axios';
 import { RawAxiosRequestHeaders } from 'axios/index';
 import { getCredentialsFromExtension } from './common';
 
+const PER_PAGE = 5;
+
 export default class ChatViewProvider implements vscode.WebviewViewProvider {
   private webView?: vscode.WebviewView;
   private requestAbortController;
@@ -34,9 +36,9 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         },
       });
 
-      const lastMessageDateQs = lastMessageDate ? `&lastMessageDate=${lastMessageDate}` : '';
+      const lastMessageDateQueryParam = lastMessageDate ? `&lastMessageDate=${lastMessageDate}` : '';
 
-      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=5${lastMessageDateQs}`, {
+      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=${PER_PAGE}${lastMessageDateQueryParam}`, {
         headers: {
           authorization: `Bearer ${apiKey}`,
         } as RawAxiosRequestHeaders,

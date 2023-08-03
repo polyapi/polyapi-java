@@ -69,7 +69,7 @@ const COMMANDS = [
 
   setInitialMessageInputHeight();
 
-  const removeConversationLoadErr = () => {
+  const removeConversationLoadError = () => {
     const conversationLoadError = document.getElementById('conversation-load-error');
 
     conversationLoadError?.remove();
@@ -114,7 +114,7 @@ const COMMANDS = [
       `;
     }
 
-    const getQuestionWrapper = (userSvg, message, createdAt = '') => {
+    const getQuestionWrapper = (message, createdAt = '') => {
       return `
       <div class='p-4 self-end relative' style='background: var(--vscode-input-background)' ${createdAt ? `data-created-at="${createdAt}"` : ''}>
         <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
@@ -203,7 +203,7 @@ const COMMANDS = [
 
     switch (message.type) {
       case 'addQuestion': {
-        conversationList.innerHTML += getQuestionWrapper(userSvg, message);
+        conversationList.innerHTML += getQuestionWrapper(message);
         scrollToLastMessage();
         break;
       }
@@ -216,7 +216,7 @@ const COMMANDS = [
         }
         
         if(value.prepend) {
-          removeConversationLoadErr();
+          removeConversationLoadError();
         }
 
         sendMessageButton.setAttribute('disabled', 'disabled');
@@ -282,7 +282,7 @@ const COMMANDS = [
         
         for(const message of messages) {
           if(message.role === 'user') {
-            newMessagesHtmlContent = `${getQuestionWrapper(userSvg, {value: message.content}, message.createdAt)}${newMessagesHtmlContent}`;
+            newMessagesHtmlContent = `${getQuestionWrapper({value: message.content}, message.createdAt)}${newMessagesHtmlContent}`;
           }
           
           if(message.role === 'assistant') {
@@ -412,7 +412,7 @@ const COMMANDS = [
     } else if(targetButton.classList?.contains('load-conversation-messages')) {
       const firstMessageOnChat = document.querySelector('#conversation-list > div[data-created-at]');
 
-      removeConversationLoadErr();
+      removeConversationLoadError();
       
       vscode.postMessage({
         type: 'getMoreConversationMessages',
