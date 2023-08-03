@@ -119,7 +119,8 @@ def get_plugin_chat(plugin_id: str, message: str) -> Dict:
         functions=functions,
         temperature=0.2,
     )
-    function_call = resp["choices"][0]["message"]["function_call"]
+    print(resp["choices"][0])
+    function_call = resp["choices"][0]["message"].get("function_call")
     # TODO pass in this token
     token = os.environ.get('POLY_BEARER_TOKEN', 'FIXME')
     resp = execute_function(token, openapi, function_call)

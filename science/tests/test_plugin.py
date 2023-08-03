@@ -103,6 +103,13 @@ MOCK_PLUGIN_OPENAPI = {
     },
 }
 
+MOCK_NO_FUNCTION_STEP_1_RESP = {
+    "index": 0,
+    "message": {"role": "assistant", "content": "The capital of Sweden is Stockholm."},
+    "finish_reason": "stop",
+}
+
+
 MOCK_STEP_1_RESP = {
     "id": "chatcmpl-7iokRKBFPOec9EQmKDLBigFSEznpc",
     "object": "chat.completion",
@@ -127,22 +134,22 @@ MOCK_STEP_1_RESP = {
 
 
 class T(DbTestCase):
-    # def test_get_plugin_chat(self):
-    #     chat_create.return_value = "foobar"
-    @patch("app.plugin.openai.ChatCompletion.create")
-    @patch("app.plugin.requests.post")
+    # @patch("app.plugin.openai.ChatCompletion.create")
+    # @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
-    def test_get_plugin_chat(self, requests_get: Mock, requests_post: Mock, chat_create: Mock):
-        requests_post.return_value = Mock(
-            status_code=201, json=lambda: {"answer": "Message sent"}
-        )
+    # def test_get_plugin_chat(self, requests_get: Mock, requests_post: Mock, chat_create: Mock):
+    def test_get_plugin_chat(self, requests_get: Mock):
+        # requests_post.return_value = Mock(
+        #     status_code=201, json=lambda: {"answer": "Message sent"}
+        # )
+        # chat_create.return_value = MOCK_STEP_1_RESP
         requests_get.return_value = Mock(
             status_code=200, json=lambda: MOCK_PLUGIN_OPENAPI
         )
-        chat_create.return_value = MOCK_STEP_1_RESP
-        resp = get_plugin_chat(
-            "123", "please send a text message saying 'tested' to 503-267-0612"
-        )
+
+        # question = "please send a text message saying 'tested' to 503-267-0612"
+        question = "what is the capitol of Sweden?"
+        resp = get_plugin_chat("123", question)
         self.assertTrue(resp)
 
     def test_openapi_to_openai_functions(self):
