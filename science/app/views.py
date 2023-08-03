@@ -109,7 +109,7 @@ def variable_description() -> Response:
 @bp.route("/plugin-chat", methods=["POST"])
 def plugin_chat() -> Response:
     data = request.get_json(force=True)
-    resp = get_plugin_chat(data['pluginId'], data['message'])
+    resp = get_plugin_chat(data['apiKey'], data['pluginId'], data['message'])
     return jsonify(resp)
 
 

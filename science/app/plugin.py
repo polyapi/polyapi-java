@@ -1,4 +1,3 @@
-import os
 import json
 import requests
 
@@ -168,18 +167,8 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
     return rv
 
 
-def get_plugin_chat(plugin_id: int, message: str) -> List[MessageDict]:
-    """get the plugin
-    get the function ids
-    get them from db
-    pass them to the first function call
-    get back the function call and the args
-    figure out the execute path
-    hit the execute path
-    return the results
-    we are going to have a LOT of results
-    lets give the function-call invocation
-    AND the final results after the function is called
+def get_plugin_chat(api_key: str, plugin_id: int, message: str) -> List[MessageDict]:
+    """ chat with a plugin, providing
     """
     openapi = _get_openapi_spec(plugin_id)
     functions = openapi_to_openai_functions(openapi)
@@ -195,9 +184,8 @@ def get_plugin_chat(plugin_id: int, message: str) -> List[MessageDict]:
     if function_call:
         # lets execute the function_call and return the results
         function_call = dict(function_call)
-        token = os.environ.get("POLY_BEARER_TOKEN", "FIXME")
         function_call_msg = choice["message"]
-        function_msg = execute_function(token, openapi, function_call)
+        function_msg = execute_function(api_key, openapi, function_call)
         messages.extend([function_call_msg, function_msg])
         resp2 = openai.ChatCompletion.create(
             model=CHAT_GPT_MODEL,
@@ -223,12 +211,12 @@ def _get_name_path_map(openapi: Dict) -> Dict:
     return rv
 
 
-def execute_function(token: str, openapi: Dict, function_call: Dict) -> MessageDict:
+def execute_function(api_key: str, openapi: Dict, function_call: Dict) -> MessageDict:
     name_path_map = _get_name_path_map(openapi)
     path = name_path_map[function_call["name"]]
     # TODO figure out how to add preface to path?
     domain = "https://megatronical.pagekite.me"
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {api_key}"}
     resp = requests.post(
         domain + path, data=json.loads(function_call["arguments"]), headers=headers
     )

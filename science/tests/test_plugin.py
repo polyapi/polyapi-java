@@ -60,7 +60,7 @@ class T(DbTestCase):
         plugin = test_plugin_get_or_create("service-nexus")
 
         question = "please send a text message saying 'tested' to 503-267-0612"
-        resp = get_plugin_chat(plugin.id, question)
+        resp = get_plugin_chat("foobar", plugin.id, question)
 
         self.assertEqual(requests_get.call_count, 1)
         self.assertEqual(requests_post.call_count, 1)  # should hit execute endpoint
@@ -79,7 +79,7 @@ class T(DbTestCase):
         plugin = test_plugin_get_or_create("service-nexus")
 
         question = "what is the capital of Sweden?"
-        messages = get_plugin_chat(plugin.id, question)
+        messages = get_plugin_chat("foobar", plugin.id, question)
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0]["role"], "assistant")
         self.assertEqual(messages[0]["content"], "The capital of Sweden is Stockholm.")
