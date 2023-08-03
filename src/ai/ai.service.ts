@@ -40,7 +40,7 @@ export class AiService {
     );
   }
 
-  async pluginChat(apiKey: string, pluginId: number, message: string): Promise<string> {
+  async pluginChat(apiKey: string, pluginId: number, message: string): Promise<unknown> {
     this.logger.debug(`Sending message to Science server for plugin chat: ${message}`);
     return await lastValueFrom(
       this.httpService
@@ -50,7 +50,7 @@ export class AiService {
           message,
         })
         .pipe(
-          map((response) => (response.data.answer)),
+          map((response) => (response)),
         )
         .pipe(catchError(this.processScienceServerError())),
     );

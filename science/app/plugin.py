@@ -1,13 +1,14 @@
 import json
 import requests
 
-from app.constants import CHAT_GPT_MODEL
-
 assert requests
 from typing import Dict, List
 import openai
-from app.typedefs import ChatGptChoice, MessageDict
 from prisma import get_client
+
+from app.constants import CHAT_GPT_MODEL
+from app.utils import log
+from app.typedefs import ChatGptChoice, MessageDict
 
 
 MOCK_OPENAPI = {
@@ -181,6 +182,7 @@ def get_plugin_chat(api_key: str, plugin_id: int, message: str) -> List[MessageD
     )
     choice: ChatGptChoice = resp["choices"][0]
     function_call = choice["message"].get("function_call")
+    log(choice)
     if function_call:
         # lets execute the function_call and return the results
         function_call = dict(function_call)
@@ -198,6 +200,7 @@ def get_plugin_chat(api_key: str, plugin_id: int, message: str) -> List[MessageD
         messages = messages[
             1:
         ]  # lets pop off the first question, the user already knows it
+        log(messages)
         return messages
     else:
         # no function call, just return OpenAI's answer
