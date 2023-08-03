@@ -323,6 +323,7 @@ export class FunctionService implements OnModuleInit {
           }
 
           this.logger.debug(`Setting argument descriptions to arguments metadata from AI: ${JSON.stringify(aiArguments)}...`);
+
           aiArguments
             .filter((aiArgument) => !argumentsMetadata[aiArgument.name].description)
             .forEach((aiArgument) => {
@@ -365,6 +366,14 @@ export class FunctionService implements OnModuleInit {
         throw new BadRequestException(e.message);
       } else {
         throw e;
+      }
+    }
+
+    const currentArgumentsMetadata = JSON.parse(apiFunction?.argumentsMetadata || '{}') as ArgumentsMetadata;
+
+    for (const [key, value] of Object.entries(currentArgumentsMetadata)) {
+      if (typeof argumentsMetadata[key] !== 'undefined' && value.description) {
+        argumentsMetadata[key].description = value.description;
       }
     }
 
@@ -1164,7 +1173,7 @@ export class FunctionService implements OnModuleInit {
     if (this.isGraphQLBody(parsedBody)) {
       const graphqlVariables = getGraphqlVariables(parsedBody.graphql.query);
 
-      const graphqlFunctionArguments = graphqlVariables.map<FunctionArgument>(graphqlVariableDefinition => toArgument(graphqlVariableDefinition.variable.name.value));
+      const graphqlFunctionArguments = graphqlVariables.map<FunctionArgument>(graphqlVariableDefinition => ({ ...toArgument(graphqlVariableDefinition.variable.name.value), location: 'body' }));
 
       if (apiFunction.graphqlIntrospectionResponse) {
         args.push(...graphqlFunctionArguments);
@@ -1541,7 +1550,7 @@ export class FunctionService implements OnModuleInit {
         }
         const value = variables[arg.key];
 
-        if (isGraphQL) {
+        if (isGraphQL && arg.location === 'body') {
           for (const graphqlVariable of (graphqlVariables as VariableDefinitionNode[])) {
             const graphqlVariableName = graphqlVariable.variable.name.value;
             if (graphqlVariableName !== arg.name) {
