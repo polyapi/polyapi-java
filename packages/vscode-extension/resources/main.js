@@ -62,6 +62,7 @@ const COMMANDS = [
   const messageInput = document.getElementById('message-input');
   const sendMessageButton = document.getElementById('send-message-button');
   const conversationList = document.getElementById('conversation-list');
+  let chatFocussed = true;
 
   const setInitialMessageInputHeight = () => {
     messageInput.style.height = '38px';
@@ -201,6 +202,12 @@ const COMMANDS = [
       }, 100)
     }
 
+    const focusMessageInput = () => {
+      if(chatFocussed) {
+        messageInput?.focus();
+      }
+    }
+
     switch (message.type) {
       case 'addQuestion': {
         conversationList.innerHTML += getQuestionWrapper(message);
@@ -244,7 +251,7 @@ const COMMANDS = [
 
         conversationList.innerHTML += getResponseWrapper(texts.map(text => getResponseTextHtml(text)).join(''));
         scrollToLastMessage();
-        messageInput.focus();
+        focusMessageInput();
         
         currentObserver?.disconnect();
 
@@ -256,7 +263,7 @@ const COMMANDS = [
         clearConversation();
         break;
       case 'focusMessageInput':
-        messageInput?.focus();
+        focusMessageInput();
         break;
       case 'prependConversationHistory':
 
@@ -420,5 +427,13 @@ const COMMANDS = [
       });
     }
   });
+
+  window.addEventListener('focus', () => {
+    chatFocussed = true;
+  });
+
+  window.addEventListener('blur', () => {
+    chatFocussed = false;
+  })
 
 })();

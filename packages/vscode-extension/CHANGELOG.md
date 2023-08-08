@@ -1,3 +1,6 @@
+### 0.1.45
+* Prevent focus being stolen by assistant.
+
 ### 0.1.44
 * Added conversation history to assistant.
 
