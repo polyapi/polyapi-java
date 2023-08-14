@@ -10,7 +10,7 @@ jobs:
   develop:
     name: Development docker build and push.
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/develop' }}
+    # if: ${{ github.ref == 'refs/heads/develop' }}
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
