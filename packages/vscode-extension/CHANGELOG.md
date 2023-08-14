@@ -1,3 +1,6 @@
+### 0.1.48
+* Remember tree state.
+
 ### 0.1.47
 * Fix for sending questions with escaped characters.
 

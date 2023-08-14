@@ -22,6 +22,8 @@ export const activate = (context: vscode.ExtensionContext) => {
 
   const stopFileWatcher = startLibraryWatcher();
 
+  libraryIndexViewProvider.register();
+
   context.subscriptions.push(
     vscode.commands.registerCommand('poly.focusMessageInput', () => {
       chatViewProvider.focusMessageInput();
@@ -37,10 +39,6 @@ export const activate = (context: vscode.ExtensionContext) => {
           retainContextWhenHidden: true,
         },
       },
-    ),
-    vscode.window.registerTreeDataProvider(
-      'poly.library-index-view',
-      libraryIndexViewProvider,
     ),
     {
       dispose: unregisterPolyFunctionsRegeneratedListener,
