@@ -30,20 +30,20 @@ jobs:
       id: changes
       with:
         filters: |
-          package.json: packages/client/package.json
+          package: packages/client/package.json
 
-    - if: steps.changes.outputs.src == 'true'
+    - if: steps.changes.outputs.package == 'true'
       name: Setup Node
       uses: actions/setup-node@v2
       with:
         node-version: '14.x'
         registry-url: 'https://registry.npmjs.org'
 
-    - if: steps.changes.outputs.src == 'true'
+    - if: steps.changes.outputs.package == 'true'
       name: Install
       run: npm ci
 
-    - if: steps.changes.outputs.src == 'true'
+    - if: steps.changes.outputs.package == 'true'
       name: Publish package
       run: npm publish
       env:
