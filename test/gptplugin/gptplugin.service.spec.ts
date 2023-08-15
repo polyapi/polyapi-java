@@ -153,7 +153,7 @@ function isEnvironment(env: Environment | null): asserts env is Environment {
   if (!env) throw new Error('environment is null!');
 }
 
-const createTestEnvironment = async prisma => {
+const createTestEnvironment = async (prisma) => {
   // HACK we should really create an environment instead of clobbering whichever is first
   const env = prisma.environment.findFirst({ orderBy: { id: 'asc' } });
   isEnvironment(env);
@@ -238,16 +238,35 @@ describe('GptPluginService', () => {
 
       expect(Object.keys(spec.paths).length).toBe(1);
       const path1 = spec.paths[`/functions/api/${PLUGIN_CREATE_SPEC.id}/execute`];
-      console.log(spec.paths);
       expect(path1.post.summary).toBe('This API call allows users');
       expect(path1.post.operationId).toBe('createPlugin');
 
       const bodySchema = spec.components.schemas.createPluginBody;
       expect(bodySchema).toBeTruthy();
     });
+  });
+
+  describe('createOrUpdatePlugin', () => {
+    it('should succeed with everything', async () => {
+      jest.spyOn(service, 'getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([])));
+      await prisma.gptPlugin.deleteMany({ where: { slug: 'bad' } });
+      const body = {
+        slug: 'bad',
+        name: 'Bad',
+        iconUrl: 'http://example.com/image.png',
+        functionIds: [],
+        legalUrl: 'http://example.com/legal',
+        contactEmail: 'dan@example.com',
+      };
+
+      const environment = await createTestEnvironment(prisma);
+      const plugin = await service.createOrUpdatePlugin(environment, body);
+      expect(plugin.contactEmail).toBe('dan@example.com');
+    });
 
     it('should fail for invalid functionId', async () => {
       jest.spyOn(service, 'getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([])));
+      await prisma.gptPlugin.deleteMany({ where: { slug: 'bad' } });
       const body = {
         slug: 'bad',
         name: 'Bad',
@@ -262,6 +281,26 @@ describe('GptPluginService', () => {
       } catch (e) {
         // should start with correct message
         expect(e.message.indexOf('Invalid function')).toBe(0);
+      }
+    });
+
+    it('should fail for no legal url', async () => {
+      jest.spyOn(service, 'getAllFunctions').mockReturnValue(new Promise((resolve) => resolve([])));
+      await prisma.gptPlugin.deleteMany({ where: { slug: 'bad' } });
+      const body = {
+        slug: 'bad',
+        name: 'Bad',
+        iconUrl: 'http://example.com/image.png',
+        functionIds: [],
+      };
+
+      const environment = await createTestEnvironment(prisma);
+      try {
+        await service.createOrUpdatePlugin(environment, body);
+        expect(0).toBe(1); // force error here if no error thrown
+      } catch (e) {
+        // should start with correct message
+        expect(e.message.indexOf('Required field legalUrl')).toBe(0);
       }
     });
   });

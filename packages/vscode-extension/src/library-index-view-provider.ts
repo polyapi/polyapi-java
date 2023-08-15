@@ -1,9 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { ProviderResult, TreeItem } from 'vscode';
+import { merge } from 'lodash';
 import { PropertySpecification, VariableSpecification } from '@poly/model';
 import { toTypeDeclaration } from '@poly/common/utils';
 import { toCamelCase } from '@guanghechen/helper-string';
+import { getCredentialsFromExtension, getLibraryVersionFromApiHost } from './common';
+
+type TreeState = Record<string, { state: vscode.TreeItemCollapsibleState }>
 
 class LibraryTreeItem extends vscode.TreeItem {
   constructor(
@@ -108,17 +112,26 @@ export default class LibraryIndexViewProvider implements vscode.TreeDataProvider
   }
 
   getChildren(parent?: LibraryTreeItem): ProviderResult<LibraryTreeItem[]> {
+    const prevTreeState = this.context.globalState.get<TreeState | undefined>(LibraryIndexViewProvider.getTreeStateKey());
+
     const data = parent?.data || this.specs;
     if (data.type) {
       return [];
     }
 
     const parentPath = parent ? `${parent.parentPath}.${parent.label}` : '';
+
     return Object.keys(data)
       .map(key => {
-        const collapsibleState = data[key].type
+        let collapsibleState = data[key].type
           ? vscode.TreeItemCollapsibleState.None
           : vscode.TreeItemCollapsibleState.Collapsed;
+
+        const path = `${parentPath}${key ? `.${key}` : ''}`;
+
+        if (prevTreeState && prevTreeState[path]?.state) {
+          collapsibleState = prevTreeState[path].state;
+        }
 
         return new LibraryTreeItem(this.context, parentPath, data[key], key, collapsibleState);
       })
@@ -185,5 +198,56 @@ export default class LibraryIndexViewProvider implements vscode.TreeDataProvider
         break;
     }
     vscode.window.showInformationMessage('Copied');
+  }
+
+  static getTreeStateKey() {
+    const credentials = getCredentialsFromExtension();
+
+    const tag = getLibraryVersionFromApiHost(credentials.apiBaseUrl);
+
+    return `tree-state-${tag ? `${tag}-` : ''}${credentials.apiKey}`;
+  }
+
+  saveElementState(element: vscode.TreeViewExpansionEvent<LibraryTreeItem>['element'], state: vscode.TreeItemCollapsibleState) {
+    const TREE_STATE_KEY = LibraryIndexViewProvider.getTreeStateKey();
+
+    const prevTreeState = this.context.globalState.get<TreeState>(TREE_STATE_KEY);
+
+    const path = `${element.parentPath}.${element.label}`;
+
+    if (state === vscode.TreeItemCollapsibleState.Collapsed) {
+      delete prevTreeState[path];
+      return this.context.globalState.update(TREE_STATE_KEY, prevTreeState);
+    }
+
+    const newTreeState = merge(prevTreeState, {
+      [path]: {
+        state,
+      },
+    } as TreeState);
+
+    return this.context.globalState.update(TREE_STATE_KEY, merge(prevTreeState, newTreeState));
+  }
+
+  register() {
+    const TREE_ID = 'poly.library-index-view';
+
+    const tree = vscode.window.createTreeView(TREE_ID, {
+      treeDataProvider: this,
+    });
+
+    tree.onDidCollapseElement(event => {
+      const { element } = event;
+
+      this.saveElementState(element, vscode.TreeItemCollapsibleState.Collapsed);
+    });
+
+    tree.onDidExpandElement(event => {
+      const { element } = event;
+
+      this.saveElementState(element, vscode.TreeItemCollapsibleState.Expanded);
+    });
+
+    this.context.subscriptions.push(tree);
   }
 }

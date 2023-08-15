@@ -235,25 +235,34 @@ const getProperties = (props: PropertySpecification[]) => {
   return rv;
 };
 
-const validateName = (name: string): string => {
-  if (name.length > 30) {
+const validateName = (key: string, name: string): string => {
+  if (name && name.length > 30) {
     throw new BadRequestException('Name too long. Max name length is 30 characters!');
   }
   return name;
 };
 
-const _validateDesc = (desc: string): string => {
-  if (desc.length > 120) {
+const _validateDesc = (key: string, desc: string): string => {
+  if (desc && desc.length > 120) {
     throw new BadRequestException('Desc too long. Max desc length is 120 characters!');
   }
   return desc;
 };
 
-const _noValidation = (input) => input;
+const _noValidation = (key, val) => val;
 
-const SIMPLE_PLUGIN_FIELDS: { [key: string]: null | CallableFunction } = {
-  contactEmail: null,
-  legalUrl: null,
+const requireOrThrow = (key: string, val) => {
+  // if no value, throw an exception!
+  if (val) {
+    return val;
+  } else {
+    throw new BadRequestException(`Required field ${key} not passed!`);
+  }
+};
+
+const SIMPLE_FIELD_VALIDATORS: { [key: string]: null | CallableFunction } = {
+  contactEmail: requireOrThrow,
+  legalUrl: requireOrThrow,
   name: validateName,
   descriptionForMarketplace: _validateDesc,
   descriptionForModel: _validateDesc,
@@ -412,18 +421,33 @@ export class GptPluginService {
     const update = {};
 
     if (body.name) {
-      update['name'] = validateName(body.name);
+      update['name'] = validateName('name', body.name);
     }
 
     if (functionIds) {
       update['functionIds'] = functionIds;
     }
 
-    for (let [key, validator] of Object.entries(SIMPLE_PLUGIN_FIELDS)) {
-      validator = validator || _noValidation;
-      if (body[key]) {
-        update[key] = validator(body[key]);
+    for (const [key, val] of Object.entries(body)) {
+      if (key in SIMPLE_FIELD_VALIDATORS) {
+        const validator: CallableFunction = SIMPLE_FIELD_VALIDATORS[key] || _noValidation;
+        update[key] = validator(key, val);
+      } else {
+        // key is not simple to validate, the validate logic lies elsewhere
+        // (probably directly above here)
       }
+    }
+
+    const existingPlugin = await this.prisma.gptPlugin.findFirst({
+      where: {
+        slug: body.slug,
+        environmentId: environment.id,
+      },
+    });
+    if (!existingPlugin) {
+      // do create-only validation!
+      requireOrThrow('legalUrl', body.legalUrl);
+      requireOrThrow('contactEmail', body.contactEmail);
     }
 
     return this.prisma.gptPlugin.upsert({
@@ -435,9 +459,9 @@ export class GptPluginService {
         ...update,
         // list them all explicitly so we pass type checking and can set defaults
         slug: body.slug,
-        name: validateName(body.name ? body.name : body.slug),
-        contactEmail: body.contactEmail ? body.contactEmail : 'info@polyapi.io',
-        legalUrl: body.legalUrl ? body.legalUrl : 'https://polyapi.io/legal',
+        name: validateName('name', body.name ? body.name : body.slug),
+        contactEmail: body.contactEmail,
+        legalUrl: body.legalUrl,
         iconUrl: body.iconUrl ? body.iconUrl : POLY_DEFAULT_ICON_URL,
         environmentId: environment.id,
         functionIds,
