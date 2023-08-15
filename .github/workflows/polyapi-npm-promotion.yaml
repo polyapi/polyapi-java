@@ -11,7 +11,7 @@ jobs:
   develop:
     name: Promote develop NPM package
     runs-on: ubuntu-latest
-    if: ${{ github.base_ref == 'refs/heads/develop' }}
+    if: ${{ github.head_ref == 'refs/heads/develop' }}
       
     steps:
     - uses: actions/checkout@v3
@@ -32,7 +32,7 @@ jobs:
   main:
     name: Tagging of develop package
     runs-on: ubuntu-latest
-    if: ${{ github.base_ref == 'refs/heads/main' }}
+    if: ${{ github.head_ref == 'refs/heads/main' }}
 
       
     steps:

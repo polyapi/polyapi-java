@@ -15,6 +15,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
       IMAGE: ghcr.io/polyapi/polyapi-dev
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
     steps:
     - uses: actions/checkout@v3
@@ -41,9 +42,22 @@ jobs:
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
-      run: yarn install && npx prisma@4.11.0 generate --generator js && cd packages/client && npm install --include=dev && npm publish --tag develop
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo $VERSION
+        REMOTEVERSION=$(npm view polyapi --json | jq -r .version)
+        echo $REMOTEVERSION
+        if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
+          yarn install
+          npx prisma@4.11.0 generate --generator js
+          cd packages/client 
+          npm install --include=dev
+          npm publish --tag develop
+        else
+          echo "Local NPM version is the same as remote"
+        fi
+        
+        
 
   main:
     name: Main Docker build and push.
