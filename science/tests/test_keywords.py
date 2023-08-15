@@ -85,7 +85,7 @@ class T(DbTestCase):
         for func, expected in [
             (GOOGLE_MAPS, True),
             (ACCUWEATHER, True),
-            (SERVICE_NOW, True),
+            (SERVICE_NOW, False),
         ]:
             self.assertTrue(keywords_similar(keywords, func))
             with self.subTest(func=func):
@@ -100,7 +100,7 @@ class T(DbTestCase):
         for func, expected in [
             (GOOGLE_MAPS, True),
             (ACCUWEATHER, True),
-            (SERVICE_NOW, True),
+            (SERVICE_NOW, False),
         ]:
             self.assertTrue(keywords_similar(keywords, func))
             with self.subTest(func=func):
@@ -112,7 +112,7 @@ class T(DbTestCase):
         keywords = "create incident service now"
         for func, expected in [
             (GOOGLE_MAPS, False),
-            (ACCUWEATHER, True),
+            (ACCUWEATHER, False),
             (SERVICE_NOW, True),
         ]:
             self.assertTrue(keywords_similar(keywords, func))

@@ -242,7 +242,7 @@ class T(DbTestCase):
             "how do I create a new incident in ServiceNow?",
         )
         self.assertEqual(query_node_server.call_count, 1)
-        self.assertEqual(stats["match_count"], 2)
+        self.assertEqual(stats["match_count"], 1)
         self.assertEqual(len(messages), 2)
 
     @patch("app.utils.query_node_server")

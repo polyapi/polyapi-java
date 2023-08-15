@@ -105,15 +105,7 @@ def remove_blacklist(keywords: str) -> str:
     return keywords
 
 
-def keywords_similar(
-    keywords: str, func: SpecificationDto, debug=False
-) -> Tuple[bool, int]:
-    if not keywords:
-        # when we have no keywords, just assume everything matches for now
-        return True, -1
-
-    keywords = keywords.lower()
-
+def _get_func_str(func: SpecificationDto) -> str:
     func_parts = []
     if func.get("context"):
         func_parts.append(func["context"])
@@ -124,9 +116,23 @@ def keywords_similar(
     if func.get("description"):
         func_str += f"\n{func.get('description')}"
 
+    return func_str
+
+
+def keywords_similar(
+    keywords: str, func: SpecificationDto, debug=False
+) -> Tuple[bool, int]:
+    if not keywords:
+        # when we have no keywords, just assume everything matches for now
+        return True, -1
+
+    keywords = keywords.lower()
+
+    func_str = _get_func_str(func)
+
     keywords = remove_blacklist(keywords)
 
-    similarity_score = fuzz.partial_token_set_ratio(keywords, func_str)
+    similarity_score = fuzz.token_set_ratio(keywords, func_str)
     if debug:
         log(keywords, similarity_score, func_str)
 
@@ -230,9 +236,13 @@ def _get_top(
     variables_with_scores = sorted(
         variables_with_scores, key=lambda x: x[1], reverse=True
     )
-    top_functions = [item for item, score in functions_with_scores if score > function_threshold]
+    top_functions = [
+        item for item, score in functions_with_scores if score > function_threshold
+    ]
     top_functions = top_functions[:match_limit]
-    top_variables = [item for item, score in variables_with_scores if score > variable_threshold]
+    top_variables = [
+        item for item, score in variables_with_scores if score > variable_threshold
+    ]
     top_variables = top_variables[:match_limit]
 
     stats = _get_stats(functions_with_scores, variables_with_scores)

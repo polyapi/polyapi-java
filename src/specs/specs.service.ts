@@ -39,8 +39,14 @@ export class SpecsService {
       tenantId,
     };
 
+    const [apiFunctions, customFunctions, webhookHandles, authProviders] = await Promise.all([
+      this.functionService.getApiFunctions(environmentId, contexts, names, ids, visibilityQuery, true),
+      this.functionService.getCustomFunctions(environmentId, contexts, names, ids, visibilityQuery, true),
+      this.webhookService.getWebhookHandles(environmentId, contexts, names, ids, visibilityQuery, true),
+      this.authProviderService.getAuthProviders(environmentId, contexts, ids, visibilityQuery, true),
+    ]);
+
     const getApiFunctionsSpecifications = async () => {
-      const apiFunctions = await this.functionService.getApiFunctions(environmentId, contexts, names, ids, visibilityQuery, true);
       return await Promise.all(
         apiFunctions.map(async apiFunction =>
           await this.fillMetadata(
@@ -52,7 +58,6 @@ export class SpecsService {
     };
 
     const getCustomFunctionsSpecifications = async () => {
-      const customFunctions = await this.functionService.getCustomFunctions(environmentId, contexts, names, ids, visibilityQuery, true);
       return await Promise.all(
         customFunctions.map(async customFunction =>
           await this.fillMetadata(
@@ -64,7 +69,6 @@ export class SpecsService {
     };
 
     const getWebhookHandlesSpecifications = async () => {
-      const webhookHandles = await this.webhookService.getWebhookHandles(environmentId, contexts, names, ids, visibilityQuery, true);
       return await Promise.all(
         webhookHandles.map(async webhookHandle =>
           await this.fillMetadata(
@@ -76,7 +80,6 @@ export class SpecsService {
     };
 
     const getAuthProvidersSpecifications = async () => {
-      const authProviders = await this.authProviderService.getAuthProviders(environmentId, contexts, ids, visibilityQuery, true);
       return (
         await Promise.all(
           authProviders.map(async authProvider => {
@@ -106,12 +109,20 @@ export class SpecsService {
       );
     };
 
+    const [apiFunctionSpecifications, customFunctionSpecifications, webhookHandleSpecifications, authProviderSpecifications, serverVariableSpecifications] = await Promise.all([
+      getApiFunctionsSpecifications(),
+      getCustomFunctionsSpecifications(),
+      getWebhookHandlesSpecifications(),
+      getAuthProvidersSpecifications(),
+      getServerVariablesSpecifications(),
+    ]);
+
     return [
-      ...(await getApiFunctionsSpecifications()),
-      ...(await getCustomFunctionsSpecifications()),
-      ...(await getWebhookHandlesSpecifications()),
-      ...(await getAuthProvidersSpecifications()),
-      ...(await getServerVariablesSpecifications()),
+      ...apiFunctionSpecifications,
+      ...customFunctionSpecifications,
+      ...webhookHandleSpecifications,
+      ...authProviderSpecifications,
+      ...serverVariableSpecifications,
     ].sort(this.sortSpecifications);
   }
 
