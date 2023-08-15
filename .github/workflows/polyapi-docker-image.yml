@@ -43,17 +43,10 @@ jobs:
     # - if: steps.changes.outputs.client == 'true'
     #   name: Install
     #   run: npm ci
-    - if: steps.changes.outputs.client == 'true'
-      name: Working directory
-      run: cd  packages/client
-
-    - if: steps.changes.outputs.client == 'true'
-      name: Working directory
-      run: pwd
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
-      run: npm publish
+      run: cd  packages/client && npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
