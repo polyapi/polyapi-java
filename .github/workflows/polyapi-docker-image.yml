@@ -20,11 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    # - name: Build the Docker image
-    #   run: |
-    #     echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-    #     docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
-    #     docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+    - name: Build the Docker image
+      run: |
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
 
     - uses: dorny/paths-filter@v2
       id: changes
@@ -39,10 +39,6 @@ jobs:
       with:
         node-version: '18'
         registry-url: 'https://registry.npmjs.org'
-
-    # - if: steps.changes.outputs.client == 'true'
-    #   name: Install
-    #   run: cd packages/client && npm ci
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
