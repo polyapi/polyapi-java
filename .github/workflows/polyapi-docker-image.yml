@@ -48,6 +48,10 @@ jobs:
       run: cd  packages/client
 
     - if: steps.changes.outputs.client == 'true'
+      name: Working directory
+      run: pwd
+
+    - if: steps.changes.outputs.client == 'true'
       name: Publish package
       run: npm publish
       env:
