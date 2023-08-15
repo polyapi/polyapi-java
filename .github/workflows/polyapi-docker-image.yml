@@ -43,6 +43,9 @@ jobs:
     # - if: steps.changes.outputs.client == 'true'
     #   name: Install
     #   run: npm ci
+    - if: steps.changes.outputs.client == 'true'
+      name: Working directory
+      run: cd  packages/client
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
