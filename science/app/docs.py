@@ -69,7 +69,7 @@ def documentation_question(
     question_msg = MessageDict(
         role="user", content=QUESTION_TEMPLATE.format(question), type=MessageType.user
     )
-    messages = msgs_to_msg_dicts(prev_msgs) + [prompt_msg, question_msg]
+    messages = msgs_to_msg_dicts(prev_msgs) + [prompt_msg, question_msg]  # type: ignore
 
     host_url = os.environ.get("HOST_URL", "https://na1.polyapi.io")
     if host_url != "https://na1.polyapi.io":

@@ -198,6 +198,7 @@ model Conversation {
   createdAt DateTime              @default(now())
   user      User                  @relation(fields: [userId], references: [id])
   userId    String
+  workspaceFolder String          @default("")
   messages  ConversationMessage[]
 }
 
@@ -210,7 +211,7 @@ model ConversationMessage {
   name      String   @default("") // not used for now. in future, will allow the user to have multiple conversations
   role      String // assistant or user or system or info
 
-  // 1 is gpt messages, aka messages between us and ChatGPT, 2 is user messages, 3 is internal that was never sent anywhere (like "start stage 1")
+  // see MessageType in science/app/constant.py for values
   type Int @default(1)
 
   content        String

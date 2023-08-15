@@ -31,7 +31,7 @@ Here is the question:
 
 
 def previous_message_referenced(
-    user_id: str, question: str
+    user_id: str, question: str, workspaceFolder: str = ""
 ) -> List[ConversationMessage]:
     """ get any previous messages referenced in the incoming question
     """

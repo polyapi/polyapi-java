@@ -75,9 +75,9 @@ def function_completion() -> Response:
         # TODO fixme?
         # stats.update(completion_stats)
     elif route == "general":
-        resp = general_question(user_id, conversation.id, question, prev_msgs)
+        resp = general_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
     elif route == "help":
-        resp = help_question(user_id, conversation.id, question, prev_msgs)
+        resp = help_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
     elif route == "documentation":
         resp = documentation_question(user_id, conversation.id, question, prev_msgs)
         # TODO fixme?
