@@ -42,7 +42,7 @@ jobs:
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
-      run: yarn install && npx prisma@4.11.0 generate --generator js && cd packages/client && npm install --include=dev && npm publish
+      run: yarn install && npx prisma@4.11.0 generate --generator js && cd packages/client && npm install --include=dev && npm publish --tag develop
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
