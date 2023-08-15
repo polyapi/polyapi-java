@@ -40,13 +40,13 @@ jobs:
         node-version: '14.x'
         registry-url: 'https://registry.npmjs.org'
 
-    # - if: steps.changes.outputs.client == 'true'
-    #   name: Install
-    #   run: npm ci
+    - if: steps.changes.outputs.client == 'true'
+      name: Install
+      run: cd packages/client && npm ci
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
-      run: cd  packages/client && pwd && npm publish
+      run: cd  packages/client && npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
