@@ -46,7 +46,7 @@ jobs:
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
-      run: cd  packages/client && npm install && npm publish
+      run: cd  packages/client && npm install --include=dev && npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
