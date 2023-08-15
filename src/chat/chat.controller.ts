@@ -60,7 +60,7 @@ export class ChatController {
 
     this.logger.debug(`Sending question to chat: ${data.message}`);
 
-    const observable = await this.service.sendQuestion(environmentId, userId, data.message);
+    const observable = await this.service.sendQuestion(environmentId, userId, data.message, data.workspaceFolder || '');
 
     return observable.pipe(
       map((data) => ({

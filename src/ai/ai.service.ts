@@ -5,11 +5,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { SystemPrompt, DocSection } from '@prisma/client';
-import {
-  FunctionDescriptionDto,
-  PropertySpecification,
-  VariableDescriptionDto,
-} from '@poly/model';
+import { FunctionDescriptionDto, PropertySpecification, VariableDescriptionDto } from '@poly/model';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import crypto from 'crypto';
@@ -25,7 +21,12 @@ export class AiService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async getFunctionCompletion(environmentId: string, userId: string, message: string): Promise<Observable<string>> {
+  async getFunctionCompletion(
+    environmentId: string,
+    userId: string,
+    message: string,
+    workspaceFolder = '',
+  ): Promise<Observable<string>> {
     const messageUUID = crypto.randomUUID();
 
     const messageKey = `questions:${messageUUID}`;
@@ -38,9 +39,13 @@ export class AiService {
 
     this.logger.debug(`Sending message to Science server for function completion with key: ${messageKey}`);
 
-    const eventSource = new EventSource(`${this.config.scienceServerBaseUrl}/function-completion?user_id=${userId}&environment_id=${environmentId}&question_uuid=${messageKey}`);
+    let scienceUrl = `${this.config.scienceServerBaseUrl}/function-completion?user_id=${userId}&environment_id=${environmentId}&question_uuid=${messageKey}`;
+    if (workspaceFolder) {
+      scienceUrl += `&workspaceFolder=${workspaceFolder}`;
+    }
+    const eventSource = new EventSource(scienceUrl);
 
-    return new Observable<string>(subscriber => {
+    return new Observable<string>((subscriber) => {
       eventSource.onmessage = (event) => {
         subscriber.next(JSON.parse(event.data).chunk);
       };
@@ -52,11 +57,19 @@ export class AiService {
         subscriber.complete();
         eventSource.close();
 
-        this.cacheManager.del(messageKey).then(() => {
-          this.logger.debug(`Message key ${messageKey} removed from cache manager after science server message is fully received.`);
-        }).catch(err => {
-          this.logger.error(`Couldn't delete message key ${messageKey} from cache manager after science server message is fully received`, err);
-        });
+        this.cacheManager
+          .del(messageKey)
+          .then(() => {
+            this.logger.debug(
+              `Message key ${messageKey} removed from cache manager after science server message is fully received.`,
+            );
+          })
+          .catch((err) => {
+            this.logger.error(
+              `Couldn't delete message key ${messageKey} from cache manager after science server message is fully received`,
+              err,
+            );
+          });
       };
     });
   }
