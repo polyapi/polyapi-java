@@ -62,13 +62,11 @@ export class ChatController {
 
     const observable = await this.service.sendQuestion(environmentId, userId, data.message);
 
-    return observable
-      .pipe(
-        map(data => ({
-          data,
-        }),
-        ),
-      );
+    return observable.pipe(
+      map((data) => ({
+        data,
+      })),
+    );
   }
 
   @UseGuards(PolyAuthGuard)
@@ -105,8 +103,8 @@ export class ChatController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Get('/conversations')
-  public async conversationsList(@Req() req: AuthRequest, @Query('userId') userId: string) {
-    const conversationIds = await this.service.getConversationIds(userId);
+  public async conversationsList(@Req() req: AuthRequest, @Query() query) {
+    const conversationIds = await this.service.getConversationIds(query.userId, query.workspaceFolder || '');
     return { conversationIds };
   }
 
@@ -126,12 +124,10 @@ export class ChatController {
   @Get('/history')
   public async chatHistory(
     @Req() req: AuthRequest,
-    @MergeRequestData(['query'], new ValidationPipe({ validateCustomDecorators: true, transform: true })) pagination: Pagination,
+    @MergeRequestData(['query'], new ValidationPipe({ validateCustomDecorators: true, transform: true }))
+      pagination: Pagination,
   ): Promise<MessageDto[]> {
-    const {
-      perPage = '10',
-      firstMessageDate = null,
-    } = pagination;
+    const { perPage = '10', firstMessageDate = null } = pagination;
 
     // returns the conversation history for this specific user
     const history = await this.service.getHistory(req.user.user?.id, Number(perPage), firstMessageDate);

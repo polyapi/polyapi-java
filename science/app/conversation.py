@@ -31,11 +31,11 @@ Here is the question:
 
 
 def previous_message_referenced(
-    user_id: str, question: str, workspaceFolder: str = ""
+    user_id: str, question: str, workspace_folder: str = ""
 ) -> List[ConversationMessage]:
     """ get any previous messages referenced in the incoming question
     """
-    conversations = get_last_conversations(user_id, 3)
+    conversations = get_last_conversations(user_id, 3, workspace_folder)
     conversationIds = [conversation.id for conversation in conversations]
     if not conversationIds:
         return []

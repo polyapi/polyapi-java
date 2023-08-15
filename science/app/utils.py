@@ -149,14 +149,14 @@ def get_conversations_for_user(user_id: str) -> List[Conversation]:
     )
 
 
-def get_last_conversations(user_id: str, limit: int, workspaceFolder: str = "") -> List[Conversation]:
+def get_last_conversations(user_id: str, limit: int, workspace_folder: str = "") -> List[Conversation]:
     db = get_client()
     return db.conversation.find_many(
-        where={"userId": user_id, "workspaceFolder": workspaceFolder}, order={"createdAt": "desc"}, take=limit
+        where={"userId": user_id, "workspaceFolder": workspace_folder}, order={"createdAt": "desc"}, take=limit
     )
 
 
-def create_new_conversation(user_id: str) -> Conversation:
+def create_new_conversation(user_id: str, workspace_folder: str = "") -> Conversation:
     assert user_id
     db = get_client()
     return db.conversation.create(data={"userId": user_id})

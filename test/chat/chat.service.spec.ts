@@ -35,7 +35,7 @@ describe('ChatService', () => {
       await prisma.conversationMessage.deleteMany({ where: { userId: user.id } });
       await prisma.conversation.deleteMany({ where: { userId: user.id } });
       const conversation = await prisma.conversation.create({ data: { userId: user.id } });
-      const ids = await service.getConversationIds(user.id);
+      const ids = await service.getConversationIds(user.id, '');
       expect(ids).toStrictEqual([conversation.id]);
     });
 

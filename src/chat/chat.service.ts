@@ -27,9 +27,9 @@ export class ChatService {
     }
   }
 
-  async getConversationIds(userId: string): Promise<string[]> {
+  async getConversationIds(userId: string, workspaceFolder: string): Promise<string[]> {
     const conversations = await this.prisma.conversation.findMany({
-      where: { userId },
+      where: { userId, workspaceFolder },
       orderBy: { createdAt: 'desc' },
       take: 100, // limit to 100 results for now
     });
