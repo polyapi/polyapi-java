@@ -46,7 +46,7 @@ jobs:
       run: |
         VERSION=$(node -p "require('./package.json').version")
         echo $VERSION
-        REMOTEVERSION=$(npm view polyapi --json | jq -r .version)
+        REMOTEVERSION=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
         echo $REMOTEVERSION
         if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
           yarn install
