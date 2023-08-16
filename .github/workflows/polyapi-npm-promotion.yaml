@@ -12,7 +12,6 @@ jobs:
     name: Promote develop NPM package
     runs-on: ubuntu-latest
     if: ${{ github.head_ref == 'refs/heads/develop' }}
-
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -51,9 +50,9 @@ jobs:
     name: Tagging of develop package
     runs-on: ubuntu-latest
     if: ${{ github.head_ref == 'refs/heads/main' }}
-
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 
     steps:
     - uses: actions/checkout@v3
@@ -77,4 +76,4 @@ jobs:
           echo "Repository NPM version it's the same that develop on registry"
         fi
 
-      
+
