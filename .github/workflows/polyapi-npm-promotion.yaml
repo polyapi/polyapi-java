@@ -29,22 +29,22 @@ jobs:
 
     - name: Publish package
       run: |
-      cd packages/client 
-      VERSION=$(node -p "require('./package.json').version")
-      VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].na1')
-      VERSIONREMOTELATEST=$(npm view polyapi --json | jq -r '.["dist-tags"].latest')
-      
-      if [[ $VERSION == $VERSIONREMOTE ]]; then
-        npm dist-tag add polyapi@$VERSION na1 
-      else
-        echo "Repository NPM version it's the same that na1 on registry"
-      fi
-      
-      if [[ $VERSION == $VERSIONREMOTELATEST ]]; then
-        npm dist-tag add polyapi@$VERSION latest 
-      else
-        echo "Repository NPM version it's the same that latest on registry"
-      fi
+        cd packages/client 
+        VERSION=$(node -p "require('./package.json').version")
+        VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].na1')
+        VERSIONREMOTELATEST=$(npm view polyapi --json | jq -r '.["dist-tags"].latest')
+        
+        if [[ $VERSION == $VERSIONREMOTE ]]; then
+          npm dist-tag add polyapi@$VERSION na1 
+        else
+          echo "Repository NPM version it's the same that na1 on registry"
+        fi
+        
+        if [[ $VERSION == $VERSIONREMOTELATEST ]]; then
+          npm dist-tag add polyapi@$VERSION latest 
+        else
+          echo "Repository NPM version it's the same that latest on registry"
+        fi
 
 
   main:
@@ -67,14 +67,14 @@ jobs:
 
     - name: Publish package
       run: |
-      cd packages/client
-      VERSION=$(node -p "require('./package.json').version")
-      VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
+        cd packages/client
+        VERSION=$(node -p "require('./package.json').version")
+        VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
 
-      if [[ $VERSION == $VERSIONREMOTE ]]; then
-        npm dist-tag add polyapi@$VERSION develop
-      else
-        echo "Repository NPM version it's the same that develop on registry"
-      fi
+        if [[ $VERSION == $VERSIONREMOTE ]]; then
+          npm dist-tag add polyapi@$VERSION develop
+        else
+          echo "Repository NPM version it's the same that develop on registry"
+        fi
 
       
