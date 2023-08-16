@@ -44,12 +44,10 @@ jobs:
     - if: steps.changes.outputs.client == 'true'
       name: Publish package
       run: |
-        cd packages/client 
-        VERSION=$(node -p "require('./package.json').version")
+        VERSION=$(node -p "require('./packages/client/package.json').version")
         echo $VERSION
         REMOTEVERSION=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
         echo $REMOTEVERSION
-        cd .. & cd .. 
 
         if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
           echo "Local NPM version is the same as remote"
