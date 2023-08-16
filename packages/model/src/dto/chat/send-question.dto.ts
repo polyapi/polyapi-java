@@ -1,6 +1,11 @@
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class SendQuestionDto {
-  @IsNotEmpty()
+  @IsString()
+  @IsOptional()
   message: string;
+
+  @IsString()
+  @IsOptional()
+  message_uuid: string;
 }

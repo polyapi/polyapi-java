@@ -189,9 +189,6 @@ const COMMANDS = [
     
     let currentObserver = null; 
 
-    const loadingContainer = document.querySelector('.loading-container');
-
-
     const observeFirstMessage = (firstChatElement) => {
 
       console.log('observeFirstMessage: ', firstChatElement)
@@ -300,8 +297,6 @@ const COMMANDS = [
       }
       case 'finishMessage': {
 
-        console.log('finish mesasge', message);
-
         const messageID = message.messageID;
 
         const messageElement = document.getElementById(messageID);
@@ -385,7 +380,6 @@ const COMMANDS = [
           observeFirstMessage(document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`))
         }
 
-        observeFirstMessage(document.querySelector('#conversation-list > div[data-created-at]'));
 
         enableTextarea();
 
