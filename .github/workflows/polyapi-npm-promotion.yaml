@@ -129,7 +129,7 @@ jobs:
   test:
     name: NPM build and push.
     runs-on: ubuntu-latest
-
+    steps:
     - name: Publish package
       run: |
         echo  ${{ github.event.pull_request.base.ref }}
