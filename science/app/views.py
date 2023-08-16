@@ -43,6 +43,8 @@ def function_completion() -> Response:
     if not question:
         message_uuid = data.get("question_uuid", "").strip()
         question = redis_get(message_uuid)
+        parsedQuestion = json.loads(json.loads(question))
+        question = parsedQuestion["message"]
 
     if not question:
         raise NotImplementedError("No question or question_uuid passed!")

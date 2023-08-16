@@ -18,7 +18,7 @@ export class ChatService {
 
     this.logger.debug(`Storing message in cache manager with key: ${messageKey}`);
 
-    await this.cacheManager.set(messageKey, message);
+    await this.cacheManager.set(messageKey, JSON.stringify({ message }));
 
     this.logger.debug(`Stored message: ${message}`);
 
