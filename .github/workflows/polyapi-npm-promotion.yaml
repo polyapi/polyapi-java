@@ -12,7 +12,9 @@ jobs:
     name: Promote develop NPM package
     runs-on: ubuntu-latest
     if: ${{ github.head_ref == 'refs/heads/develop' }}
-      
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
     steps:
     - uses: actions/checkout@v3
 
@@ -25,16 +27,33 @@ jobs:
 
 
     - name: Publish package
-      run: cd packages/client && VERSION=$(node -p "require('./package.json').version") && npm dist-tag add polyapi@$VERSION na1 && npm dist-tag add polyapi@$VERSION latest
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        cd packages/client 
+        VERSION=$(node -p "require('./package.json').version")
+        VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].na1')
+        VERSIONREMOTELATEST=$(npm view polyapi --json | jq -r '.["dist-tags"].latest')
+        
+        if [[ $VERSION == $VERSIONREMOTE ]]; then
+          npm dist-tag add polyapi@$VERSION na1 
+        else
+          echo "Repository NPM version it's the same that na1 on registry"
+        fi
+        
+        if [[ $VERSION == $VERSIONREMOTELATEST ]]; then
+          npm dist-tag add polyapi@$VERSION latest 
+        else
+          echo "Repository NPM version it's the same that latest on registry"
+        fi
+
 
   main:
     name: Tagging of develop package
     runs-on: ubuntu-latest
     if: ${{ github.head_ref == 'refs/heads/main' }}
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      
+
     steps:
     - uses: actions/checkout@v3
 
@@ -46,6 +65,15 @@ jobs:
 
 
     - name: Publish package
-      run: cd packages/client && VERSION=$(node -p "require('./package.json').version") && npm dist-tag add polyapi@$VERSION develop
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        cd packages/client
+        VERSION=$(node -p "require('./package.json').version")
+        VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
+
+        if [[ $VERSION == $VERSIONREMOTE ]]; then
+          npm dist-tag add polyapi@$VERSION develop
+        else
+          echo "Repository NPM version it's the same that develop on registry"
+        fi
+
+
