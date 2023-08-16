@@ -8,132 +8,118 @@ on:
       - main
 
 jobs:
-  # develop:
-  #   name: Promote develop NPM package
-  #   runs-on: ubuntu-latest
-  #   if: ${{ github.event.pull_request.head.ref == 'develop' }}
-  #   env:
-  #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  #   steps:
-  #   - uses: actions/checkout@v3
-
-
-  #   - name: Setup Node
-  #     uses: actions/setup-node@v2
-  #     with:
-  #       node-version: '18'
-  #       registry-url: 'https://registry.npmjs.org'
-
-
-  #   - name: Publish package
-  #     run: |
-  #       cd packages/client 
-  #       VERSION=$(node -p "require('./package.json').version")
-  #       VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].na1')
-  #       VERSIONREMOTELATEST=$(npm view polyapi --json | jq -r '.["dist-tags"].latest')
-        
-  #       if [[ $VERSION == $VERSIONREMOTE ]]; then
-  #         npm dist-tag add polyapi@$VERSION na1 
-  #       else
-  #         echo "Repository NPM version it's the same that na1 on registry"
-  #       fi
-        
-  #       if [[ $VERSION == $VERSIONREMOTELATEST ]]; then
-  #         npm dist-tag add polyapi@$VERSION latest 
-  #       else
-  #         echo "Repository NPM version it's the same that latest on registry"
-  #       fi
-
-
-  # main:
-  #   name: Tagging of develop package
-  #   runs-on: ubuntu-latest
-  #   if: ${{ github.event.pull_request.head.ref == 'main' }}
-  #   env:
-  #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-
-  #   steps:
-  #   - uses: actions/checkout@v3
-
-  #   - name: Setup Node
-  #     uses: actions/setup-node@v2
-  #     with:
-  #       node-version: '18'
-  #       registry-url: 'https://registry.npmjs.org'
-
-
-  #   - name: Publish package
-  #     run: |
-  #       cd packages/client
-  #       VERSION=$(node -p "require('./package.json').version")
-  #       VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
-
-  #       if [[ $VERSION == $VERSIONREMOTE ]]; then
-  #         npm dist-tag add polyapi@$VERSION develop
-  #       else
-  #         echo "Repository NPM version it's the same that develop on registry"
-  #       fi
-
-  # other-branch:
-  #   name: NPM build and push.
-  #   runs-on: ubuntu-latest
-  #   if: ${{ github.event.pull_request.head.ref != 'develop' && github.event.pull_request.base.ref == 'main' }}
-
-  #   env:
-  #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  #     ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-  #     IMAGE: ghcr.io/polyapi/polyapi-dev
-  #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      
-  #   steps:
-  #   - uses: actions/checkout@v3
-
-  #   - uses: dorny/paths-filter@v2
-  #     id: changes
-  #     with:
-  #       filters: |
-  #         client:
-  #           - 'packages/client/package.json'
-
-  #   - if: steps.changes.outputs.client == 'true'
-  #     name: Setup Node
-  #     uses: actions/setup-node@v2
-  #     with:
-  #       node-version: '18'
-  #       registry-url: 'https://registry.npmjs.org'
-
-  #   - if: steps.changes.outputs.client == 'true'
-  #     name: Publish package
-  #     run: |
-  #       cd packages/client 
-  #       VERSION=$(node -p "require('./package.json').version")
-  #       echo $VERSION
-  #       REMOTEVERSION=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
-  #       echo $REMOTEVERSION
-  #       cd.. & cd.. 
-  #       if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
-  #         yarn install
-  #         npx prisma@4.11.0 generate --generator js
-  #         cd packages/client 
-  #         npm install --include=dev
-  #         npm publish --tag develop
-  #       else
-  #         echo "Local NPM version is the same as remote"
-  #       fi
-      
-
-
-  test:
-    name: NPM build and push.
+  develop:
+    name: Promote develop NPM package
     runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.head.ref == 'develop' && github.event.pull_request.base.ref == 'main'  }}
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
     steps:
+    - uses: actions/checkout@v3
+
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+
+
     - name: Publish package
       run: |
-        echo  ${{ github.event.pull_request.base.ref }}
-        echo  ${{ github.event.pull_request.head.ref }}
-        echo ---
-        echo  ${{ github.event.pull_request.base_ref }}
-        echo  ${{ github.event.pull_request.head_ref }}
+        cd packages/client 
+        VERSION=$(node -p "require('./package.json').version")
+        VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].na1')
+        VERSIONREMOTELATEST=$(npm view polyapi --json | jq -r '.["dist-tags"].latest')
+        
+        if [[ $VERSION == $VERSIONREMOTE ]]; then
+          echo "Repository NPM version it's the same that na1 on registry" 
+        else
+          npm dist-tag add polyapi@$VERSION na1 
+        fi
+        
+        if [[ $VERSION == $VERSIONREMOTELATEST ]]; then
+          echo "Repository NPM version it's the same that latest on registry"
+        else
+          npm dist-tag add polyapi@$VERSION latest       
+        fi
+
+
+  main:
+    name: Tagging of develop package
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.head.ref == 'main' && github.event.pull_request.base.ref == 'develop' }}
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+
+
+    - name: Publish package
+      run: |
+        cd packages/client
+        VERSION=$(node -p "require('./package.json').version")
+        VERSIONREMOTE=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
+
+        if [[ $VERSION == $VERSIONREMOTE ]]; then
+          echo "Repository NPM version it's the same that develop on registry"
+        else
+          npm dist-tag add polyapi@$VERSION develop
+        fi
+
+  other-branch:
+    name: NPM build and push.
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.head.ref != 'develop' && github.event.pull_request.base.ref == 'main' }}
+
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      
+    steps:
+    - uses: actions/checkout@v3
+
+
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Publish package
+      run: |
+        cd packages/client 
+        VERSION=$(node -p "require('./package.json').version")
+        echo $VERSION
+        REMOTEVERSION=$(npm view polyapi --json | jq -r '.["dist-tags"].na1')
+        VERSIONREMOTELATEST=$(npm view polyapi --json | jq -r '.["dist-tags"].latest')
+        cd .. & cd .. 
+
+        if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
+          echo "Local NPM version is the same as remote"
+        else
+          yarn install
+          npx prisma@4.11.0 generate --generator js
+          cd packages/client 
+          npm install --include=dev
+          npm publish --tag na1
+        fi
+
+        if [[ "$VERSION" == "$VERSIONREMOTELATEST" ]]; then
+          echo "Local NPM version is the same as remote"
+        else
+          npm dist-tag add polyapi@$VERSION latest 
+        fi        
+
+
+
+

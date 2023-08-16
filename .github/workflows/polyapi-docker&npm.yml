@@ -52,13 +52,13 @@ jobs:
         cd .. & cd .. 
 
         if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
+          echo "Local NPM version is the same as remote"
+        else
           yarn install
           npx prisma@4.11.0 generate --generator js
           cd packages/client 
           npm install --include=dev
           npm publish --tag develop
-        else
-          echo "Local NPM version is the same as remote"
         fi
         
 
