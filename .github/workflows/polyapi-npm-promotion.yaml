@@ -1,6 +1,7 @@
 name: Promote NPM package
 on:
   pull_request:
+    types: [ closed ]
     paths:
       - "packages/client/package.json"
     branches:
@@ -11,7 +12,7 @@ jobs:
   develop:
     name: Promote develop NPM package
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.head.ref == 'develop' && github.event.pull_request.base.ref == 'main'  }}
+    if: ${{ github.event.pull_request.head.ref == 'develop' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.merged == true  }}
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -48,7 +49,7 @@ jobs:
   main:
     name: Tagging of develop package
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.head.ref == 'main' && github.event.pull_request.base.ref == 'develop' }}
+    if: ${{ github.event.pull_request.head.ref == 'main' && github.event.pull_request.base.ref == 'develop' && github.event.pull_request.merged == true }}
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -77,7 +78,7 @@ jobs:
   other-branch:
     name: NPM build and push.
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.head.ref != 'develop' && github.event.pull_request.base.ref == 'main' }}
+    if: ${{ github.event.pull_request.head.ref != 'develop' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.merged == true }}
 
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
