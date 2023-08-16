@@ -50,6 +50,7 @@ jobs:
         REMOTEVERSION=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
         echo $REMOTEVERSION
         cd .. & cd .. 
+
         if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
           yarn install
           npx prisma@4.11.0 generate --generator js
