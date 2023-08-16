@@ -93,4 +93,4 @@ jobs:
         echo below head_ref
         echo github.head_ref
         echo below base_ref
-        ehco github.base_ref
+        echo github.base_ref
