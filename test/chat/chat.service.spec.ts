@@ -1,8 +1,9 @@
 import { PrismaService } from 'prisma/prisma.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from 'chat/chat.service';
-import { aiServiceMock } from '../mocks';
+import { aiServiceMock, cacheManagerMock } from '../mocks';
 import { AiService } from 'ai/ai.service';
+import { CACHE_MANAGER } from '@nestjs/common';
 
 describe('ChatService', () => {
   const prisma = new PrismaService();
@@ -16,6 +17,10 @@ describe('ChatService', () => {
         {
           provide: AiService,
           useValue: aiServiceMock,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: cacheManagerMock,
         },
       ],
     }).compile();
