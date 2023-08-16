@@ -292,6 +292,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     const markedJs = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'marked.min.js'));
     const highlightJs = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'highlight.min.js'));
     const highlightCss = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'highlight.min.css'));
+    const htmlEscaper = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'html-escaper.min.js'));
 
     return (
       `<!DOCTYPE html>
@@ -305,6 +306,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         <script src='${tailwindJs}'></script>
         <script src='${markedJs}'></script>
         <script src='${highlightJs}'></script>
+        <script src='${htmlEscaper}'></script>
         <link href='${highlightCss}' rel='stylesheet'>
       </head>
       <body class='overflow-hidden'>
