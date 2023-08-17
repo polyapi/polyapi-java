@@ -63,17 +63,27 @@ export class ChatService {
     return parts.join('\n\n');
   }
 
-  async getHistory(userId: string | undefined, perPage = 10, firstMessageDate: Date | null = null) {
+  async getHistory(userId: string | undefined, perPage = 10, firstMessageDate: Date | null = null, workspaceFolder: string) {
     if (!userId) {
       return [];
     }
 
     const messages = await this.prisma.conversationMessage.findMany({
-      where: { userId, type: 2, role: { in: ['user', 'assistant'] } },
+      where: {
+        userId,
+        type: 2,
+        role: { in: ['user', 'assistant'] },
+        conversation: {
+          workspaceFolder,
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: perPage,
       cursor: firstMessageDate ? { createdAt: firstMessageDate } : undefined,
       skip: firstMessageDate ? 1 : undefined,
+      include: {
+        conversation: true,
+      },
     });
 
     return messages.map((message) => {

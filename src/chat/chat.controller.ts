@@ -12,7 +12,6 @@ import {
   Header,
   Query,
   MessageEvent,
-  ValidationPipe,
 } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
 import {
@@ -32,7 +31,6 @@ import { AuthRequest } from 'common/types';
 import { UserService } from 'user/user.service';
 import { AuthService } from 'auth/auth.service';
 import { MessageDto } from '@poly/model';
-import { MergeRequestData } from 'common/decorators';
 
 @ApiSecurity('PolyApiKey')
 @Controller('chat')
@@ -124,13 +122,12 @@ export class ChatController {
   @Get('/history')
   public async chatHistory(
     @Req() req: AuthRequest,
-    @MergeRequestData(['query'], new ValidationPipe({ validateCustomDecorators: true, transform: true }))
-      pagination: Pagination,
+    @Query() pagination: Pagination,
   ): Promise<MessageDto[]> {
-    const { perPage = '10', firstMessageDate = null } = pagination;
+    const { perPage = '10', firstMessageDate = null, workspaceFolder = '' } = pagination;
 
     // returns the conversation history for this specific user
-    const history = await this.service.getHistory(req.user.user?.id, Number(perPage), firstMessageDate);
+    const history = await this.service.getHistory(req.user.user?.id, Number(perPage), firstMessageDate, workspaceFolder);
 
     return history;
   }

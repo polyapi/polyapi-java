@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import axios from 'axios';
 import { RawAxiosRequestHeaders } from 'axios/index';
 import EventSource from 'eventsource';
-import { getCredentialsFromExtension } from './common';
+import { getCredentialsFromExtension, getWorkspacePath } from './common';
 
 const PER_PAGE = 5;
 
@@ -40,7 +40,9 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
 
       const firstMessageDateQueryParam = firstMessageDate ? `&firstMessageDate=${firstMessageDate}` : '';
 
-      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=${PER_PAGE}${firstMessageDateQueryParam}`, {
+      const workspaceFolder = getWorkspacePath();
+
+      const { data } = await axios.get(`${apiBaseUrl}/chat/history?perPage=${PER_PAGE}${firstMessageDateQueryParam}&workspaceFolder=${workspaceFolder}`, {
         headers: {
           authorization: `Bearer ${apiKey}`,
         } as RawAxiosRequestHeaders,
@@ -158,7 +160,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       loadingPresent = false;
     };
 
-    const es = new EventSource(`${apiBaseUrl}/chat/question?message=${encodeURIComponent(message)}`, {
+    const es = new EventSource(`${apiBaseUrl}/chat/question?message=${encodeURIComponent(message)}&workspaceFolder=${getWorkspacePath()}`, {
       headers: {
         authorization: `Bearer ${apiKey}`,
       },

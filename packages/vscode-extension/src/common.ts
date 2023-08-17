@@ -21,7 +21,7 @@ export const saveCredentialsInExtension = (apiBaseUrl: unknown, apiKey: unknown)
 };
 
 export const getWorkspacePath = () => {
-  return vscode.workspace.workspaceFolders[0].uri.fsPath;
+  return vscode.workspace.workspaceFolders[0]?.uri?.path || '';
 };
 
 export const getPackageManager = (): 'yarn' | 'npm' => {

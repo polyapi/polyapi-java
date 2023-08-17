@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsNumber, IsNumberString, IsOptional } from 'class-validator';
+import { IsDate, IsNumber, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class Pagination {
     @IsOptional()
@@ -9,4 +9,7 @@ export class Pagination {
     @IsOptional()
     @IsNumberString()
     perPage: string;
+    @IsString()
+    @IsOptional()
+    workspaceFolder: string;
 }
