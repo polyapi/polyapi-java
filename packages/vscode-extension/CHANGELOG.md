@@ -1,5 +1,10 @@
-### 0.2.48
+### 0.2.49
 * Conversation history based on workspace folder.
+
+### 0.1.49
+* Fix: Escape questions on render
+* Fix: Redis string format when saving.
+* Fix: Store message before sending it to science server.
 
 ### 0.1.48
 * Remember tree state.

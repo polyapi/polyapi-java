@@ -1,0 +1,80 @@
+name: Docker Image & NPM publish CI/CD
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  develop:
+    name: Development Docker / NPM build and push.
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/develop' }}
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      IMAGE: ghcr.io/polyapi/polyapi-dev
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build the Docker image
+      run: |
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          client:
+            - 'packages/client/package.json'
+
+    - if: steps.changes.outputs.client == 'true'
+      name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+
+    - if: steps.changes.outputs.client == 'true'
+      name: Publish package
+      run: |
+        VERSION=$(node -p "require('./packages/client/package.json').version")
+        echo $VERSION
+        REMOTEVERSION=$(npm view polyapi --json | jq -r '.["dist-tags"].develop')
+        echo $REMOTEVERSION
+
+        if [[ "$VERSION" == "$REMOTEVERSION" ]]; then
+          echo "Local NPM version is the same as remote"
+        else
+          yarn install
+          npx prisma@4.11.0 generate --generator js
+          cd packages/client 
+          npm install --include=dev
+          npm publish --tag develop
+        fi
+        
+
+  main:
+    name: Main Docker build and push.
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      IMAGE: ghcr.io/polyapi/polyapi-main
+      
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build the Docker image
+      run: |
+        echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}

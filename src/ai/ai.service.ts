@@ -1,77 +1,33 @@
 import EventSource from 'eventsource';
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
-import { catchError, lastValueFrom, map, Observable } from 'rxjs';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { SystemPrompt, DocSection } from '@prisma/client';
-import { FunctionDescriptionDto, PropertySpecification, VariableDescriptionDto } from '@poly/model';
-import { Cache } from 'cache-manager';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import crypto from 'crypto';
+import {
+  FunctionDescriptionDto,
+  PropertySpecification,
+  VariableDescriptionDto,
+} from '@poly/model';
 
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
 
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly httpService: HttpService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {}
 
-  async getFunctionCompletion(
-    environmentId: string,
-    userId: string,
-    message: string,
-    workspaceFolder = '',
-  ): Promise<Observable<string>> {
-    const messageUUID = crypto.randomUUID();
-
-    const messageKey = `questions:${messageUUID}`;
-
-    this.logger.debug(`Saving message in cache manager with key: ${messageKey}`);
-
-    await this.cacheManager.set(messageKey, message);
-
-    this.logger.debug(`Saved message: ${message}`);
-
-    this.logger.debug(`Sending message to Science server for function completion with key: ${messageKey}`);
-
-    let scienceUrl = `${this.config.scienceServerBaseUrl}/function-completion?user_id=${userId}&environment_id=${environmentId}&question_uuid=${messageKey}`;
+  getFunctionCompletion(environmentId: string, userId: string, uuid: string, workspaceFolder = '') {
+    let scienceUrl = `${this.config.scienceServerBaseUrl}/function-completion?user_id=${userId}&environment_id=${environmentId}&question_uuid=${uuid}`;
     if (workspaceFolder) {
       scienceUrl += `&workspace_folder=${workspaceFolder}`;
     }
-    const eventSource = new EventSource(scienceUrl);
 
-    return new Observable<string>((subscriber) => {
-      eventSource.onmessage = (event) => {
-        subscriber.next(JSON.parse(event.data).chunk);
-      };
-      eventSource.onerror = (error) => {
-        if (error.message) {
-          this.logger.debug(`Error from Science server for function completion: ${error.message}`);
-          subscriber.error(error.message);
-        }
-        subscriber.complete();
-        eventSource.close();
-
-        this.cacheManager
-          .del(messageKey)
-          .then(() => {
-            this.logger.debug(
-              `Message key ${messageKey} removed from cache manager after science server message is fully received.`,
-            );
-          })
-          .catch((err) => {
-            this.logger.error(
-              `Couldn't delete message key ${messageKey} from cache manager after science server message is fully received`,
-              err,
-            );
-          });
-      };
-    });
+    return new EventSource(scienceUrl);
   }
 
   async pluginChat(apiKey: string, pluginId: number, message: string): Promise<unknown> {
