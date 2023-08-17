@@ -1,16 +1,79 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { AiService } from 'ai/ai.service';
 import { Observable } from 'rxjs';
+import { Cache } from 'cache-manager';
+import crypto from 'crypto';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private readonly aiService: AiService, private readonly prisma: PrismaService) {}
+  constructor(private readonly aiService: AiService, private readonly prisma: PrismaService, @Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
-  public sendQuestion(environmentId: string, userId: string, message: string): Promise<Observable<string>> {
-    return this.aiService.getFunctionCompletion(environmentId, userId, message);
+  public async storeMessage(message: string) {
+    const uuid = crypto.randomUUID();
+
+    const messageKey = this.getMessageKey(uuid);
+
+    this.logger.debug(`Storing message in cache manager with key: ${messageKey}`);
+
+    await this.cacheManager.set(messageKey, JSON.stringify({ message }));
+    this.logger.debug(`Stored message: ${message}`);
+
+    return {
+      uuid,
+    };
+  }
+
+  public async sendQuestion(environmentId: string, userId: string, message: string | null, uuid: string | null): Promise<Observable<string>> {
+    let eventSource: any;
+
+    if (uuid) {
+      const messageKey = this.getMessageKey(uuid);
+      const storedMessage = await this.cacheManager.get(messageKey);
+
+      if (!storedMessage) {
+        this.logger.error(`Key ${messageKey} not found.`);
+        throw new NotFoundException('Message not found');
+      }
+
+      this.logger.debug(`Sending question to science server with key ${messageKey}`);
+
+      eventSource = this.aiService.getFunctionCompletion(environmentId, userId, messageKey);
+    } else if (message) {
+      const { uuid } = await this.storeMessage(message);
+      const messageKey = this.getMessageKey(uuid);
+
+      this.logger.debug(`Sending question to science server with uuid ${messageKey}`);
+
+      eventSource = this.aiService.getFunctionCompletion(environmentId, userId, messageKey);
+    } else {
+      throw new Error('At least one of `message` or `uuid` must be provided.');
+    }
+
+    return new Observable<string>(subscriber => {
+      eventSource.onmessage = (event) => {
+        subscriber.next(JSON.parse(event.data).chunk);
+      };
+      eventSource.onerror = (error) => {
+        if (error.message) {
+          this.logger.debug(`Error from Science server for function completion: ${error.message}`);
+          subscriber.error(error.message);
+        }
+        subscriber.complete();
+        eventSource.close();
+
+        if (uuid) {
+          const messageKey = this.getMessageKey(uuid);
+          this.cacheManager.del(messageKey).then(() => {
+            this.logger.debug(`Message key ${messageKey} removed from cache manager after science server message is fully received.`);
+          }).catch(err => {
+            this.logger.error(`Couldn't delete message key ${messageKey} from cache manager after science server message is fully received`, err);
+          });
+        }
+      };
+    });
   }
 
   async processCommand(environmentId: string, userId: string, command: string) {
@@ -82,5 +145,9 @@ export class ChatService {
       return content.trim().split('Question:')[1].trim().replace(/^"/, '').replace(/"$/, '');
     }
     return content;
+  }
+
+  private getMessageKey(uuid: string) {
+    return `questions:${uuid}`;
   }
 }

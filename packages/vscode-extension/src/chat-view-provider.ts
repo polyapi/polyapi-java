@@ -158,7 +158,29 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       loadingPresent = false;
     };
 
-    const es = new EventSource(`${apiBaseUrl}/chat/question?message=${encodeURIComponent(message)}`, {
+    let uuid = '';
+
+    try {
+      const response = await axios.post<{ uuid: string }>(`${apiBaseUrl}/chat/store-message`, {
+        message,
+      }, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+      uuid = response.data.uuid;
+    } catch (error) {
+      this.webView?.webview.postMessage({
+        type: 'addMessage',
+        data: {
+          type: 'error',
+          value: error.data,
+        },
+      });
+      return removeLoading();
+    }
+
+    const es = new EventSource(`${apiBaseUrl}/chat/question?message_uuid=${uuid}`, {
       headers: {
         authorization: `Bearer ${apiKey}`,
       },
@@ -199,6 +221,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           },
         });
       } else if (error.message) {
+        console.error(error);
         this.webView?.webview.postMessage({
           type: 'addMessage',
           data: {
@@ -269,6 +292,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     const markedJs = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'marked.min.js'));
     const highlightJs = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'highlight.min.js'));
     const highlightCss = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'highlight.min.css'));
+    const htmlEscaper = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'html-escaper.min.js'));
 
     return (
       `<!DOCTYPE html>
@@ -282,6 +306,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
         <script src='${tailwindJs}'></script>
         <script src='${markedJs}'></script>
         <script src='${highlightJs}'></script>
+        <script src='${htmlEscaper}'></script>
         <link href='${highlightCss}' rel='stylesheet'>
       </head>
       <body class='overflow-hidden'>

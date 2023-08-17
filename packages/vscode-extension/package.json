@@ -3,7 +3,7 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.1.48",
+  "version": "0.1.49",
   "publisher": "PolyAPICorp",
   "engines": {
     "vscode": "^1.75.0"
@@ -129,7 +129,7 @@
     "precompile": "yarn run lint",
     "watch": "tsc --watch -p ./ && tsc-alias -p ./tsconfig.json",
     "pretest": "yarn run compile && yarn run lint",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts --fix"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

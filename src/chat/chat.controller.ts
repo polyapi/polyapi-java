@@ -13,6 +13,7 @@ import {
   Query,
   MessageEvent,
   ValidationPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
 import {
@@ -23,6 +24,8 @@ import {
   Role,
   Permission,
   Pagination,
+  StoreMessageDto,
+  MessageUUIDDto,
 } from '@poly/model';
 import { ApiSecurity } from '@nestjs/swagger';
 import { ChatService } from 'chat/chat.service';
@@ -47,6 +50,21 @@ export class ChatController {
   ) {}
 
   @UseGuards(PolyAuthGuard)
+  @Post('/store-message')
+  public async storeMessage(@Req() req: AuthRequest, @Body() data: StoreMessageDto): Promise<MessageUUIDDto> {
+    const environmentId = req.user.environment.id;
+    const userId = req.user.user?.id || (await this.userService.findAdminUserByEnvironmentId(environmentId))?.id;
+
+    if (!userId) {
+      throw new InternalServerErrorException('Cannot find user to process command');
+    }
+
+    await this.authService.checkPermissions(req.user, Permission.Use);
+
+    return this.service.storeMessage(data.message);
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Sse('/question')
   public async sendQuestion(@Req() req, @Query() data: SendQuestionDto): Promise<Observable<MessageEvent>> {
     const environmentId = req.user.environment.id;
@@ -58,9 +76,14 @@ export class ChatController {
 
     await this.authService.checkPermissions(req.user, Permission.Use);
 
-    this.logger.debug(`Sending question to chat: ${data.message}`);
+    const message = data.message || null;
+    const uuid = data.message_uuid || null;
 
-    const observable = await this.service.sendQuestion(environmentId, userId, data.message);
+    if (!message && !uuid) {
+      throw new BadRequestException('At least one of `message` or `uuid` must be provided.');
+    }
+
+    const observable = await this.service.sendQuestion(environmentId, userId, message, uuid);
 
     return observable
       .pipe(

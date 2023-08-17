@@ -124,7 +124,7 @@ const COMMANDS = [
       return `
       <div class='p-4 self-end relative' style='background: var(--vscode-input-background)' ${getCreatedAtAttribute(createdAt)}>
         <h2 class='font-bold mb-3 flex items-center'>${userSvg}<span class='ml-1'>You</span></h2>
-        <div class='overflow-y-auto question-box'>${message.value}</div>
+        <div class='overflow-y-auto question-box'>${html.escape(message.value)}</div>
       </div>
       `;
     }
@@ -188,9 +188,6 @@ const COMMANDS = [
     }
     
     let currentObserver = null; 
-
-    const loadingContainer = document.querySelector('.loading-container');
-
 
     const observeFirstMessage = (firstChatElement) => {
 
@@ -300,8 +297,6 @@ const COMMANDS = [
       }
       case 'finishMessage': {
 
-        console.log('finish mesasge', message);
-
         const messageID = message.messageID;
 
         const messageElement = document.getElementById(messageID);
@@ -384,8 +379,6 @@ const COMMANDS = [
         if(messages.length) {
           observeFirstMessage(document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`))
         }
-
-        observeFirstMessage(document.querySelector('#conversation-list > div[data-created-at]'));
 
         enableTextarea();
 
