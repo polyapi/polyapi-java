@@ -159,7 +159,7 @@ def get_last_conversations(user_id: str, limit: int, workspace_folder: str = "")
 def create_new_conversation(user_id: str, workspace_folder: str = "") -> Conversation:
     assert user_id
     db = get_client()
-    return db.conversation.create(data={"userId": user_id})
+    return db.conversation.create(data={"userId": user_id, "workspaceFolder": workspace_folder})
 
 
 def clear_conversations(user_id: str) -> None:

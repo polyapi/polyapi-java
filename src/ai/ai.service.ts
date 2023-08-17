@@ -41,7 +41,7 @@ export class AiService {
 
     let scienceUrl = `${this.config.scienceServerBaseUrl}/function-completion?user_id=${userId}&environment_id=${environmentId}&question_uuid=${messageKey}`;
     if (workspaceFolder) {
-      scienceUrl += `&workspaceFolder=${workspaceFolder}`;
+      scienceUrl += `&workspace_folder=${workspaceFolder}`;
     }
     const eventSource = new EventSource(scienceUrl);
 
