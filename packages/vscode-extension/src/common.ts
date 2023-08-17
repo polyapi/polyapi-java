@@ -21,7 +21,7 @@ export const saveCredentialsInExtension = (apiBaseUrl: unknown, apiKey: unknown)
 };
 
 export const getWorkspacePath = () => {
-  return vscode.workspace.workspaceFolders[0]?.uri?.path || '';
+  return vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.path : '';
 };
 
 export const getPackageManager = (): 'yarn' | 'npm' => {
@@ -46,6 +46,12 @@ export const getLibraryVersionFromApiHost = (apiBaseUrl: unknown) => {
 };
 
 export const saveCredentialsOnClientLibrary = (apiBaseUrl: unknown, apiKey: unknown) => {
+  const workspacePath = getWorkspacePath();
+
+  if (!workspacePath) {
+    return;
+  }
+
   const polyFolder = path.join(getWorkspacePath(), 'node_modules/.poly');
 
   fs.mkdirSync(polyFolder, { recursive: true });

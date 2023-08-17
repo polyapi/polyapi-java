@@ -1,3 +1,6 @@
+### 0.2.48
+* Conversation history based on workspace folder.
+
 ### 0.1.48
 * Remember tree state.
 
