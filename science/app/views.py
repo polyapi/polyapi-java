@@ -44,7 +44,7 @@ def function_completion() -> Response:
         message_uuid = data.get("question_uuid", "").strip()
         question = redis_get(message_uuid)
         if question:
-            parsedQuestion = json.loads(json.loads(question))
+            parsedQuestion = json.loads(question)
             question = parsedQuestion["message"]
 
     if not question:
