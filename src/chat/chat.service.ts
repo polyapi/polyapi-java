@@ -54,7 +54,16 @@ export class ChatService {
 
     return new Observable<string>(subscriber => {
       eventSource.onmessage = (event) => {
-        subscriber.next(JSON.parse(event.data).chunk);
+        try {
+          subscriber.next(JSON.parse(event.data).chunk);
+        } catch (error) {
+          this.logger.error('Error while parsing event from science server', error.stack, {
+            event,
+          });
+          subscriber.error(error.message);
+          subscriber.complete();
+          eventSource.close();
+        }
       };
       eventSource.onerror = (error) => {
         if (error.message) {
