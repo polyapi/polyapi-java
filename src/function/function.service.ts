@@ -57,6 +57,7 @@ import { VariableService } from 'variable/variable.service';
 import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
 import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospectionQuery, resolveGraphqlArgumentType } from './graphql/utils';
 import { AuthService } from 'auth/auth.service';
+import crypto from 'crypto';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -1743,6 +1744,8 @@ export class FunctionService implements OnModuleInit {
   }
 
   private getSanitizedRawBody(apiFunction: ApiFunction, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): Body {
+    const uuidRemovableKeyValue = crypto.randomUUID();
+
     const body = JSON.parse(apiFunction.body || '{}') as Body;
 
     const clonedArgumentValueMap = cloneDeep(argumentValueMap);
@@ -1781,6 +1784,21 @@ export class FunctionService implements OnModuleInit {
       }
     };
 
+    const sanitizeNonStringOptionalArgument = (name: string, quoted: boolean) => {
+      /*
+        We should set a "fake value" for optional arguments that are not strings and weren't provided on execution call from client side.
+        If not, since, non string arguments are specified on json raw as mustache syntax like `"data": {{data}}`, we would be building
+        an invalid json string since non string arguments are non enclosed by double quotes.
+        At the end of `getSanitizedRawBody`, before returning valid stringified object, we can remove this non provided arguments matching them
+        by our provided "fake value" in this function.
+      */
+      if (typeof clonedArgumentValueMap[name] === 'undefined') {
+        if (!quoted) {
+          clonedArgumentValueMap[name] = `"${uuidRemovableKeyValue}"`; // We should enclose fake value in double quotes since they are always unquoted.
+        }
+      }
+    };
+
     const foundArgs: {
         quoted: boolean,
         name: string,
@@ -1816,6 +1834,8 @@ export class FunctionService implements OnModuleInit {
       for (const arg of foundArgs) {
         if (argumentsMetadata[arg.name]?.type === 'string') {
           sanitizeSringArgumentValue(arg.name, arg.quoted);
+        } else {
+          sanitizeNonStringOptionalArgument(arg.name, arg.quoted);
         }
       }
 
@@ -1827,9 +1847,17 @@ export class FunctionService implements OnModuleInit {
 
       this.logger.debug(`Rendered content after sanitization: ${renderedContent}`);
 
+      const renderedParsedObject = JSON.parse(renderedContent);
+
+      for (const [key, value] of Object.entries(renderedParsedObject)) {
+        if (value === uuidRemovableKeyValue) {
+          delete renderedParsedObject[key];
+        }
+      }
+
       return {
         ...body,
-        raw: JSON.stringify(JSON.parse(renderedContent)),
+        raw: JSON.stringify(renderedParsedObject),
       };
     }
 
