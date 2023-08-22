@@ -18,7 +18,7 @@ export class ChatService {
 
     this.logger.debug(`Storing message in cache manager with key: ${messageKey}`);
 
-    await this.cacheManager.set(messageKey, JSON.stringify({ message }));
+    await this.cacheManager.set(messageKey, { message });
     this.logger.debug(`Stored message: ${message}`);
 
     return {
@@ -54,7 +54,16 @@ export class ChatService {
 
     return new Observable<string>(subscriber => {
       eventSource.onmessage = (event) => {
-        subscriber.next(JSON.parse(event.data).chunk);
+        try {
+          subscriber.next(JSON.parse(event.data).chunk);
+        } catch (error) {
+          this.logger.error('Error while parsing event from science server', error.stack, {
+            event,
+          });
+          subscriber.error(error.message);
+          subscriber.complete();
+          eventSource.close();
+        }
       };
       eventSource.onerror = (error) => {
         if (error.message) {

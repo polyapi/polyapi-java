@@ -44,7 +44,7 @@ def function_completion() -> Response:
         message_uuid = data.get("question_uuid", "").strip()
         question = redis_get(message_uuid)
         if question:
-            parsedQuestion = json.loads(json.loads(question))
+            parsedQuestion = json.loads(question)
             question = parsedQuestion["message"]
 
     if not question:
@@ -94,7 +94,7 @@ def function_completion() -> Response:
 
     def generate():
         if isinstance(resp, str):
-            yield f"data: {resp}"
+            yield "data: {}\n\n".format(json.dumps({"chunk": resp}))
             # store the final message before exiting
             store_messages(
                 user_id,

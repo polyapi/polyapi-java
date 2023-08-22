@@ -8,6 +8,7 @@ import redis
 import numpy as np
 from requests import Response
 from flask import current_app
+import jsonref
 from typing import Any, Dict, Generator, List, Optional, Union
 from app.constants import CHAT_GPT_MODEL, MessageType, VarName
 from app.typedefs import (
@@ -36,6 +37,29 @@ def func_path(func: SpecificationDto) -> str:
     return "poly." + path
 
 
+def _process_schema_property(property: Dict):
+    if property["type"] == "string":
+        return "string"
+    elif property["type"] == "number":
+        return "number"
+    elif property["type"] == "integer":
+        return "integer"
+    elif property["type"] == "boolean":
+        return "boolean"
+    elif property["type"] == "null":
+        return "null"
+    elif property["type"] == "array":
+        child = _process_schema_property(property['items'])
+        return f"[{child}]"
+    elif property["type"] == "object":
+        sub_props = []
+        for key, val in property["properties"].items():
+            sub_props.append(f"{key}: {_process_schema_property(val)}")
+        return "{\n%s\n}" % ",\n".join(sub_props)
+    else:
+        return ""
+
+
 def _process_property_spec(arg: PropertySpecification) -> str:
     kind = arg["type"]["kind"]
     if kind == "void":
@@ -49,11 +73,16 @@ def _process_property_spec(arg: PropertySpecification) -> str:
             name=arg["name"], item_type=item_type
         )
     elif kind == "object":
-        if arg["type"].get("properties"):
+        arg_type = arg["type"]
+        if arg_type.get("properties"):
             properties = [_process_property_spec(p) for p in arg["type"]["properties"]]
             sub_props = "\n".join(properties)
             sub_props = "{\n" + sub_props + "\n}"
             rv = "{name}: {sub_props}".format(name=arg["name"], sub_props=sub_props)
+        elif arg_type.get("schema"):
+            schema = jsonref.loads(json.dumps(arg_type['schema']))
+            sub_props = _process_schema_property(schema)
+            rv = f"{arg['name']}: {sub_props}"
         else:
             log(f"WARNING: object with no properties in args - {arg}")
             rv = "{name}: object".format(name=arg["name"])

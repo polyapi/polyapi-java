@@ -244,7 +244,14 @@ const validateName = (key: string, name: string): string => {
 
 const _validateDesc = (key: string, desc: string): string => {
   if (desc && desc.length > 120) {
-    throw new BadRequestException('Desc too long. Max desc length is 120 characters!');
+    throw new BadRequestException('Description for marketplace too long. Max desc length is 120 characters!');
+  }
+  return desc;
+};
+
+const _validateDescForModel = (key: string, desc: string): string => {
+  if (desc && desc.length > 7900) {
+    throw new BadRequestException('Description for model too long. Max desc length is 8000 characters!');
   }
   return desc;
 };
@@ -265,7 +272,7 @@ const SIMPLE_FIELD_VALIDATORS: { [key: string]: null | CallableFunction } = {
   legalUrl: requireOrThrow,
   name: validateName,
   descriptionForMarketplace: _validateDesc,
-  descriptionForModel: _validateDesc,
+  descriptionForModel: _validateDescForModel,
   iconUrl: null,
   authType: null,
   authToken: null,

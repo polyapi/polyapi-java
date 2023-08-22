@@ -7,6 +7,7 @@ from load_fixtures import (
     united_get_status_get_or_create,
 )
 from app.utils import (
+    _process_schema_property,
     camel_case,
     create_new_conversation,
     filter_to_real_public_ids,
@@ -63,6 +64,185 @@ FUNC: SpecificationDto = {
     },
 }
 
+REF_FUNC = {
+    "id": "087cbfbb-414d-417d-9f52-1845feeff441",
+    "type": "apiFunction",
+    "context": "operaCloud.rsv",
+    "name": "createReservation",
+    "description": "Used to create a reservation for a specific hotel. Expects arrival and departure dates, number of adults, first and last name, phone number and email. Returns Links",
+    "function": {
+        "arguments": [
+            {
+                "name": "payload",
+                "required": True,
+                "type": {
+                    "kind": "object",
+                    "properties": [
+                        {
+                            "name": "costTotal",
+                            "description": "",
+                            "required": True,
+                            "type": {"kind": "primitive", "type": "number"},
+                        },
+                        {
+                            "name": "rateArray",
+                            "description": "",
+                            "required": True,
+                            "type": {
+                                "kind": "object",
+                                "schema": {
+                                    "$schema": "http://json-schema.org/draft-06/schema#",
+                                    "type": "array",
+                                    "items": {"$ref": "#/definitions/ArgumentElement"},
+                                    "definitions": {
+                                        "ArgumentElement": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "properties": {
+                                                "base": {"$ref": "#/definitions/Base"},
+                                                "total": {
+                                                    "$ref": "#/definitions/Total"
+                                                },
+                                                "start": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                },
+                                                "end": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                },
+                                            },
+                                            "required": [
+                                                "base",
+                                                "end",
+                                                "start",
+                                                "total",
+                                            ],
+                                            "title": "ArgumentElement",
+                                        },
+                                        "Base": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "properties": {
+                                                "amountBeforeTax": {"type": "integer"},
+                                                "currencyCode": {"type": "string"},
+                                            },
+                                            "required": [
+                                                "amountBeforeTax",
+                                                "currencyCode",
+                                            ],
+                                            "title": "Base",
+                                        },
+                                        "Total": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "properties": {
+                                                "amountBeforeTax": {"type": "integer"}
+                                            },
+                                            "required": ["amountBeforeTax"],
+                                            "title": "Total",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            "name": "arrivalDate",
+                            "description": "",
+                            "required": True,
+                            "type": {"kind": "primitive", "type": "string"},
+                        },
+                        {
+                            "name": "departureDate",
+                            "description": "",
+                            "required": True,
+                            "type": {"kind": "primitive", "type": "string"},
+                        },
+                    ],
+                },
+            },
+        ],
+    },
+}
+
+JSONREF_PROPERTY = {
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "base": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "amountBeforeTax": {"type": "integer"},
+                    "currencyCode": {"type": "string"},
+                },
+                "required": ["amountBeforeTax", "currencyCode"],
+                "title": "Base",
+            },
+            "total": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"amountBeforeTax": {"type": "integer"}},
+                "required": ["amountBeforeTax"],
+                "title": "Total",
+            },
+            "start": {"type": "string", "format": "date"},
+            "end": {"type": "string", "format": "date"},
+        },
+        "required": ["base", "end", "start", "total"],
+        "title": "ArgumentElement",
+    },
+    "definitions": {
+        "ArgumentElement": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "base": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "amountBeforeTax": {"type": "integer"},
+                        "currencyCode": {"type": "string"},
+                    },
+                    "required": ["amountBeforeTax", "currencyCode"],
+                    "title": "Base",
+                },
+                "total": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"amountBeforeTax": {"type": "integer"}},
+                    "required": ["amountBeforeTax"],
+                    "title": "Total",
+                },
+                "start": {"type": "string", "format": "date"},
+                "end": {"type": "string", "format": "date"},
+            },
+            "required": ["base", "end", "start", "total"],
+            "title": "ArgumentElement",
+        },
+        "Base": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "amountBeforeTax": {"type": "integer"},
+                "currencyCode": {"type": "string"},
+            },
+            "required": ["amountBeforeTax", "currencyCode"],
+            "title": "Base",
+        },
+        "Total": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"amountBeforeTax": {"type": "integer"}},
+            "required": ["amountBeforeTax"],
+            "title": "Total",
+        },
+    },
+}
+
 
 class T(DbTestCase):
     def test_load_fixtures(self) -> None:
@@ -86,6 +266,25 @@ class T(DbTestCase):
         self.assertEqual(len(args), 2)
         self.assertTrue(args[0].startswith("payload:"))
         self.assertEqual(args[1], "GAPIKey: string,  // your api key")
+
+    def test_func_args_ref(self):
+        arguments = func_args(REF_FUNC)
+        self.assertIn("rateArray", arguments[0])
+
+    def test_process_schema_property(self):
+        processed = _process_schema_property(JSONREF_PROPERTY)
+        expected = """[{
+base: {
+amountBeforeTax: integer,
+currencyCode: string
+},
+total: {
+amountBeforeTax: integer
+},
+start: string,
+end: string
+}]"""
+        self.assertEqual(processed, expected)
 
     def test_func_path_with_args(self):
         fpwa = func_path_with_args(FUNC)
