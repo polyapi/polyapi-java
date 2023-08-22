@@ -1760,7 +1760,7 @@ export class FunctionService implements OnModuleInit {
     const sanitizeSringArgumentValue = (name: string, quoted: boolean) => {
       const escapeRegularArgumentString = () => {
         // Escape string values, we should  only escape double quotes to avoid breaking json syntax on mustache template.
-        const escapedString = (clonedArgumentValueMap[name] || '').replace(/"/g, '\\"');
+        const escapedString = (clonedArgumentValueMap[name] || uuidRemovableKeyValue).replace(/"/g, '\\"');
 
         clonedArgumentValueMap[name] = quoted ? escapedString : `"${escapedString}"`;
       };
