@@ -1789,8 +1789,8 @@ export class FunctionService implements OnModuleInit {
         We should set a "fake value" for optional arguments that are not strings and weren't provided on execution call from client side.
         If not, since, non string arguments are specified on json raw as mustache syntax like `"data": {{data}}`, we would be building
         an invalid json string since non string arguments are non enclosed by double quotes.
-        At the end of `getSanitizedRawBody`, before returning valid stringified object, we can remove this non provided arguments matching them
-        by our provided "fake value" in this function.
+        At the end of `getSanitizedRawBody`, before returning valid stringyfied object, we can remove this non provided arguments matching them
+        by our "fake value" in this function.
       */
       if (typeof clonedArgumentValueMap[name] === 'undefined') {
         if (!quoted) {
