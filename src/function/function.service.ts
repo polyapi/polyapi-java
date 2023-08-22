@@ -1847,17 +1847,17 @@ export class FunctionService implements OnModuleInit {
 
       this.logger.debug(`Rendered content after sanitization: ${renderedContent}`);
 
-      const renderedParsedObject = JSON.parse(renderedContent);
+      const parsedObjectFromRenderedContent = JSON.parse(renderedContent);
 
-      for (const [key, value] of Object.entries(renderedParsedObject)) {
+      for (const [key, value] of Object.entries(parsedObjectFromRenderedContent)) {
         if (value === uuidRemovableKeyValue) {
-          delete renderedParsedObject[key];
+          delete parsedObjectFromRenderedContent[key];
         }
       }
 
       return {
         ...body,
-        raw: JSON.stringify(renderedParsedObject),
+        raw: JSON.stringify(parsedObjectFromRenderedContent),
       };
     }
 
