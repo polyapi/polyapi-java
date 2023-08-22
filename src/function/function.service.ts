@@ -1748,6 +1748,13 @@ export class FunctionService implements OnModuleInit {
 
     const body = JSON.parse(apiFunction.body || '{}') as Body;
 
+    const parsedArgumentsMetadata = Object.entries(argumentsMetadata).reduce<Record<string, FunctionArgument>>((acum, [key]) => {
+      return {
+        ...acum,
+        [key]: this.toArgument(key, argumentsMetadata),
+      };
+    }, {});
+
     const clonedArgumentValueMap = cloneDeep(argumentValueMap);
 
     const sanitizeSringArgumentValue = (name: string, quoted: boolean) => {
@@ -1819,8 +1826,9 @@ export class FunctionService implements OnModuleInit {
       const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];
       const quotedArgsMatchResult = bodyString.match(quotedArgsRegexp) || [];
       this.logger.debug(`Api function body: ${JSON.stringify(body)}`);
-      this.logger.debug(`Arguments value map for sanitization: ${JSON.stringify(argumentValueMap)}`);
       this.logger.debug(`Arguments metadata for sanitization: ${JSON.stringify(argumentsMetadata)}`);
+      this.logger.debug(`Cloned arguments metadata for sanitization: ${JSON.stringify(parsedArgumentsMetadata)}`);
+      this.logger.debug(`Arguments value map for sanitization: ${JSON.stringify(argumentValueMap)}`);
       this.logger.debug(`Sanitizing unquoted arguments: ${JSON.stringify(unquotedArgsMatchResult)}`);
       this.logger.debug(`Sanitizing quoted arguments: ${JSON.stringify(quotedArgsMatchResult)}`);
 
@@ -1833,7 +1841,7 @@ export class FunctionService implements OnModuleInit {
       }
 
       for (const arg of foundArgs) {
-        if (argumentsMetadata[arg.name]?.type === 'string') {
+        if (parsedArgumentsMetadata[arg.name]?.type === 'string') {
           sanitizeSringArgumentValue(arg.name, arg.quoted);
         } else {
           sanitizeNonStringOptionalArgument(arg.name, arg.quoted);
