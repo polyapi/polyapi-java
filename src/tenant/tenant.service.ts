@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { ApiKey, Environment, Team, Tenant, TenantSignUp } from '@prisma/client';
+import { ApiKey, Tenant, TenantSignUp } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
@@ -9,7 +9,7 @@ import { Role, SignUpDto, SignUpVerificationResultDto, TenantDto, TenantFullDto 
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
-import { User } from '@kubernetes/client-node';
+import { getEndOfDay } from '@poly/common/utils';
 
 type CreateTenantOptions = {
   environmentName?: string;
@@ -249,7 +249,7 @@ export class TenantService implements OnModuleInit {
           email,
           verificationCode: this.createSignUpVerfificationCode(),
           name,
-          expiresAt: new Date(),
+          expiresAt: getEndOfDay(),
         },
       });
     } catch (err) {
@@ -276,6 +276,19 @@ export class TenantService implements OnModuleInit {
     ]);
 
     if (tenantSignUp) {
+      if (tenantSignUp.expiresAt < new Date()) {
+        // Update and send new verification code.
+
+        return this.prisma.tenantSignUp.update({
+          where: {
+            id: tenantSignUp.id,
+          },
+          data: {
+            expiresAt: getEndOfDay(),
+          },
+        });
+      }
+
       return tenantSignUp;
     }
 
@@ -287,20 +300,32 @@ export class TenantService implements OnModuleInit {
   }
 
   async signUpVerify(id: string, code: string): Promise<SignUpVerificationResultDto> {
-    const tenantSignUp = await this.prisma.tenantSignUp.findFirst({
-      where: {
-        id,
-        verificationCode: code.toLowerCase(),
-      },
-    });
+    const [tenantSignUp, tier] = await Promise.all([
+      this.prisma.tenantSignUp.findFirst({
+        where: {
+          id,
+          verificationCode: code.toLowerCase(),
+        },
+      }),
+      this.prisma.limitTier.findFirst({
+        where: {
+          name: 'free',
+        },
+      }),
+    ]);
 
     if (!tenantSignUp) {
-      throw new ConflictException('Invalid verification code.');
+      throw new ConflictException({ code: 'INVALID_VERIFICATION_CODE' });
+    }
+
+    if (tenantSignUp.expiresAt < new Date()) {
+      await this.resendVerificationCode(id);
+      throw new ConflictException({ code: 'EXPIRED_VERIFICATION_CODE' });
     }
 
     const {
       apiKey,
-    } = await this.create(tenantSignUp.name, false, { email: tenantSignUp.email });
+    } = await this.create(tenantSignUp.name, false, tier?.id, { email: tenantSignUp.email });
 
     await this.prisma.tenantSignUp.delete({
       where: {

@@ -18,7 +18,7 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
     apiBaseUrl: string
   } | null = null;
 
-  const { email, name } = await inquirer.prompt([
+  const { email, name = '' } = await inquirer.prompt([
     {
       type: 'input',
       name: 'email',
@@ -51,10 +51,11 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       return create(instance);
     }
     shell.echo('Error during sign up process.\n');
+    return;
   }
 
-  const verifyTenant = async(retry = false) => {
-    if(!retry) {
+  const verifyTenant = async(showDescription = true) => {
+    if(showDescription) {
       shell.echo('A verification code has been sent to your email address', chalk.bold(`(${tenantSignUp.email}),`),'please check your email and enter your verification code. \nIf you didn\'t receive your verification code you can enter "resend" to send it again\n');
     }
   
@@ -77,10 +78,11 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
 
       } catch(err) {
         shell.echo(chalk.red('ERROR\n'));
-        shell.echo(`Error sending verification code to "${tenantSignUp.email}".\n`);
+        shell.echo(`Error sending verification code to`, `${chalk.bold(tenantSignUp.email)}.`, '\n');
+        throw err;
       }
 
-      return verifyTenant();
+      return verifyTenant(false);
     }
 
     shell.echo('-n', chalk.rgb(255, 255, 255)('Verifying your tenant...\n\n'));
@@ -100,16 +102,30 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
     }catch(err) {
       shell.echo(chalk.red('ERROR\n'));
       if(err.response?.status === 409) {
-        shell.echo('Wrong verification code.\n');
-        return verifyTenant(true);
+
+        if(err.response?.data?.code === 'INVALID_VERIFICATION_CODE') {
+          shell.echo('Wrong verification code.\n');
+        }
+
+        if(err.response?.data?.code === 'EXPIRED_VERIFICATION_CODE') {
+          shell.echo('Verification code is expired.\n');
+          return verifyTenant();
+        }
+
+        return verifyTenant(false);
       }
   
       shell.echo('Error during sign up process.\n');
+      throw err;
     }
 
   }
 
-  await verifyTenant();
+  try {
+    await verifyTenant();
+  } catch(err) {
+    return;
+  }
 
 
   const { generate } = await inquirer.prompt([
@@ -125,20 +141,20 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       POLY_API_BASE_URL: credentials.apiBaseUrl,
       POLY_API_KEY: credentials.apiKey,
     })
+
+    try {
+      shell.echo('Generating your poly client library...\n');
+      await exec('npx poly generate');
+  
+      shell.echo(chalk.green('Poly client library generated.'));
+    } catch (err) {
+      shell.echo(chalk.red('ERROR\n'));
+      shell.echo('Error generating your poly client library.');
+    }
   }
 
-  try {
-    shell.echo('Generating your poly client library...\n');
-    const result = await exec('npx poly generate');
-
-    console.log(result.stdout);
-    shell.echo(chalk.green('Poly client library generated.'));
-  } catch (err) {
-    shell.echo(chalk.red('ERROR\n'));
-    shell.echo('Error generating your poly client library.');
-  }
   
 };
 
-// segiur con logica expiracion, rate limiting.
+// rate limiting.
 // validacion de email
