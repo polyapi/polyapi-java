@@ -671,6 +671,18 @@ export class TenantController {
     await this.applicationService.delete(application.id);
   }
 
+  @Get('/sign-up/availability')
+  async verifyAvailability(
+    @Query('email') email: string,
+    @Query('tenant_name') tenantName: string,
+  ) {
+    if (!email && !tenantName) {
+      throw new BadRequestException('You should provide one of "email" | "tenant_name" query params.');
+    }
+
+    return this.tenantService.verifyAvailability(email || '', tenantName || '');
+  }
+
   @Post('/sign-up')
   async signUp(
     @Body() data: CreateSignUpDto,

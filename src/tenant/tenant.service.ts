@@ -361,4 +361,35 @@ export class TenantService implements OnModuleInit {
       },
     });
   }
+
+  async verifyAvailability(email: string, tenantName: string) {
+    if (email) {
+      const [user, tenantSignUp] = await Promise.all([
+        this.prisma.user.findFirst({
+          where: {
+            email,
+          },
+        }),
+        this.prisma.tenantSignUp.findFirst({
+          where: {
+            email,
+          },
+        }),
+      ]);
+
+      if (user || tenantSignUp) {
+        throw new ConflictException('Email already exists.');
+      }
+    } else {
+      const tenant = await this.prisma.tenant.findFirst({
+        where: {
+          name: tenantName,
+        },
+      });
+
+      if (tenant) {
+        throw new ConflictException('Tenant name already exists.');
+      }
+    }
+  }
 }
