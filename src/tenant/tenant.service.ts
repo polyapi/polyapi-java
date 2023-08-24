@@ -261,8 +261,8 @@ export class TenantService implements OnModuleInit {
     }
   }
 
-  async signUp(email: string, name: string) {
-    const [user, tenantSignUp] = await Promise.all([
+  async signUp(email: string, tenantName: string) {
+    const [user, tenantSignUp, tenant] = await Promise.all([
       this.prisma.user.findFirst({
         where: {
           email,
@@ -273,6 +273,13 @@ export class TenantService implements OnModuleInit {
           email,
         },
       }),
+      tenantName
+        ? this.prisma.tenant.findFirst({
+          where: {
+            name: tenantName,
+          },
+        })
+        : null,
     ]);
 
     if (tenantSignUp) {
@@ -293,10 +300,18 @@ export class TenantService implements OnModuleInit {
     }
 
     if (user) {
-      throw new ConflictException('Email already exists.');
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_EXISTS',
+      });
     }
 
-    return this.createSignUpRecord(email, name);
+    if (tenant) {
+      throw new ConflictException({
+        code: 'TENANT_ALREADY_EXISTS',
+      });
+    }
+
+    return this.createSignUpRecord(email, tenantName);
   }
 
   async signUpVerify(id: string, code: string): Promise<SignUpVerificationResultDto> {

@@ -91,11 +91,11 @@ export const createClientFunction = async (
   ).data;
 };
 
-export const createTenantSignUp = async (instance: string, email: string, name = '') => {
+export const createTenantSignUp = async (instance: string, email: string, tenantName = '') => {
   return (
     await axios.post<any, AxiosResponse<SignUpDto>>(`${getInstanceUrl(instance)}/tenants/sign-up`, {
       email,
-      name,
+      tenantName,
     }, {
       headers: {
         'Content-Type': 'application/json',

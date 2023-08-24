@@ -18,40 +18,76 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
     apiBaseUrl: string
   } | null = null;
 
-  const { email, name = '' } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'email',
-      message: 'Please, enter your email:',
-      filter: (value) => value.trim(),
-      validate: (email) => {
-        if (typeof email !== 'string' || !isEmail(email)) {
-          return 'Given email is not valid. Please enter a valid email.';
-        }
-        return true;
+  let email = '';
+  let tenantName = '';
+
+  const requestEmail = async () => {
+    const { email: result } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'email',
+        message: 'Please, enter your email:',
+        filter: (value) => value.trim(),
+        validate: (email) => {
+          if (typeof email !== 'string' || !isEmail(email)) {
+            return 'Given email is not valid. Please enter a valid email.';
+          }
+          return true;
+        },
       },
-    },
-    {
-      type: 'input',
-      name: 'name',
-      message: 'Please, enter your tenant name:',
-      filter: (value) => value.trim(),
-    },
-  ]);
+    ]);
+    
+    email = result;
+  };
+
+  const requestTenant = async () => {
+    const { tenantName: result } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'tenantName',
+        message: 'Please, enter your tenant name:',
+        filter: (value) => value.trim(),
+      },
+    ]);
+
+    tenantName = result;
+  }
+
 
   shell.echo('-n', chalk.rgb(255, 255, 255)('\n\nChecking email...\n\n'));
 
-  try {
-    const response = await createTenantSignUp(instance, email, name);
+  const signUp = async (data : 'tenant' | '' = '') => {
+    try {
 
-    tenantSignUp = response;
-  } catch (err) {
-    shell.echo(chalk.red('ERROR\n'));
-    if (err.response?.status === 409) {
-      shell.echo('Email already in use.\n');
-      return create(instance);
+      if (data === 'tenant') {
+        await requestTenant();
+      } else {
+        await requestEmail();
+        await requestTenant();
+      }
+
+      const response = await createTenantSignUp(instance, email, tenantName);
+  
+      tenantSignUp = response;
+    } catch (err) {
+      shell.echo(chalk.red('ERROR\n'));
+      if (err.response?.status === 409) {
+        if(err.response.data.code === 'TENANT_ALREADY_EXISTS') {
+          shell.echo('Tenant already in use.\n');
+          return signUp('tenant');
+        } else if(err.response.data.code === 'EMAIL_ALREADY_EXISTS'){
+          shell.echo('Email already in use.\n');
+          return signUp();
+        }  
+      }
+      shell.echo('Error during sign up process.\n');
+      throw err;
     }
-    shell.echo('Error during sign up process.\n');
+  }
+
+  try {
+    await signUp();
+  } catch(err) {
     return;
   }
 
