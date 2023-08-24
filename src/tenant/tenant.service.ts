@@ -249,7 +249,7 @@ export class TenantService implements OnModuleInit {
           email,
           verificationCode: this.createSignUpVerfificationCode(),
           name,
-          expiresAt: new Date()
+          expiresAt: new Date(),
         },
       });
     } catch (err) {
