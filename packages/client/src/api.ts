@@ -91,31 +91,31 @@ export const createClientFunction = async (
   ).data;
 };
 
-export const createTenantSignUp = async(instance: string, email: string, name = '') => {
+export const createTenantSignUp = async (instance: string, email: string, name = '') => {
   return (
     await axios.post<any, AxiosResponse<SignUpDto>>(`${getInstanceUrl(instance)}/tenants/sign-up`, {
       email,
-      name
+      name,
     }, {
       headers: {
         'Content-Type': 'application/json',
-      }
+      },
     })
   ).data;
-}
+};
 
-export const verifyTenantSignUp = async(instance: string, id: string, code: string) => {
+export const verifyTenantSignUp = async (instance: string, id: string, code: string) => {
   return (
     await axios.post<any, AxiosResponse<SignUpVerificationResultDto>>(`${getInstanceUrl(instance)}/tenants/sign-up/${id}/verify`, {
       code,
     }, {
       headers: {
         'Content-Type': 'application/json',
-      }
+      },
     })
   ).data;
-}
+};
 
 export const resendVerificationCode = (instance: string, id: string) => {
-  return axios.post<any, AxiosResponse<SignUpDto>>(`${getInstanceUrl(instance)}/tenants/sign-up/${id}/resend-verification-code`)
-}
+  return axios.post<any, AxiosResponse<SignUpDto>>(`${getInstanceUrl(instance)}/tenants/sign-up/${id}/resend-verification-code`);
+};

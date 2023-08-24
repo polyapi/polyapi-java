@@ -107,7 +107,7 @@ void yargs
       async ({
         instance = 'local',
       }) => {
-        if(!Object.keys(INSTANCE_URL_MAP).includes(instance)) {
+        if (!Object.keys(INSTANCE_URL_MAP).includes(instance)) {
           yargs.showHelp();
           return;
         }
