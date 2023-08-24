@@ -11,6 +11,7 @@ import { AiModule } from 'ai/ai.module';
 import { AuthModule } from 'auth/auth.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { TriggerModule } from 'trigger/trigger.module';
+import { LimitModule } from 'limit/limit.module';
 
 @Module({
   providers: [WebhookService],
@@ -26,6 +27,7 @@ import { TriggerModule } from 'trigger/trigger.module';
     forwardRef(() => SpecsModule),
     ConfigVariableModule,
     forwardRef(() => TriggerModule),
+    LimitModule,
   ],
   exports: [WebhookService],
 })

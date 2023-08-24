@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpStatus,
   Logger,
@@ -17,18 +18,14 @@ import {
 } from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
-import {
-  AuthTokenDto,
-  CreateAuthProviderDto,
-  ExecuteAuthProviderDto,
-  ExecuteAuthProviderResponseDto,
-  Permission,
-  UpdateAuthProviderDto,
-} from '@poly/model';
+import { AuthTokenDto, CreateAuthProviderDto, ExecuteAuthProviderDto, ExecuteAuthProviderResponseDto, Permission, UpdateAuthProviderDto } from '@poly/model';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { VariableService } from 'variable/variable.service';
+import { LimitService } from 'limit/limit.service';
+import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
+import { StatisticsService } from 'statistics/statistics.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('auth-providers')
@@ -39,6 +36,8 @@ export class AuthProviderController {
     private readonly service: AuthProviderService,
     private readonly authService: AuthService,
     private readonly variableService: VariableService,
+    private readonly limitService: LimitService,
+    private readonly statisticsService: StatisticsService,
   ) {
   }
 
@@ -75,10 +74,15 @@ export class AuthProviderController {
       refreshEnabled = false,
     } = data;
 
+    const functionCount = this.service.getFunctionCount(introspectUrl, revokeUrl, refreshEnabled);
+    if (!await this.limitService.checkTenantFunctionsLimit(req.user.tenant, functionCount)) {
+      this.logger.debug(`Tenant ${req.user.tenant.id} reached its limit of functions while creating auth provider functions.`);
+      throw new ForbiddenException('You have reached your limit of functions.');
+    }
     await this.authService.checkPermissions(req.user, Permission.AuthConfig);
 
     return this.service.toAuthProviderDto(
-      await this.service.createAuthProvider(req.user.environment.id, name, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
+      await this.service.createAuthProvider(req.user.environment, name, context, authorizeUrl, tokenUrl, revokeUrl, introspectUrl, audienceRequired, refreshEnabled),
     );
   }
 
@@ -102,6 +106,17 @@ export class AuthProviderController {
       throw new NotFoundException();
     }
 
+    const currentFunctionCount = this.service.getFunctionCount(authProvider.introspectUrl, authProvider.revokeUrl, authProvider.refreshEnabled);
+    const updatedFunctionCount = this.service.getFunctionCount(
+      introspectUrl === null ? introspectUrl : authProvider.introspectUrl,
+      revokeUrl === null ? revokeUrl : authProvider.revokeUrl,
+      refreshEnabled ?? authProvider.refreshEnabled,
+    );
+    if (updatedFunctionCount > currentFunctionCount && !await this.limitService.checkTenantFunctionsLimit(req.user.tenant, updatedFunctionCount - currentFunctionCount)) {
+      this.logger.debug(`Tenant ${req.user.tenant.id} reached its limit of functions while creating auth provider functions.`);
+      throw new ForbiddenException('You have reached your limit of functions.');
+    }
+
     await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, false, Permission.AuthConfig);
 
     return this.service.toAuthProviderDto(
@@ -121,7 +136,7 @@ export class AuthProviderController {
     await this.service.deleteAuthProvider(authProvider);
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/:id/execute')
   async executeAuthProvider(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: ExecuteAuthProviderDto): Promise<ExecuteAuthProviderResponseDto> {
     const authProvider = await this.service.getAuthProvider(id, true);
@@ -131,6 +146,8 @@ export class AuthProviderController {
 
     await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, true, Permission.Use);
     data = await this.variableService.unwrapVariables(req.user, data);
+
+    await this.statisticsService.trackFunctionCall(req.user, id, 'auth-provider');
 
     const {
       eventsClientId,
@@ -155,7 +172,7 @@ export class AuthProviderController {
     }
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/:id/revoke')
   async revokeToken(@Req() req: AuthRequest, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<void> {
     const authProvider = await this.service.getAuthProvider(id, true);
@@ -169,11 +186,13 @@ export class AuthProviderController {
       throw new BadRequestException(`Auth provider with id ${id} does not support revocation.`);
     }
 
+    await this.statisticsService.trackFunctionCall(req.user, id, 'auth-provider');
+
     const { token } = tokenDto;
     await this.service.revokeAuthToken(authProvider, token);
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/:id/introspect')
   async introspectToken(@Req() req: AuthRequest, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<any> {
     const authProvider = await this.service.getAuthProvider(id, true);
@@ -187,11 +206,13 @@ export class AuthProviderController {
       throw new BadRequestException(`Auth provider with id ${id} does not support introspection.`);
     }
 
+    await this.statisticsService.trackFunctionCall(req.user, id, 'auth-provider');
+
     const { token } = tokenDto;
     return await this.service.introspectAuthToken(authProvider, token);
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/:id/refresh')
   async refreshToken(@Req() req: AuthRequest, @Param('id') id: string, @Body() tokenDto: AuthTokenDto): Promise<any> {
     const authProvider = await this.service.getAuthProvider(id, true);
@@ -204,6 +225,8 @@ export class AuthProviderController {
     if (!authProvider.refreshEnabled) {
       throw new BadRequestException(`Auth provider with id ${id} does not support refresh.`);
     }
+
+    await this.statisticsService.trackFunctionCall(req.user, id, 'auth-provider');
 
     const { token } = tokenDto;
     return await this.service.refreshAuthToken(authProvider, token);

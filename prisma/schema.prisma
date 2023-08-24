@@ -24,6 +24,8 @@ model Tenant {
   applications            Application[]
   publicVisibilityAllowed Boolean          @default(false) @map("public_visibility_allowed")
   configVariables         ConfigVariable[]
+  limitTier               LimitTier?       @relation(fields: [limitTierId], references: [id])
+  limitTierId             String?          @map("limit_tier_id")
 
   @@map("tenant")
 }
@@ -116,25 +118,26 @@ model ApiKey {
 }
 
 model ApiFunction {
-  id                String      @id @default(uuid())
-  createdAt         DateTime    @default(now()) @map("created_at")
-  environment       Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId     String      @map("environment_id")
-  name              String
-  context           String
-  description       String      @default("")
-  payload           String?
-  method            String
-  url               String
-  headers           String?
-  body              String?
-  auth              String?
-  responseType      String?     @map("response_type")
-  argumentsMetadata String?     @map("arguments_metadata")
-  trained           Boolean     @default(false)
-  visibility        String      @default("ENVIRONMENT")
-  graphqlIdentifier String?     @map("graphql_identifier")
-  graphqlIntrospectionResponse String? @map("introspection_response")
+  id                           String      @id @default(uuid())
+  createdAt                    DateTime    @default(now()) @map("created_at")
+  environment                  Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environmentId                String      @map("environment_id")
+  name                         String
+  context                      String
+  description                  String      @default("")
+  payload                      String?
+  method                       String
+  url                          String
+  headers                      String?
+  body                         String?
+  auth                         String?
+  responseType                 String?     @map("response_type")
+  argumentsMetadata            String?     @map("arguments_metadata")
+  trained                      Boolean     @default(false)
+  visibility                   String      @default("ENVIRONMENT")
+  graphqlIdentifier            String?     @map("graphql_identifier")
+  graphqlIntrospectionResponse String?     @map("introspection_response")
+
   @@map("api_function")
 }
 
@@ -277,8 +280,8 @@ model GptPlugin {
   functionIds               String // json array of function publicIds for now
   environment               Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   environmentId             String      @map("environment_id")
-  authType                  String      @map("auth_type") @default("user_http")
-  authToken                 String      @default("")  //
+  authType                  String      @default("user_http") @map("auth_type")
+  authToken                 String      @default("") //
 
   @@unique(fields: [slug, environmentId])
   @@map("gpt_plugin")
@@ -314,6 +317,31 @@ model DocSection {
   title     String   @default("")
   text      String   @default("")
   vector    String   @default("")  // JSON of OpenAI embedding vector of the title+text
+}
+
+model LimitTier {
+  id                  String   @id @default(uuid())
+  name                String   @default("")
+  maxFunctions        Int      @default(0) @map("max_functions")
+  chatQuestionsPerDay Int      @default(0) @map("chat_questions_per_day")
+  functionCallsPerDay Int      @default(0) @map("function_calls_per_day")
+  tenants             Tenant[]
+
+  @@map("limit_tier")
+}
+
+model Statistics {
+  id            String   @id @default(uuid())
+  createdAt     DateTime @default(now()) @map("created_at")
+  type          String
+  apiKey        String   @map("api_key")
+  tenantId      String   @map("tenant_id")
+  environmentId String   @map("environment_id")
+  userId        String?  @map("user_id")
+  applicationId String?  @map("application_id")
+  data          String?
+
+  @@map("statistics")
 }
 
 model TenantSignUp {

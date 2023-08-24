@@ -7,6 +7,7 @@ import Redis, { RedisOptions } from 'ioredis';
 import { CacheModuleOptions } from '@nestjs/cache-manager/dist/interfaces/cache-module.interface';
 import { RedisClientOptions } from 'redis';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from 'auth/auth.module';
 import { UserModule } from 'user/user.module';
 import { FunctionModule } from 'function/function.module';
@@ -31,6 +32,8 @@ import { ConfigService } from 'config/config.service';
 import { MigrationModule } from 'migration/migration.module';
 import { TriggerModule } from 'trigger/trigger.module';
 import { DocsModule } from 'docs/docs.module';
+import { LimitModule } from 'limit/limit.module';
+import { StatisticsModule } from 'statistics/statistics.module';
 
 const isRedisAvailable = async (url: string): Promise<boolean> => {
   const redisOptions: RedisOptions = {
@@ -75,6 +78,7 @@ const logger = new Logger('AppModule');
       inject: [ConfigService],
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     ConfigModule,
     CommonModule,
@@ -98,6 +102,8 @@ const logger = new Logger('AppModule');
     MigrationModule,
     TriggerModule,
     DocsModule,
+    LimitModule,
+    StatisticsModule,
   ],
   exports: [ConfigModule],
 })

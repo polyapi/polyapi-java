@@ -1,3 +1,6 @@
+### 0.3.0
+* Adjusted 'Too many requests' error message.
+
 ### 0.2.50
 * Conversation history based on workspace folder.
 

@@ -172,6 +172,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       });
       uuid = response.data.uuid;
     } catch (error) {
+      console.log('%c ERROR', 'background: yellow; color: black', error);
       this.webView?.webview.postMessage({
         type: 'addMessage',
         data: {

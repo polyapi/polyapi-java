@@ -5,9 +5,18 @@ import { AiModule } from 'ai/ai.module';
 import { UserModule } from 'user/user.module';
 import { AuthModule } from 'auth/auth.module';
 import { PrismaModule } from 'prisma/prisma.module';
+import { LimitModule } from 'limit/limit.module';
+import { StatisticsModule } from 'statistics/statistics.module';
 
 @Module({
-  imports: [AiModule, UserModule, AuthModule, PrismaModule],
+  imports: [
+    AiModule,
+    UserModule,
+    AuthModule,
+    PrismaModule,
+    LimitModule,
+    StatisticsModule,
+  ],
   providers: [ChatService],
   controllers: [ChatController],
 })

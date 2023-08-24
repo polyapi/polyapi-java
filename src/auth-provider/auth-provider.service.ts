@@ -1,28 +1,16 @@
 import crypto from 'crypto';
-import {
-  BadRequestException,
-  ConflictException,
-  forwardRef,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
-import { AuthProvider, AuthToken } from '@prisma/client';
+import { BadRequestException, ConflictException, forwardRef, Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { AuthProvider, AuthToken, Environment } from '@prisma/client';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from 'prisma/prisma.service';
-import {
-  AuthFunctionSpecification,
-  AuthProviderDto,
-  ExecuteAuthProviderResponseDto,
-  PropertySpecification, Visibility, VisibilityQuery,
-} from '@poly/model';
+import { AuthFunctionSpecification, AuthProviderDto, ExecuteAuthProviderResponseDto, PropertySpecification, Visibility, VisibilityQuery } from '@poly/model';
 import { ConfigService } from 'config/config.service';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
 import { SpecsService } from 'specs/specs.service';
 import { CommonService } from 'common/common.service';
+import { LimitService } from 'limit/limit.service';
 
 @Injectable()
 export class AuthProviderService {
@@ -36,6 +24,7 @@ export class AuthProviderService {
     private readonly eventService: EventService,
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
+    private readonly limitService: LimitService,
   ) {
   }
 
@@ -112,7 +101,7 @@ export class AuthProviderService {
   }
 
   async createAuthProvider(
-    environmentId: string,
+    environment: Environment,
     name: string,
     context: string,
     authorizeUrl: string,
@@ -122,11 +111,11 @@ export class AuthProviderService {
     audienceRequired: boolean,
     refreshEnabled: boolean,
   ) {
-    if (!await this.checkContextDuplicates(environmentId, context, !!revokeUrl, !!introspectUrl)) {
+    if (!await this.checkContextDuplicates(environment.id, context, !!revokeUrl, !!introspectUrl)) {
       throw new ConflictException(`Auth functions within context ${context} already exist`);
     }
 
-    this.logger.debug(`Creating auth provider in environment ${environmentId} with context ${context} and authorizeUrl ${authorizeUrl}`);
+    this.logger.debug(`Creating auth provider in environment ${environment.id} with context ${context} and authorizeUrl ${authorizeUrl}`);
     return this.prisma.authProvider.create({
       data: {
         name,
@@ -139,7 +128,7 @@ export class AuthProviderService {
         refreshEnabled,
         environment: {
           connect: {
-            id: environmentId,
+            id: environment.id,
           },
         },
       },
@@ -838,6 +827,10 @@ export class AuthProviderService {
         },
       },
     ].filter(Boolean) as PropertySpecification[];
+  }
+
+  getFunctionCount(introspectUrl: string | null, revokeUrl: string | null, refreshEnabled: boolean): number {
+    return 1 + (introspectUrl ? 1 : 0) + (revokeUrl ? 1 : 0) + (refreshEnabled ? 1 : 0);
   }
 
   private async checkContextDuplicates(environmentId: string, context: string, revokeFunction: boolean, introspectFunction: boolean, excludedIds?: string[]): Promise<boolean> {

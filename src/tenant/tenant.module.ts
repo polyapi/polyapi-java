@@ -8,6 +8,7 @@ import { TeamModule } from 'team/team.module';
 import { AuthModule } from 'auth/auth.module';
 import { ApplicationModule } from 'application/application.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
+import { LimitModule } from 'limit/limit.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
     UserModule,
     forwardRef(() => AuthModule),
     ConfigVariableModule,
+    LimitModule,
   ],
   providers: [TenantService],
   controllers: [TenantController],

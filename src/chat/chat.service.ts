@@ -130,7 +130,7 @@ export class ChatService {
     return parts.join('\n\n');
   }
 
-  async getHistory(userId: string | undefined, perPage = 10, firstMessageDate: Date | null = null, workspaceFolder: string) {
+  async getHistory(userId: string | undefined, perPage = 10, firstMessageDate: Date | null = null, workspaceFolder = '') {
     if (!userId) {
       return [];
     }

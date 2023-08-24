@@ -3,7 +3,9 @@ import {
   Body,
   Controller,
   Delete,
-  Get, Headers,
+  ForbiddenException,
+  Get,
+  Headers,
   Logger,
   NotFoundException,
   Param,
@@ -33,6 +35,10 @@ import {
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { VariableService } from 'variable/variable.service';
+import { LimitService } from 'limit/limit.service';
+import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
+import { Tenant } from '@prisma/client';
+import { StatisticsService } from 'statistics/statistics.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -43,6 +49,8 @@ export class FunctionController {
     private readonly service: FunctionService,
     private readonly authService: AuthService,
     private readonly variableService: VariableService,
+    private readonly limitService: LimitService,
+    private readonly statisticsService: StatisticsService,
   ) {
   }
 
@@ -79,7 +87,7 @@ export class FunctionController {
 
     await this.authService.checkPermissions(req.user, Permission.Teach);
 
-    this.logger.debug(`Creating API function in environment ${environmentId}...`);
+    this.logger.debug(`Creating or updating API function in environment ${environmentId}...`);
     this.logger.debug(
       `name: ${name}, context: ${context}, description: ${description}, payload: ${payload}, response: ${response}, statusCode: ${statusCode}`,
     );
@@ -104,6 +112,7 @@ export class FunctionController {
         templateBody,
         introspectionResponse,
         templateAuth,
+        () => this.checkFunctionsLimit(req.user.tenant, 'training function'),
       ),
     );
   }
@@ -149,7 +158,7 @@ export class FunctionController {
     );
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/api/:id/execute')
   async executeApiFunction(
     @Req() req: AuthRequest,
@@ -163,6 +172,8 @@ export class FunctionController {
 
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, true, Permission.Use);
     data = await this.variableService.unwrapVariables(req.user, data);
+
+    await this.statisticsService.trackFunctionCall(req.user, apiFunction.id, 'api');
 
     return await this.service.executeApiFunction(apiFunction, data, req.user.user?.id, req.user.application?.id);
   }
@@ -196,7 +207,16 @@ export class FunctionController {
 
     try {
       return this.service.customFunctionToDetailsDto(
-        await this.service.createCustomFunction(req.user.environment, context, name, description, code, false, req.user.key),
+        await this.service.createOrUpdateCustomFunction(
+          req.user.environment,
+          context,
+          name,
+          description,
+          code,
+          false,
+          req.user.key,
+          () => this.checkFunctionsLimit(req.user.tenant, 'creating custom client function'),
+        ),
       );
     } catch (e) {
       throw new BadRequestException(e.message);
@@ -264,8 +284,13 @@ export class FunctionController {
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
+    if (!await this.limitService.checkTenantFunctionsLimit(req.user.tenant)) {
+      this.logger.debug(`Tenant ${req.user.tenant.id} reached its limit of functions while creating custom server function.`);
+      throw new ForbiddenException('You have reached your limit of functions.');
+    }
+
     try {
-      const customFunction = await this.service.createCustomFunction(
+      const customFunction = await this.service.createOrUpdateCustomFunction(
         req.user.environment,
         context,
         name,
@@ -273,6 +298,7 @@ export class FunctionController {
         code,
         true,
         req.user.key,
+        () => this.checkFunctionsLimit(req.user.tenant, 'creating custom server function'),
       );
       return this.service.customFunctionToDetailsDto(customFunction);
     } catch (e) {
@@ -327,7 +353,7 @@ export class FunctionController {
     await this.service.deleteCustomFunction(id, req.user.environment);
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/server/:id/execute')
   async executeServerFunction(
     @Req() req: AuthRequest,
@@ -349,6 +375,8 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, true, Permission.Use);
     data = await this.variableService.unwrapVariables(req.user, data);
 
+    await this.statisticsService.trackFunctionCall(req.user, customFunction.id, 'server');
+
     return await this.service.executeServerFunction(customFunction, data, headers, clientId);
   }
 
@@ -360,5 +388,12 @@ export class FunctionController {
         this.logger.debug('All functions are being updated in background...');
       });
     return 'Functions are being updated in background. Please check logs for more details.';
+  }
+
+  private async checkFunctionsLimit(tenant: Tenant, debugMessage: string) {
+    if (!await this.limitService.checkTenantFunctionsLimit(tenant)) {
+      this.logger.debug(`Tenant ${tenant.id} reached its limit of functions while ${debugMessage}.`);
+      throw new ForbiddenException('You have reached your limit of functions.');
+    }
   }
 }

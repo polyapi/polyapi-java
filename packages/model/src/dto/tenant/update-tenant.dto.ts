@@ -8,4 +8,7 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsBoolean()
   publicVisibilityAllowed?: boolean;
+
+  @IsOptional()
+  limitTierId?: string | null;
 }

@@ -33,11 +33,13 @@ import {
   Method,
   PostmanVariableEntry,
   PropertySpecification,
-  PropertyType, Role,
+  PropertyType,
+  Role,
   ServerFunctionSpecification,
   TrainingDataGeneration,
   Variables,
-  Visibility, VisibilityQuery,
+  Visibility,
+  VisibilityQuery,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -51,7 +53,7 @@ import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
-import { uniqBy, mergeWith, omit, isPlainObject, cloneDeep } from 'lodash';
+import { cloneDeep, isPlainObject, mergeWith, omit, uniqBy } from 'lodash';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { VariableService } from 'variable/variable.service';
 import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
@@ -172,6 +174,7 @@ export class FunctionService implements OnModuleInit {
     templateBody: Body,
     introspectionResponse: IntrospectionQuery | null,
     templateAuth?: Auth,
+    checkBeforeCreate: () => Promise<void> = async () => undefined,
   ): Promise<ApiFunction> {
     if (!(statusCode >= HttpStatus.OK && statusCode < HttpStatus.AMBIGUOUS)) {
       throw new BadRequestException(
@@ -261,7 +264,11 @@ export class FunctionService implements OnModuleInit {
       this.logger.debug(`Explicitly retraining function with id ${id}.`);
     }
 
-    const willRetrain = (id === null || id !== 'new') && apiFunction !== null;
+    const updating = (id === null || id !== 'new') && apiFunction !== null;
+    if (!updating) {
+      await checkBeforeCreate();
+    }
+
     const argumentsMetadata = await this.resolveArgumentsMetadata(
       {
         argumentsMetadata: null,
@@ -281,7 +288,7 @@ export class FunctionService implements OnModuleInit {
       this.logger.debug('Creating a new poly function...');
     }
 
-    if (id === null && willRetrain && apiFunction) {
+    if (id === null && updating && apiFunction) {
       this.logger.debug(`Found existing function ${apiFunction.id} for retraining. Updating...`);
     }
 
@@ -289,7 +296,7 @@ export class FunctionService implements OnModuleInit {
       this.logger.debug('Creating new poly function...');
     }
 
-    if ((!name || !context || !description) && !willRetrain) {
+    if ((!name || !context || !description) && !updating) {
       if (await this.isApiFunctionAITrainingEnabled(environment)) {
         try {
           const {
@@ -320,7 +327,7 @@ export class FunctionService implements OnModuleInit {
 
           this.logger.debug(`Setting argument descriptions to arguments metadata from AI: ${JSON.stringify(aiArguments)}...`);
 
-          aiArguments
+          (aiArguments || [])
             .filter((aiArgument) => !argumentsMetadata[aiArgument.name].description)
             .forEach((aiArgument) => {
               argumentsMetadata[aiArgument.name].description = aiArgument.description;
@@ -387,7 +394,7 @@ export class FunctionService implements OnModuleInit {
       graphqlIntrospectionResponse,
     };
 
-    if (apiFunction && willRetrain) {
+    if (apiFunction && updating) {
       return this.prisma.apiFunction.update({
         where: {
           id: apiFunction.id,
@@ -716,7 +723,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  async createCustomFunction(
+  async createOrUpdateCustomFunction(
     environment: Environment,
     context: string,
     name: string,
@@ -724,6 +731,7 @@ export class FunctionService implements OnModuleInit {
     customCode: string,
     serverFunction: boolean,
     apiKey: string,
+    checkBeforeCreate: () => Promise<void> = async () => undefined,
   ): Promise<CustomFunction> {
     const {
       code,
@@ -792,6 +800,8 @@ export class FunctionService implements OnModuleInit {
         await this.faasService.deleteFunction(customFunction.id, environment.tenantId, environment.id);
       }
     } else {
+      await checkBeforeCreate();
+
       this.logger.debug(`Creating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
 
       customFunction = await this.prisma.customFunction.create({
@@ -1150,7 +1160,10 @@ export class FunctionService implements OnModuleInit {
     if (this.isGraphQLBody(parsedBody)) {
       const graphqlVariables = getGraphqlVariables(parsedBody.graphql.query);
 
-      const graphqlFunctionArguments = graphqlVariables.map<FunctionArgument>(graphqlVariableDefinition => ({ ...toArgument(graphqlVariableDefinition.variable.name.value), location: 'body' }));
+      const graphqlFunctionArguments = graphqlVariables.map<FunctionArgument>(graphqlVariableDefinition => ({
+        ...toArgument(graphqlVariableDefinition.variable.name.value),
+        location: 'body',
+      }));
 
       if (apiFunction.graphqlIntrospectionResponse) {
         args.push(...graphqlFunctionArguments);
@@ -1712,7 +1725,7 @@ export class FunctionService implements OnModuleInit {
 
     return {
       description: aiDescription,
-      arguments: aiArguments,
+      arguments: aiArguments || [],
     };
   }
 
@@ -1807,9 +1820,9 @@ export class FunctionService implements OnModuleInit {
     };
 
     const foundArgs: {
-        quoted: boolean,
-        name: string,
-      }[] = [];
+      quoted: boolean,
+      name: string,
+    }[] = [];
 
     const pushFoundArg = (arg: string, quoted: boolean) => {
       foundArgs.push({

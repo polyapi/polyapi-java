@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class SendQuestionDto {
   @IsString()
@@ -13,3 +13,4 @@ export class SendQuestionDto {
   @IsString()
   workspaceFolder: string = '';
 }
+

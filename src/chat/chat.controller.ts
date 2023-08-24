@@ -34,6 +34,8 @@ import { AuthRequest } from 'common/types';
 import { UserService } from 'user/user.service';
 import { AuthService } from 'auth/auth.service';
 import { MessageDto } from '@poly/model';
+import { ChatQuestionsLimitGuard } from 'limit/chat-questions-limit-guard';
+import { StatisticsService } from 'statistics/statistics.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('chat')
@@ -45,6 +47,7 @@ export class ChatController {
     private readonly aiService: AiService,
     private readonly userService: UserService,
     private readonly authService: AuthService,
+    private readonly statisticsService: StatisticsService,
   ) {}
 
   @UseGuards(PolyAuthGuard)
@@ -62,9 +65,9 @@ export class ChatController {
     return this.service.storeMessage(data.message);
   }
 
-  @UseGuards(PolyAuthGuard)
+  @UseGuards(PolyAuthGuard, ChatQuestionsLimitGuard)
   @Sse('/question')
-  public async sendQuestion(@Req() req, @Query() data: SendQuestionDto): Promise<Observable<MessageEvent>> {
+  public async sendQuestion(@Req() req: AuthRequest, @Query() data: SendQuestionDto): Promise<Observable<MessageEvent>> {
     const environmentId = req.user.environment.id;
     const userId = req.user.user?.id || (await this.userService.findAdminUserByEnvironmentId(environmentId))?.id;
 
@@ -80,6 +83,8 @@ export class ChatController {
     if (!message && !uuid) {
       throw new BadRequestException('At least one of `message` or `uuid` must be provided.');
     }
+
+    await this.statisticsService.trackChatQuestion(req.user);
 
     const observable = await this.service.sendQuestion(environmentId, userId, message, uuid, data.workspaceFolder || '');
 

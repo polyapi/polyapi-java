@@ -1,5 +1,5 @@
 const COMMANDS = [
-  'clear', 'c'
+  'clear', 'c',
 ];
 
 (function() {
@@ -33,25 +33,25 @@ const COMMANDS = [
             css: {
               fontSize: 'var(--vscode-font-size)',
               '--tw-prose-body': 'var(--vscode-editor-foreground)',
-                '--tw-prose-headings': 'var(--vscode-editor-foreground)',
-                '--tw-prose-lead': 'var(--vscode-editor-foreground)',
-                '--tw-prose-links': 'var(--vscode-textLink-foreground)',
-                '--tw-prose-bold': 'var(--vscode-editor-foreground)',
-                '--tw-prose-counters': 'var(--vscode-editor-foreground)',
-                '--tw-prose-bullets': 'var(--vscode-editor-foreground)',
-                '--tw-prose-hr': 'var(--vscode-editor-foreground)',
-                '--tw-prose-quotes': 'var(--vscode-editor-foreground)',
-                '--tw-prose-quote-borders': 'var(--vscode-textBlockQuote-border)',
-                '--tw-prose-code': 'var(--vscode-textPreformat-foreground)',
-                '--tw-prose-pre-bg': 'rgb(0 0 0 / 50%)',
-                '--tw-prose-th-borders': 'var(--vscode-editor-foreground)',
-                '--tw-prose-td-borders': 'var(--vscode-editor-foreground)'
-            }
-          }
-        }
-      }
-    }
-  }
+              '--tw-prose-headings': 'var(--vscode-editor-foreground)',
+              '--tw-prose-lead': 'var(--vscode-editor-foreground)',
+              '--tw-prose-links': 'var(--vscode-textLink-foreground)',
+              '--tw-prose-bold': 'var(--vscode-editor-foreground)',
+              '--tw-prose-counters': 'var(--vscode-editor-foreground)',
+              '--tw-prose-bullets': 'var(--vscode-editor-foreground)',
+              '--tw-prose-hr': 'var(--vscode-editor-foreground)',
+              '--tw-prose-quotes': 'var(--vscode-editor-foreground)',
+              '--tw-prose-quote-borders': 'var(--vscode-textBlockQuote-border)',
+              '--tw-prose-code': 'var(--vscode-textPreformat-foreground)',
+              '--tw-prose-pre-bg': 'rgb(0 0 0 / 50%)',
+              '--tw-prose-th-borders': 'var(--vscode-editor-foreground)',
+              '--tw-prose-td-borders': 'var(--vscode-editor-foreground)',
+            },
+          },
+        },
+      },
+    },
+  };
 
   const loadingSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' viewBox='0 0 132 58'><g fill='currentColor' fill-rule='evenodd'><circle class='dot1' cx='25' cy='30' r='13'/><circle class='dot2' cx='65' cy='30' r='13'/><circle class='dot3' cx='105' cy='30' r='13'/></g></svg>`;
   const userSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' viewBox='0 0 24 24'><path stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-miterlimit='10' stroke-width='1.5' d='M18 18.86h-.76c-.8 0-1.56.31-2.12.87l-1.71 1.69c-.78.77-2.05.77-2.83 0l-1.71-1.69c-.56-.56-1.33-.87-2.12-.87H6c-1.66 0-3-1.33-3-2.97V4.98c0-1.64 1.34-2.97 3-2.97h12c1.66 0 3 1.33 3 2.97v10.91c0 1.63-1.34 2.97-3 2.97Z'/><path stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M12 10a2.33 2.33 0 1 0 0-4.66A2.33 2.33 0 0 0 12 10Zm4 5.66c0-1.8-1.79-3.26-4-3.26s-4 1.46-4 3.26'/></svg>`;
@@ -74,7 +74,7 @@ const COMMANDS = [
     const conversationLoadError = document.getElementById('conversation-load-error');
 
     conversationLoadError?.remove();
-  }
+  };
 
   window.addEventListener('message', (event) => {
     const message = event.data;
@@ -113,12 +113,12 @@ const COMMANDS = [
       return `
         <div class='p-4 self-end' ${getCreatedAtAttribute(createdAt)}>
           <h2 class='font-bold mb-3 flex'>${polySvg}<span class='ml-1.5'>Poly</span></h2>
-          <div class="prose prose-headings:font-normal prose-th:font-bold" ${messageId}>
+          <div class='prose prose-headings:font-normal prose-th:font-bold' ${messageId}>
             ${content}            
           </div>
         </div>
       `;
-    }
+    };
 
     const getQuestionWrapper = (message, createdAt = '') => {
       return `
@@ -127,7 +127,7 @@ const COMMANDS = [
         <div class='overflow-y-auto question-box'>${html.escape(message.value)}</div>
       </div>
       `;
-    }
+    };
 
     const convertToHtml = data => {
       switch (data.type) {
@@ -137,13 +137,23 @@ const COMMANDS = [
 
           const goToSettings = `
             <span>
-              Check your credentials <a href="/#" class="go-to-settings">here</a>
+              Check your credentials <a href='/#' class='go-to-settings'>here</a>
             </span>
           `;
 
-          const isCredentialsIssue = data.error?.status === 401 || data.error?.status === 403;
+          const getErrorMessage = () => {
+            switch (data.error?.status) {
+              case 401:
+              case 403:
+                return `${data.value}. ${isCredentialsIssue ? goToSettings : ''}`;
+              case 429:
+                return `You have reached your limit of questions. Try again tomorrow.`;
+              default:
+                return `${data.value}`;
+            }
+          }
 
-          return `<div class='response-text-error'>${data.value}. ${isCredentialsIssue ? goToSettings : ''}</div>`;
+          return `<div class='response-text-error'>${getErrorMessage()}</div>`;
         case 'js':
           return marked.parse(`\`\`\`\n${data.value}\n\`\`\``);
         case 'markdown':
@@ -164,17 +174,17 @@ const COMMANDS = [
     const disableTextarea = () => {
       sendMessageButton.setAttribute('disabled', 'disabled');
       messageInput.setAttribute('data-avoid-send', 'true');
-    }
+    };
 
     const removeLoadingContainer = () => {
       const loadingContainer = document.querySelector('.loading-container');
       loadingContainer?.remove();
-    }
+    };
 
     const enableTextarea = () => {
       sendMessageButton.removeAttribute('disabled');
       messageInput.removeAttribute('data-avoid-send');
-    }
+    };
 
     const getLoadingComponent = (withCancelButton = true) => {
       return `<div class='loading-container p-4 self-end flex justify-between'>
@@ -185,15 +195,15 @@ const COMMANDS = [
           </button>        
         ` : ''}
       </div>`;
-    }
-    
-    let currentObserver = null; 
+    };
+
+    let currentObserver = null;
 
     const observeFirstMessage = (firstChatElement) => {
 
-      console.log('observeFirstMessage: ', firstChatElement)
+      console.log('observeFirstMessage: ', firstChatElement);
 
-      if(!firstChatElement) {
+      if (!firstChatElement) {
         return;
       }
 
@@ -203,7 +213,7 @@ const COMMANDS = [
 
         currentObserver = new IntersectionObserver(([entry]) => {
 
-          if(entry.isIntersecting) {
+          if (entry.isIntersecting) {
             vscode.postMessage({
               type: 'getMoreConversationMessages',
               value: firstChatElement.getAttribute('data-created-at'),
@@ -216,14 +226,14 @@ const COMMANDS = [
           threshold: 1.0,
         });
         currentObserver.observe(firstChatElement.querySelector('h2'));
-      }, 100)
-    }
+      }, 100);
+    };
 
     const focusMessageInput = () => {
-      if(chatFocussed) {
+      if (chatFocussed) {
         messageInput?.focus();
       }
-    }
+    };
 
     switch (message.type) {
       case 'addQuestion': {
@@ -238,25 +248,24 @@ const COMMANDS = [
           cancellable: true,
           prepend: false,
           skipScrollToLastMessage: false,
-        }
-        
-        if(value.prepend) {
+        };
+
+        if (value.prepend) {
           removeConversationLoadError();
         }
 
         disableTextarea();
 
-
         if (!loadingContainer) {
 
-          if(message.value?.prepend) {
+          if (message.value?.prepend) {
             conversationList.innerHTML = `${getLoadingComponent(value.cancellable)}${conversationList.innerHTML}`;
           } else {
             conversationList.innerHTML += getLoadingComponent(value.cancellable);
           }
         }
 
-        if(!value.skipScrollToLastMessage) {
+        if (!value.skipScrollToLastMessage) {
           scrollToLastMessage();
         }
 
@@ -319,13 +328,13 @@ const COMMANDS = [
         break;
       case 'prependConversationHistory':
 
-        if(message.value.type === 'error') {
+        if (message.value.type === 'error') {
           conversationList.innerHTML = `
-            <div id="conversation-load-error" class='response-text-error flex-col flex items-center py-5'>
+            <div id='conversation-load-error' class='response-text-error flex-col flex items-center py-5'>
               <span>
                 Error loading conversation messages.
               </span>
-              <button class="load-conversation-messages mt-4"><span class="text-uppercase p-2 hover:!bg-[var(--vscode-button-hoverBackground)]" style="color: var(--vscode-button-foreground); background-color: var(--vscode-button-background);"><span>Try again</span></span></button>
+              <button class='load-conversation-messages mt-4'><span class='text-uppercase p-2 hover:!bg-[var(--vscode-button-hoverBackground)]' style='color: var(--vscode-button-foreground); background-color: var(--vscode-button-background);'><span>Try again</span></span></button>
             </div>
           ${conversationList.innerHTML}`;
           removeLoadingContainer();
@@ -339,24 +348,26 @@ const COMMANDS = [
         let newMessagesHtmlContent = '';
 
         const lastScrollHeight = document.querySelector('#conversation-list').scrollHeight;
-        
-        for(const message of messages) {
-          if(message.role === 'user') {
-            newMessagesHtmlContent = `${getQuestionWrapper({value: message.content}, message.createdAt)}${newMessagesHtmlContent}`;
+
+        for (const message of messages) {
+          if (message.role === 'user') {
+            newMessagesHtmlContent = `${getQuestionWrapper({ value: message.content }, message.createdAt)}${newMessagesHtmlContent}`;
           }
-          
-          if(message.role === 'assistant') {
-            newMessagesHtmlContent = `${getResponseWrapper([convertToHtml({ value: message.content, type: 'markdown'})], undefined, message.createdAt)}${newMessagesHtmlContent}`
+
+          if (message.role === 'assistant') {
+            newMessagesHtmlContent = `${getResponseWrapper([convertToHtml({
+              value: message.content, type: 'markdown',
+            })], undefined, message.createdAt)}${newMessagesHtmlContent}`;
           }
         }
-        
+
         conversationList.innerHTML = `${newMessagesHtmlContent}${conversationList.innerHTML}`;
 
         const firstMessage = messages[0];
-        
+
         removeLoadingContainer();
 
-        if(firstMessage && !firstLoad) {
+        if (firstMessage && !firstLoad) {
           // Keep scroll in same position.
           setTimeout(() => {
 
@@ -366,18 +377,18 @@ const COMMANDS = [
 
           }, 0);
 
-        }        
+        }
 
         const lastMessage = messages[messages.length - 1];
 
-        if(firstLoad) {
+        if (firstLoad) {
           setTimeout(() => {
             scrollToLastMessage();
           }, 0);
         }
 
-        if(messages.length) {
-          observeFirstMessage(document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`))
+        if (messages.length) {
+          observeFirstMessage(document.querySelector(`div[data-created-at="${lastMessage.createdAt}"]`));
         }
 
         enableTextarea();
@@ -444,8 +455,8 @@ const COMMANDS = [
     const targetButton = e.target.closest('button');
     const linkButton = e.target.closest('a');
 
-    if(linkButton) {
-      if(linkButton.classList?.contains('go-to-settings')) {
+    if (linkButton) {
+      if (linkButton.classList?.contains('go-to-settings')) {
         e.preventDefault();
         vscode.postMessage({
           type: 'goToExtensionSettings',
@@ -471,14 +482,14 @@ const COMMANDS = [
             targetButton.innerHTML = copySvg;
           }, 2000);
         });
-    } else if(targetButton.classList?.contains('load-conversation-messages')) {
+    } else if (targetButton.classList?.contains('load-conversation-messages')) {
       const firstMessageOnChat = document.querySelector('#conversation-list > div[data-created-at]');
 
       removeConversationLoadError();
-      
+
       vscode.postMessage({
         type: 'getMoreConversationMessages',
-        value: firstMessageOnChat ? firstMessageOnChat.getAttribute('data-created-at') : ''
+        value: firstMessageOnChat ? firstMessageOnChat.getAttribute('data-created-at') : '',
       });
     }
   });
@@ -489,6 +500,6 @@ const COMMANDS = [
 
   window.addEventListener('blur', () => {
     chatFocussed = false;
-  })
+  });
 
 })();

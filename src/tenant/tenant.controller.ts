@@ -52,6 +52,7 @@ import { ApplicationService } from 'application/application.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { MergeRequestData } from 'common/decorators';
+import { LimitService } from 'limit/limit.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('tenants')
@@ -64,6 +65,7 @@ export class TenantController {
     private readonly userService: UserService,
     private readonly applicationService: ApplicationService,
     private readonly configVariableService: ConfigVariableService,
+    private readonly limitService: LimitService,
   ) {}
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
@@ -75,8 +77,16 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed } = data;
-    return this.tenantService.toDto(((await this.tenantService.create(name, publicVisibilityAllowed)).tenant));
+    const { name, publicVisibilityAllowed, limitTierId = null } = data;
+
+    if (limitTierId) {
+      const limitTier = await this.limitService.findById(limitTierId);
+      if (!limitTier) {
+        throw new BadRequestException('Limit tier with given id does not exist.');
+      }
+    }
+
+    return this.tenantService.toDto((await this.tenantService.create(name, publicVisibilityAllowed, limitTierId)).tenant);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -97,9 +107,17 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch(':id')
   async updateTenant(@Param('id') id: string, @Body() data: UpdateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed } = data;
+    const { name, publicVisibilityAllowed, limitTierId } = data;
+
+    if (limitTierId) {
+      const limitTier = await this.limitService.findById(limitTierId);
+      if (!limitTier) {
+        throw new BadRequestException('Limit tier with given id does not exist.');
+      }
+    }
+
     return this.tenantService.toDto(
-      await this.tenantService.update(await this.findTenant(id), name, publicVisibilityAllowed),
+      await this.tenantService.update(await this.findTenant(id), name, publicVisibilityAllowed, limitTierId),
     );
   }
 

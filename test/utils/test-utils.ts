@@ -46,6 +46,7 @@ export const mockedAuthData: AuthData = {
     id: 'fbabafff-f506-47fd-8cf3-509d711fcde3',
     name: '',
     publicVisibilityAllowed: true,
+    limitTierId: 'a34b1b9e-0b0a-4b0a-9b0a-0b0a0b0a0b0a',
   },
   key: 'b4d1fd5c-8dc2-45e5-9bf3-047a2bcce2ca',
   application: {

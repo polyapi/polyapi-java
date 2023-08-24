@@ -23,6 +23,7 @@ describe('TenantService', () => {
     name: 'name12345',
     createdAt: new Date(),
     publicVisibilityAllowed: true,
+    limitTierId: 'a34b1b9e-0b0a-4b0a-9b0a-0b0a0b0a0b0a',
   };
 
   let service: TenantService;
@@ -80,6 +81,7 @@ describe('TenantService', () => {
         id: testTenant.id,
         name: testTenant.name,
         publicVisibilityAllowed: testTenant.publicVisibilityAllowed,
+        limitTierId: testTenant.limitTierId,
       });
     });
   });

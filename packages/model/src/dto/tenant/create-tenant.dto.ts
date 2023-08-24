@@ -8,4 +8,8 @@ export class CreateTenantDto {
   @IsOptional()
   @IsBoolean()
   publicVisibilityAllowed?: boolean;
+
+  @IsOptional()
+  @IsNotEmpty()
+  limitTierId?: string;
 }

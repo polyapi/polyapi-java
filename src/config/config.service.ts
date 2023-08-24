@@ -174,4 +174,8 @@ export class ConfigService {
   get knativeTriggerNamespace(): string {
     return this.get('KNATIVE_TRIGGER_NAMESPACE', 'default');
   }
+
+  get statisticsFunctionCallsRetentionDays(): number {
+    return Number(this.get('STATISTICS_FUNCTION_CALLS_RETENTION_DAYS', 7));
+  }
 }

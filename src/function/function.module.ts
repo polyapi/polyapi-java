@@ -10,6 +10,8 @@ import { SpecsModule } from 'specs/specs.module';
 import { AuthModule } from 'auth/auth.module';
 import { VariableModule } from 'variable/variable.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
+import { LimitModule } from 'limit/limit.module';
+import { StatisticsModule } from 'statistics/statistics.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
     forwardRef(() => SpecsModule),
     ConfigVariableModule,
     VariableModule,
+    LimitModule,
+    StatisticsModule,
   ],
   providers: [FunctionService],
   exports: [FunctionService],

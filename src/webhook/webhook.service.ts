@@ -10,7 +10,8 @@ import {
   ConfigVariableName,
   PropertySpecification,
   TrainingDataGeneration,
-  Visibility, VisibilityQuery,
+  Visibility,
+  VisibilityQuery,
   WebhookHandleDto,
   WebhookHandleSpecification,
 } from '@poly/model';
@@ -19,6 +20,7 @@ import { SpecsService } from 'specs/specs.service';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { TriggerService } from 'trigger/trigger.service';
+import { LimitService } from 'limit/limit.service';
 
 @Injectable()
 export class WebhookService {
@@ -36,6 +38,7 @@ export class WebhookService {
     private readonly specsService: SpecsService,
     private readonly configVariableService: ConfigVariableService,
     private readonly triggerService: TriggerService,
+    private readonly limitService: LimitService,
   ) {
   }
 
@@ -104,6 +107,7 @@ export class WebhookService {
     name: string,
     eventPayload: any,
     description: string,
+    checkBeforeCreate: () => Promise<void> = async () => undefined,
   ): Promise<WebhookHandle> {
     this.logger.debug(`Creating webhook handle for ${context}/${name}...`);
     this.logger.debug(`Event payload: ${JSON.stringify(eventPayload)}`);
@@ -161,6 +165,8 @@ export class WebhookService {
         },
       });
     } else {
+      await checkBeforeCreate();
+
       this.logger.debug(`Creating new webhook handle in environment ${environment.id} for ${context}/${name}...`);
 
       return this.prisma.$transaction(
