@@ -32,6 +32,7 @@ model User {
   id                   String                @id @default(uuid())
   createdAt            DateTime              @default(now()) @map("created_at")
   name                 String
+  email                String?               @unique()
   tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId             String                @map("tenant_id")
   role                 String                @default("USER")
@@ -313,4 +314,15 @@ model DocSection {
   title     String   @default("")
   text      String   @default("")
   vector    String   @default("")  // JSON of OpenAI embedding vector of the title+text
+}
+
+model TenantSignUp {
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now()) @map("created_at")
+  email             String   @unique
+  name              String   @default("")
+  verificationCode  String   @map("verification_code")
+  expiresAt         DateTime
+
+  @@map("tenant_sign_up")
 }

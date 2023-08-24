@@ -1,14 +1,15 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { Tenant } from '@prisma/client';
+import { ApiKey, Environment, Team, Tenant, TenantSignUp } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
-import { Role, TenantDto, TenantFullDto } from '@poly/model';
+import { Role, SignUpDto, SignUpVerificationResultDto, TenantDto, TenantFullDto } from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
+import { User } from '@kubernetes/client-node';
 
 type CreateTenantOptions = {
   environmentName?: string;
@@ -16,6 +17,7 @@ type CreateTenantOptions = {
   userName?: string;
   userRole?: Role;
   userApiKey?: string;
+  email?: string;
 }
 
 @Injectable()
@@ -118,8 +120,15 @@ export class TenantService implements OnModuleInit {
     });
   }
 
-  async create(name: string, publicVisibilityAllowed = false, options: CreateTenantOptions = {}): Promise<Tenant> {
-    const { environmentName, teamName, userName, userRole, userApiKey } = options;
+  async create(name: string, publicVisibilityAllowed = false, options: CreateTenantOptions = {}): Promise<{
+    tenant: Tenant & {
+      users: User[];
+      environments: Environment[];
+      teams: Team[];
+    },
+    apiKey: ApiKey
+  }> {
+    const { environmentName, teamName, userName, userRole, userApiKey, email = null } = options;
 
     return this.prisma.$transaction(async tx => {
       const tenant = await tx.tenant.create({
@@ -131,6 +140,7 @@ export class TenantService implements OnModuleInit {
               {
                 name: userName || 'admin',
                 role: userRole || Role.Admin,
+                email,
               },
             ],
           },
@@ -174,7 +184,7 @@ export class TenantService implements OnModuleInit {
       });
 
       // create API key for user
-      await tx.apiKey.create({
+      const apiKey = await tx.apiKey.create({
         data: {
           name: `api-key-${userRole || Role.Admin}`,
           key: userApiKey || crypto.randomUUID(),
@@ -191,7 +201,10 @@ export class TenantService implements OnModuleInit {
         },
       });
 
-      return tenant;
+      return {
+        tenant,
+        apiKey,
+      };
     });
   }
 
@@ -214,6 +227,105 @@ export class TenantService implements OnModuleInit {
       where: {
         id: tenantId,
       },
+    });
+  }
+
+  toSignUpDto(tenantSignUp: TenantSignUp): SignUpDto {
+    return {
+      id: tenantSignUp.id,
+      email: tenantSignUp.email,
+      name: tenantSignUp.name,
+    };
+  }
+
+  private createSignUpVerfificationCode() {
+    return Math.random().toString(36).slice(2, 8);
+  }
+
+  private async createSignUpRecord(email: string, name: string) {
+    try {
+      return await this.prisma.tenantSignUp.create({
+        data: {
+          email,
+          verificationCode: this.createSignUpVerfificationCode(),
+          name,
+          expiresAt: new Date()
+        },
+      });
+    } catch (err) {
+      // Verification code collision.
+      if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verificationCode')) {
+        return await this.createSignUpRecord(email, name);
+      }
+      throw err;
+    }
+  }
+
+  async signUp(email: string, name: string) {
+    const [user, tenantSignUp] = await Promise.all([
+      this.prisma.user.findFirst({
+        where: {
+          email,
+        },
+      }),
+      this.prisma.tenantSignUp.findFirst({
+        where: {
+          email,
+        },
+      }),
+    ]);
+
+    if (tenantSignUp) {
+      return tenantSignUp;
+    }
+
+    if (user) {
+      throw new ConflictException('Email already exists.');
+    }
+
+    return this.createSignUpRecord(email, name);
+  }
+
+  async signUpVerify(id: string, code: string): Promise<SignUpVerificationResultDto> {
+    const tenantSignUp = await this.prisma.tenantSignUp.findFirst({
+      where: {
+        id,
+        verificationCode: code.toLowerCase(),
+      },
+    });
+
+    if (!tenantSignUp) {
+      throw new ConflictException('Invalid verification code.');
+    }
+
+    const {
+      apiKey,
+    } = await this.create(tenantSignUp.name, false, { email: tenantSignUp.email });
+
+    await this.prisma.tenantSignUp.delete({
+      where: {
+        id,
+      },
+    });
+
+    return {
+      apiKey: apiKey.key,
+      apiBaseUrl: this.config.hostUrl,
+    };
+  }
+
+  async resendVerificationCode(id: string) {
+    await this.prisma.$transaction(async tx => {
+      await tx.tenantSignUp.update({
+        where: {
+          id,
+        },
+        data: {
+          verificationCode: this.createSignUpVerfificationCode(),
+        },
+      });
+
+      // Send code through email service.
     });
   }
 

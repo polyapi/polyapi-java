@@ -40,6 +40,8 @@ import {
   UpdateUserDto,
   UserDto,
   SetConfigVariableDto,
+  CreateSignUpDto,
+  SignUpVerificationDto,
 } from '@poly/model';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
@@ -74,7 +76,7 @@ export class TenantController {
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
     const { name, publicVisibilityAllowed } = data;
-    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed));
+    return this.tenantService.toDto(((await this.tenantService.create(name, publicVisibilityAllowed)).tenant));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -649,6 +651,28 @@ export class TenantController {
     await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
 
     await this.applicationService.delete(application.id);
+  }
+
+  @Post('/sign-up')
+  async signUp(
+    @Body() data: CreateSignUpDto,
+  ) {
+    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, data.name || ''));
+  }
+
+  @Post('/sign-up/:id/verify')
+  async signUpVerify(
+    @Param('id') id: string,
+    @Body() data: SignUpVerificationDto,
+  ) {
+    return this.tenantService.signUpVerify(id, data.code);
+  }
+
+  @Post('/sign-up/:id/resend-verification-code')
+  async signUpResendVerificationCode(
+    @Param('id') id: string,
+  ) {
+    await this.tenantService.resendVerificationCode(id);
   }
 
   private async findTenant(id: string) {
