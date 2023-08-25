@@ -165,7 +165,7 @@ export class TenantService implements OnModuleInit {
     return Math.random().toString(36).slice(2, 8);
   }
 
-  private async createSignUpRecord(email: string, name: string): Promise<TenantSignUp> {
+  private async createSignUpRecord(email: string, name: string | null): Promise<TenantSignUp> {
     const verificationCode = this.createSignUpVerfificationCode();
 
     const result = await this.prisma.$transaction(async tx => {
@@ -198,7 +198,7 @@ export class TenantService implements OnModuleInit {
     return result;
   }
 
-  async signUp(email: string, tenantName: string) {
+  async signUp(email: string, tenantName: string | null) {
     const [user, tenantSignUp, tenant] = await Promise.all([
       this.prisma.user.findFirst({
         where: {
@@ -317,6 +317,7 @@ export class TenantService implements OnModuleInit {
           },
           data: {
             verificationCode,
+            expiresAt: getEndOfDay(),
           },
         });
         await this.emailService.send(this.config.signUpEmail, 'Your Poly verification code', `Your verification code is: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
@@ -374,7 +375,7 @@ export class TenantService implements OnModuleInit {
     }
   }
 
-  private async createTenantRecord(tx: PrismaTransaction, name: string, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
+  private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
     tenant: Tenant,
     apiKey: ApiKey
   }> {

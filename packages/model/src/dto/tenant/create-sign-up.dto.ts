@@ -8,5 +8,5 @@ export class CreateSignUpDto {
     @IsString()
     @IsOptional()
     @IsNotEmpty()
-    tenantName: string;
+    tenantName?: string;
 }

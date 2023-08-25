@@ -19,24 +19,24 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
   } | null = null;
 
   let email = '';
-  let tenantName = '';
+  let tenantName: string | null = null;
 
   const requestEmail = async () => {
     const { email: result } = await inquirer.prompt([
       {
         type: 'input',
         name: 'email',
-        message: 'Please, enter your email:',
+        message: 'Enter your email:',
         filter: (value) => value.trim(),
         validate: (email) => {
           if (typeof email !== 'string' || !isEmail(email)) {
-            return 'Given email is not valid. Please enter a valid email.';
+            return 'Given email is not valid. Enter a valid email.';
           }
           return true;
         },
       },
     ]);
-    
+
     email = result;
   };
 
@@ -45,20 +45,16 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       {
         type: 'input',
         name: 'tenantName',
-        message: 'Please, enter your tenant name:',
+        message: 'Enter your desired tenant name (optional):',
         filter: (value) => value.trim(),
       },
     ]);
 
-    tenantName = result;
-  }
-
-
-  shell.echo('-n', chalk.rgb(255, 255, 255)('\n\nChecking email...\n\n'));
+    tenantName = result || null;
+  };
 
   const signUp = async (data : 'tenant' | '' = '') => {
     try {
-
       if (data === 'tenant') {
         await requestTenant();
       } else {
@@ -66,34 +62,36 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
         await requestTenant();
       }
 
+      shell.echo('-n', chalk.rgb(255, 255, 255)('\n\nChecking email and tenant name...\n\n'));
+
       const response = await createTenantSignUp(instance, email, tenantName);
-  
+
       tenantSignUp = response;
     } catch (err) {
       shell.echo(chalk.red('ERROR\n'));
       if (err.response?.status === 409) {
-        if(err.response.data.code === 'TENANT_ALREADY_EXISTS') {
+        if (err.response.data.code === 'TENANT_ALREADY_EXISTS') {
           shell.echo('Tenant already in use.\n');
           return signUp('tenant');
-        } else if(err.response.data.code === 'EMAIL_ALREADY_EXISTS'){
+        } else if (err.response.data.code === 'EMAIL_ALREADY_EXISTS') {
           shell.echo('Email already in use.\n');
           return signUp();
-        }  
+        }
       }
       shell.echo('Error during sign up process.\n');
       throw err;
     }
-  }
+  };
 
   try {
     await signUp();
-  } catch(err) {
+  } catch (err) {
     return;
   }
 
   const verifyTenant = async (showDescription = true) => {
     if (showDescription) {
-      shell.echo('A verification code has been sent to your email address', chalk.bold(`(${tenantSignUp.email}),`), 'please check your email and enter your verification code. \nIf you didn\'t receive your verification code you can enter "resend" to send it again\n');
+      shell.echo('A verification code has been sent to your email address', chalk.bold(`(${tenantSignUp.email}),`), 'check your email and enter your verification code. \nIf you didn\'t receive your verification code you can enter', chalk.bold('resend'), 'to send it again\n');
     }
 
     const { code } = await inquirer.prompt([
@@ -120,14 +118,14 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       return verifyTenant(false);
     }
 
-    shell.echo('-n', chalk.rgb(255, 255, 255)('Verifying your tenant...\n\n'));
+    shell.echo('-n', chalk.rgb(255, 255, 255)('Verifying your code...\n\n'));
 
     try {
       const response = await verifyTenantSignUp(instance, tenantSignUp.id, code);
 
       shell.echo(chalk.green('Tenant created sucesfully, details:\n'));
       shell.echo(chalk.bold('Instance url:'), response.apiBaseUrl, '\n');
-      shell.echo(chalk.bold('Api key:'), response.apiKey, '\n');
+      shell.echo(chalk.bold('Admin polyApiKey:'), response.apiKey, '\n');
 
       credentials = {
         apiBaseUrl: response.apiBaseUrl,
@@ -137,11 +135,11 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       shell.echo(chalk.red('ERROR\n'));
       if (err.response?.status === 409) {
         if (err.response?.data?.code === 'INVALID_VERIFICATION_CODE') {
-          shell.echo('Wrong verification code.\n');
+          shell.echo('Wrong verification code. If you didn\'t receive your verification code, you can type', chalk.bold('resend'), 'to send a new one.');
         }
 
         if (err.response?.data?.code === 'EXPIRED_VERIFICATION_CODE') {
-          shell.echo('Verification code is expired.\n');
+          shell.echo('Verification code has expired.\n');
           return verifyTenant();
         }
 
@@ -185,4 +183,4 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
   }
 };
 
-//TODO: resend  rate limiting.
+// TODO: resend  rate limiting.

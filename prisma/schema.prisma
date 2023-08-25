@@ -17,7 +17,7 @@ datasource db {
 model Tenant {
   id                      String           @id @default(uuid())
   createdAt               DateTime         @default(now()) @map("created_at")
-  name                    String
+  name                    String?           @unique
   users                   User[]
   teams                   Team[]
   environments            Environment[]
@@ -348,7 +348,7 @@ model TenantSignUp {
   id                String   @id @default(uuid())
   createdAt         DateTime @default(now()) @map("created_at")
   email             String   @unique
-  name              String   @default("")
+  name              String?  @unique
   verificationCode  String   @unique @map("verification_code")
   expiresAt         DateTime
 

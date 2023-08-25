@@ -25,7 +25,7 @@ export enum Visibility {
 
 export interface VisibilityMetadata {
   visibility: Visibility;
-  foreignTenantName?: string;
+  foreignTenantName?: string | null;
 }
 
 export interface VisibilityQuery {

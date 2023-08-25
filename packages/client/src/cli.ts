@@ -105,7 +105,7 @@ void yargs
         },
       },
       async ({
-        instance = 'local',
+        instance = 'na1',
       }) => {
         if (!Object.keys(INSTANCE_URL_MAP).includes(instance)) {
           yargs.showHelp();

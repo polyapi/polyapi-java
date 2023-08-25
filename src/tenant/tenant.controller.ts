@@ -687,7 +687,7 @@ export class TenantController {
   async signUp(
     @Body() data: CreateSignUpDto,
   ) {
-    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, data.tenantName || ''));
+    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, data.tenantName || null));
   }
 
   @Post('/sign-up/:id/verify')
