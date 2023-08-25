@@ -21,4 +21,7 @@ CREATE TABLE "tenant_sign_up" (
 CREATE UNIQUE INDEX "tenant_sign_up_email_key" ON "tenant_sign_up"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "tenant_sign_up_verification_code_key" ON "tenant_sign_up"("verification_code");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");

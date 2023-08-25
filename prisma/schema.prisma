@@ -34,7 +34,7 @@ model User {
   id                   String                @id @default(uuid())
   createdAt            DateTime              @default(now()) @map("created_at")
   name                 String
-  email                String?               @unique()
+  email                String?               @unique
   tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId             String                @map("tenant_id")
   role                 String                @default("USER")
@@ -349,7 +349,7 @@ model TenantSignUp {
   createdAt         DateTime @default(now()) @map("created_at")
   email             String   @unique
   name              String   @default("")
-  verificationCode  String   @map("verification_code")
+  verificationCode  String   @unique @map("verification_code")
   expiresAt         DateTime
 
   @@map("tenant_sign_up")

@@ -34,6 +34,7 @@ import { TriggerModule } from 'trigger/trigger.module';
 import { DocsModule } from 'docs/docs.module';
 import { LimitModule } from 'limit/limit.module';
 import { StatisticsModule } from 'statistics/statistics.module';
+import { EmailModule } from 'email/email.module';
 
 const isRedisAvailable = async (url: string): Promise<boolean> => {
   const redisOptions: RedisOptions = {
@@ -104,6 +105,7 @@ const logger = new Logger('AppModule');
     DocsModule,
     LimitModule,
     StatisticsModule,
+    EmailModule,
   ],
   exports: [ConfigModule],
 })
