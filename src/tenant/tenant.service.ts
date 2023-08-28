@@ -181,7 +181,7 @@ export class TenantService implements OnModuleInit {
   }
 
   async signUp(email: string, tenantName: string | null) {
-    const [user, tenantSignUp, tenant] = await Promise.all([
+    const [user, tenantSignUp, foundTenantSignUpByName, tenant] = await Promise.all([
       this.prisma.user.findFirst({
         where: {
           email,
@@ -193,6 +193,13 @@ export class TenantService implements OnModuleInit {
         },
       }),
       tenantName
+        ? this.prisma.tenantSignUp.findFirst({
+          where: {
+            name: tenantName,
+          },
+        })
+        : null,
+      tenantName
         ? this.prisma.tenant.findFirst({
           where: {
             name: tenantName,
@@ -200,6 +207,18 @@ export class TenantService implements OnModuleInit {
         })
         : null,
     ]);
+
+    if (foundTenantSignUpByName || tenant) {
+      throw new ConflictException({
+        code: 'TENANT_ALREADY_EXISTS',
+      });
+    }
+
+    if (user) {
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_EXISTS',
+      });
+    }
 
     if (tenantSignUp) {
       if (tenantSignUp.expiresAt < new Date()) {
@@ -213,18 +232,6 @@ export class TenantService implements OnModuleInit {
         data: {
           name: tenantName || undefined,
         },
-      });
-    }
-
-    if (user) {
-      throw new ConflictException({
-        code: 'EMAIL_ALREADY_EXISTS',
-      });
-    }
-
-    if (tenant) {
-      throw new ConflictException({
-        code: 'TENANT_ALREADY_EXISTS',
       });
     }
 
