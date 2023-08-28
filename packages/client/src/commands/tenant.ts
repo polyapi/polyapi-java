@@ -1,8 +1,8 @@
 import shell from 'shelljs';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { createTenantSignUp, resendVerificationCode, verifyTenantSignUp } from '../api';
-import { SignUpDto } from '../../../model/src/dto';
+import { createTenantSignUp, getLastTos, resendVerificationCode, verifyTenantSignUp } from '../api';
+import { SignUpDto, TosDto } from '../../../model/src/dto';
 import { saveConfig } from '../config';
 import { exec as execCommand } from 'child_process';
 import { promisify } from 'util';
@@ -11,6 +11,16 @@ import isEmail from 'validator/lib/isEmail';
 const exec = promisify(execCommand);
 
 export const create = async (instance: string, loadedTenantSignUp = null) => {
+  let tos: TosDto | null = null;
+
+  try {
+    tos = await getLastTos(instance);
+  } catch (error) {
+    shell.echo(chalk.red('ERROR\n'));
+    console.log(error.message);
+    return;
+  }
+
   let tenantSignUp: SignUpDto | null = loadedTenantSignUp;
 
   let credentials: {
@@ -60,6 +70,19 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       } else {
         await requestEmail();
         await requestTenant();
+        const {
+          acceptedTos,
+        } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'acceptedTos',
+            message: 'Do you agree with terms and service expressed in https://https://polyapi.io',
+          },
+        ]);
+
+        if (!acceptedTos) {
+          return false;
+        }
       }
 
       shell.echo('-n', chalk.rgb(255, 255, 255)('\n\nChecking email and tenant name...\n\n'));
@@ -67,25 +90,30 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       const response = await createTenantSignUp(instance, email, tenantName);
 
       tenantSignUp = response;
-    } catch (err) {
+    } catch (error) {
       shell.echo(chalk.red('ERROR\n'));
-      if (err.response?.status === 409) {
-        if (err.response.data.code === 'TENANT_ALREADY_EXISTS') {
+      if (error.response?.status === 409) {
+        if (error.response.data.code === 'TENANT_ALREADY_EXISTS') {
           shell.echo('Tenant already in use.\n');
           return signUp('tenant');
-        } else if (err.response.data.code === 'EMAIL_ALREADY_EXISTS') {
+        } else if (error.response.data.code === 'EMAIL_ALREADY_EXISTS') {
           shell.echo('Email already in use.\n');
           return signUp();
         }
       }
       shell.echo('Error during sign up process.\n');
-      throw err;
+      throw error;
     }
+
+    return true;
   };
 
   try {
-    await signUp();
+    if (!await signUp()) {
+      return;
+    };
   } catch (err) {
+    console.log(err.message);
     return;
   }
 
@@ -109,10 +137,10 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
         shell.echo('\n\nResending your verification code...\n');
 
         await resendVerificationCode(instance, tenantSignUp.id);
-      } catch (err) {
+      } catch (error) {
         shell.echo(chalk.red('ERROR\n'));
         shell.echo('Error sending verification code to', `${chalk.bold(tenantSignUp.email)}.`, '\n');
-        throw err;
+        throw error;
       }
 
       return verifyTenant(false);
@@ -121,7 +149,7 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
     shell.echo('-n', chalk.rgb(255, 255, 255)('Verifying your code...\n\n'));
 
     try {
-      const response = await verifyTenantSignUp(instance, tenantSignUp.id, code);
+      const response = await verifyTenantSignUp(instance, tenantSignUp.id, code, tos.id);
 
       shell.echo(chalk.green('Tenant created sucesfully, details:\n'));
       shell.echo(chalk.bold('Instance url:'), response.apiBaseUrl, '\n');
@@ -131,29 +159,34 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
         apiBaseUrl: response.apiBaseUrl,
         apiKey: response.apiKey,
       };
-    } catch (err) {
+    } catch (error) {
       shell.echo(chalk.red('ERROR\n'));
-      if (err.response?.status === 409) {
-        if (err.response?.data?.code === 'INVALID_VERIFICATION_CODE') {
+      if (error.response?.status === 409) {
+        if (error.response?.data?.code === 'INVALID_VERIFICATION_CODE') {
           shell.echo('Wrong verification code. If you didn\'t receive your verification code, you can type', chalk.bold('resend'), 'to send a new one.');
         }
 
-        if (err.response?.data?.code === 'EXPIRED_VERIFICATION_CODE') {
+        if (error.response?.data?.code === 'EXPIRED_VERIFICATION_CODE') {
           shell.echo('Verification code has expired.\n');
           return verifyTenant();
         }
 
-        return verifyTenant(false);
+        return verifyTenant();
       }
 
       shell.echo('Error during sign up process.\n');
-      throw err;
+      throw error;
     }
+
+    return true;
   };
 
   try {
-    await verifyTenant();
-  } catch (err) {
+    if (!await verifyTenant()) {
+      return;
+    }
+  } catch (error) {
+    console.log(error.message);
     return;
   }
 
@@ -176,11 +209,9 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
       await exec('npx poly generate');
 
       shell.echo(chalk.green('Poly client library generated.'));
-    } catch (err) {
+    } catch (error) {
       shell.echo(chalk.red('ERROR\n'));
       shell.echo('Error generating your poly client library.');
     }
   }
 };
-
-// TODO: resend  rate limiting.
