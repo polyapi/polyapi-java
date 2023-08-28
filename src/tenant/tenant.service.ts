@@ -271,7 +271,7 @@ export class TenantService implements OnModuleInit {
         },
       });
 
-      await this.emailService.send(this.config.signUpEmail, tenantSignUp.email, `Your api key is: ${apiKey.key}. Your tenant id is ${tenant.id}. Your api base url is: ${this.config.hostUrl}`, tenantSignUp.email);
+      await this.emailService.send(this.config.signUpEmail, 'Poly API Tenant Information', `URL: ${this.config.hostUrl}\nPoly Api Key: ${apiKey.key}\nTenant ID: ${tenant.id}`, tenantSignUp.email);
 
       return {
         apiKey: apiKey.key,
@@ -522,6 +522,6 @@ export class TenantService implements OnModuleInit {
   }
 
   private sendSignUpVerificationCode(verificationCode: string, tenantSignUp: TenantSignUp) {
-    return this.emailService.send(this.config.signUpEmail, 'Your Poly verification code', `Your verification code is: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
+    return this.emailService.send(this.config.signUpEmail, 'Poly API Verification Code', `Verification Code: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
   }
 }

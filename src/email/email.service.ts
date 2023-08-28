@@ -16,6 +16,5 @@ export class EmailService {
     this.logger.debug(`Sending email with values: "fromEmail": "${fromEmail}", "subject": "${subject}", "text": "${text}", "to": "${to}"`);
 
     return this.emailServiceProvider.send(fromEmail, subject, text, to);
-
   }
 }
