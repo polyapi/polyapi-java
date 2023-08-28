@@ -13,10 +13,9 @@ export class EmailService {
   }
 
   async send(fromEmail: string, subject: string, text: string, to: string) {
-    const response = await this.emailServiceProvider.send(fromEmail, subject, text, to);
+    this.logger.debug(`Sending email with values: "fromEmail": "${fromEmail}", "subject": "${subject}", "text": "${text}", "to": "${to}"`);
 
-    this.logger.debug(`Email sent with values: "fromEmail": "${fromEmail}", "subject": "${subject}", "text": "${text}", "to": "${to}"`);
+    return this.emailServiceProvider.send(fromEmail, subject, text, to);
 
-    this.logger.debug('Email provider response', response);
   }
 }
