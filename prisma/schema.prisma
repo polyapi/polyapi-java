@@ -26,7 +26,7 @@ model Tenant {
   configVariables         ConfigVariable[]
   limitTier               LimitTier?       @relation(fields: [limitTierId], references: [id])
   limitTierId             String?          @map("limit_tier_id")
-
+  agreements              TenantAgreement[]
   @@map("tenant")
 }
 
@@ -353,4 +353,28 @@ model TenantSignUp {
   expiresAt         DateTime
 
   @@map("tenant_sign_up")
+}
+
+model Tos {
+  id          String @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  content     String
+  version     String   @unique
+  agreements  TenantAgreement[]
+
+  @@map("tos")
+}
+
+model TenantAgreement {
+  id          String @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  notes       String?
+  agreedAt    DateTime @default(now()) @map("agreed_at")
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId    String @map("tenant_id")
+  tos         Tos @relation(fields: [tosId], references: [id], onDelete: Cascade)
+  tosId       String @map("tos_id")
+  email       String
+
+  @@map("tenant_agreement")
 }

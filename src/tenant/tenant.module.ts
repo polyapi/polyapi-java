@@ -10,6 +10,7 @@ import { ApplicationModule } from 'application/application.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { LimitModule } from 'limit/limit.module';
 import { EmailModule } from 'email/email.module';
+import { TosModule } from 'tos/tos.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { EmailModule } from 'email/email.module';
     ConfigVariableModule,
     LimitModule,
     EmailModule,
+    TosModule,
   ],
   providers: [TenantService],
   controllers: [TenantController],

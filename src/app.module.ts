@@ -35,6 +35,9 @@ import { DocsModule } from 'docs/docs.module';
 import { LimitModule } from 'limit/limit.module';
 import { StatisticsModule } from 'statistics/statistics.module';
 import { EmailModule } from 'email/email.module';
+import { TosController } from './tos/tos.controller';
+import { TosService } from './tos/tos.service';
+import { TosModule } from './tos/tos.module';
 
 const isRedisAvailable = async (url: string): Promise<boolean> => {
   const redisOptions: RedisOptions = {
@@ -106,8 +109,11 @@ const logger = new Logger('AppModule');
     LimitModule,
     StatisticsModule,
     EmailModule,
+    TosModule,
   ],
   exports: [ConfigModule],
+  controllers: [TosController],
+  providers: [TosService],
 })
 export class AppModule {
   constructor(@Inject(CACHE_MANAGER) cacheManager: Cache & { store: any }) {

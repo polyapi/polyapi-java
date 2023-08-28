@@ -1,11 +1,11 @@
 import { ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
-import { ApiKey, Tenant, TenantSignUp } from '@prisma/client';
+import { ApiKey, Tenant, TenantAgreement, TenantSignUp, Tos } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
-import { Role, SignUpDto, SignUpVerificationResultDto, TenantDto, TenantFullDto } from '@poly/model';
+import { Role, SignUpDto, SignUpVerificationResultDto, TenantAgreementDto, TenantDto, TenantFullDto } from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
@@ -161,41 +161,19 @@ export class TenantService implements OnModuleInit {
     };
   }
 
-  private createSignUpVerfificationCode() {
-    return Math.random().toString(36).slice(2, 8);
+  // crear tenant agreement dto
+  toTenantAgreementDto(tenantAgreement: TenantAgreement & { tos: Tos }): TenantAgreementDto {
+    return {
+      tosId: tenantAgreement.tos.id,
+      agreedAt: tenantAgreement.agreedAt,
+      email: tenantAgreement.email,
+      version: tenantAgreement.tos.version,
+      notes: tenantAgreement.notes || '',
+    };
   }
 
-  private async createSignUpRecord(email: string, name: string | null): Promise<TenantSignUp> {
-    const verificationCode = this.createSignUpVerfificationCode();
-
-    const result = await this.prisma.$transaction(async tx => {
-      try {
-        const tenantSignUp = await tx.tenantSignUp.create({
-          data: {
-            email,
-            verificationCode,
-            name,
-            expiresAt: getEndOfDay(),
-          },
-        });
-
-        await this.emailService.send(this.config.signUpEmail, 'Your Poly verification code', `Your verification code is: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
-
-        return tenantSignUp;
-      } catch (err) {
-        // Verification code collision.
-        if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verification_code')) {
-          return false;
-        }
-        throw err;
-      }
-    });
-
-    if (!result) {
-      return this.createSignUpRecord(email, name);
-    }
-
-    return result;
+  private createSignUpVerfificationCode() {
+    return Math.random().toString(36).slice(2, 8);
   }
 
   async signUp(email: string, tenantName: string | null) {
@@ -221,19 +199,17 @@ export class TenantService implements OnModuleInit {
 
     if (tenantSignUp) {
       if (tenantSignUp.expiresAt < new Date()) {
-        // Update and send new verification code.
-
-        return this.prisma.tenantSignUp.update({
-          where: {
-            id: tenantSignUp.id,
-          },
-          data: {
-            expiresAt: getEndOfDay(),
-          },
-        });
+        return this.updateAndResendVerificationCode(tenantSignUp.id, tenantName);
       }
 
-      return tenantSignUp;
+      return this.prisma.tenantSignUp.update({
+        where: {
+          id: tenantSignUp.id,
+        },
+        data: {
+          name: tenantName || undefined,
+        },
+      });
     }
 
     if (user) {
@@ -251,7 +227,7 @@ export class TenantService implements OnModuleInit {
     return this.createSignUpRecord(email, tenantName);
   }
 
-  async signUpVerify(id: string, code: string): Promise<SignUpVerificationResultDto> {
+  async signUpVerify(id: string, code: string, tosId: string): Promise<SignUpVerificationResultDto> {
     const [tenantSignUp, tier] = await Promise.all([
       this.prisma.tenantSignUp.findFirst({
         where: {
@@ -271,7 +247,7 @@ export class TenantService implements OnModuleInit {
     }
 
     if (tenantSignUp.expiresAt < new Date()) {
-      await this.resendVerificationCode(id);
+      await this.updateAndResendVerificationCode(id);
       throw new ConflictException({ code: 'EXPIRED_VERIFICATION_CODE' });
     }
 
@@ -281,65 +257,63 @@ export class TenantService implements OnModuleInit {
         tenant,
       } = await this.createTenantRecord(tx, tenantSignUp.name, false, tier?.id, { email: tenantSignUp.email });
 
+      await tx.tenantAgreement.create({
+        data: {
+          tosId,
+          email: tenantSignUp.email,
+          tenantId: tenant.id,
+        },
+      });
+
       await tx.tenantSignUp.delete({
         where: {
           id,
         },
       });
 
-      await this.emailService.send(this.config.signUpEmail, tenantSignUp.email, `Your api key is: ${apiKey.key}. Your tenant id is ${tenant.id}`, tenantSignUp.email);
+      await this.emailService.send(this.config.signUpEmail, tenantSignUp.email, `Your api key is: ${apiKey.key}. Your tenant id is ${tenant.id}. Your api base url is: ${this.config.hostUrl}`, tenantSignUp.email);
 
       return {
         apiKey: apiKey.key,
         apiBaseUrl: this.config.hostUrl,
+        tenantId: tenant.id,
       };
     });
   }
 
   async resendVerificationCode(id: string) {
-    const result = await this.prisma.$transaction(async tx => {
-      const tenantSignUp = await tx.tenantSignUp.findFirst({
-        where: {
-          id,
-        },
-      });
-
-      if (!tenantSignUp) {
-        throw new NotFoundException('Tenant sign up not found.');
-      }
-
-      const verificationCode = this.createSignUpVerfificationCode();
-
-      try {
-        await tx.tenantSignUp.update({
-          where: {
-            id,
-          },
-          data: {
-            verificationCode,
-            expiresAt: getEndOfDay(),
-          },
-        });
-        await this.emailService.send(this.config.signUpEmail, 'Your Poly verification code', `Your verification code is: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
-
-        return true;
-      } catch (err) {
-        if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verification_code')) {
-          return false;
-        }
-        throw err;
-      }
-    });
-
-    if (!result) {
-      return this.resendVerificationCode(id);
-    }
+    return this.updateAndResendVerificationCode(id);
   }
 
-  private async findByName(name: string): Promise<Tenant | null> {
-    return this.prisma.tenant.findFirst({
+  async getTenantAgreements(tenantId: string) {
+    const agreements = await this.prisma.tenantAgreement.findMany({
       where: {
-        name,
+        tenantId,
+      },
+      include: {
+        tos: true,
+      },
+      orderBy: [
+        {
+          agreedAt: 'desc',
+        },
+      ],
+    });
+
+    return agreements;
+  }
+
+  async createTenantAgreement(tenantId: string, tosId: string, email: string, agreedAt?: Date, notes?: string) {
+    return this.prisma.tenantAgreement.create({
+      data: {
+        tosId,
+        tenantId,
+        agreedAt: agreedAt ?? new Date(),
+        notes,
+        email,
+      },
+      include: {
+        tos: true,
       },
     });
   }
@@ -360,9 +334,12 @@ export class TenantService implements OnModuleInit {
       ]);
 
       if (user || tenantSignUp) {
-        throw new ConflictException('Email already exists.');
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_EXISTS',
+        });
       }
-    } else {
+    }
+    if (tenantName) {
       const tenant = await this.prisma.tenant.findFirst({
         where: {
           name: tenantName,
@@ -370,7 +347,9 @@ export class TenantService implements OnModuleInit {
       });
 
       if (tenant) {
-        throw new ConflictException('Tenant name already exists.');
+        throw new ConflictException({
+          code: 'TENANT_ALREADY_EXISTS',
+        });
       }
     }
   }
@@ -455,5 +434,94 @@ export class TenantService implements OnModuleInit {
       tenant,
       apiKey,
     };
+  }
+
+  private async updateAndResendVerificationCode(id: string, name: string | null = null): Promise<TenantSignUp> {
+    const result = await this.prisma.$transaction(async tx => {
+      const tenantSignUp = await tx.tenantSignUp.findFirst({
+        where: {
+          id,
+        },
+      });
+
+      if (!tenantSignUp) {
+        throw new NotFoundException('Tenant sign up not found.');
+      }
+
+      const verificationCode = this.createSignUpVerfificationCode();
+
+      try {
+        const tenantSignUp = await tx.tenantSignUp.update({
+          where: {
+            id,
+          },
+          data: {
+            verificationCode,
+            expiresAt: getEndOfDay(),
+            name: name || undefined,
+          },
+        });
+
+        await this.sendSignUpVerificationCode(verificationCode, tenantSignUp);
+
+        return tenantSignUp;
+      } catch (err) {
+        if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verification_code')) {
+          return false;
+        }
+        throw err;
+      }
+    });
+
+    if (!result) {
+      return this.updateAndResendVerificationCode(id);
+    }
+
+    return result;
+  }
+
+  private async findByName(name: string): Promise<Tenant | null> {
+    return this.prisma.tenant.findFirst({
+      where: {
+        name,
+      },
+    });
+  }
+
+  private async createSignUpRecord(email: string, name: string | null): Promise<TenantSignUp> {
+    const verificationCode = this.createSignUpVerfificationCode();
+
+    const result = await this.prisma.$transaction(async tx => {
+      try {
+        const tenantSignUp = await tx.tenantSignUp.create({
+          data: {
+            email,
+            verificationCode,
+            name,
+            expiresAt: getEndOfDay(),
+          },
+        });
+
+        await this.sendSignUpVerificationCode(verificationCode, tenantSignUp);
+
+        return tenantSignUp;
+      } catch (err) {
+        // Verification code collision.
+        if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verification_code')) {
+          return false;
+        }
+        throw err;
+      }
+    });
+
+    if (!result) {
+      return this.createSignUpRecord(email, name);
+    }
+
+    return result;
+  }
+
+  private sendSignUpVerificationCode(verificationCode: string, tenantSignUp: TenantSignUp) {
+    return this.emailService.send(this.config.signUpEmail, 'Your Poly verification code', `Your verification code is: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
   }
 }
