@@ -11,5 +11,5 @@ export class CreateTenantDto {
 
   @IsOptional()
   @IsNotEmpty()
-  limitTierId?: string;
+  tierId?: string;
 }

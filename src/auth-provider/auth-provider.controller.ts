@@ -3,8 +3,8 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
+  HttpException,
   HttpStatus,
   Logger,
   NotFoundException,
@@ -26,6 +26,7 @@ import { VariableService } from 'variable/variable.service';
 import { LimitService } from 'limit/limit.service';
 import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
 import { StatisticsService } from 'statistics/statistics.service';
+import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 
 @ApiSecurity('PolyApiKey')
 @Controller('auth-providers')
@@ -77,7 +78,7 @@ export class AuthProviderController {
     const functionCount = this.service.getFunctionCount(introspectUrl, revokeUrl, refreshEnabled);
     if (!await this.limitService.checkTenantFunctionsLimit(req.user.tenant, functionCount)) {
       this.logger.debug(`Tenant ${req.user.tenant.id} reached its limit of functions while creating auth provider functions.`);
-      throw new ForbiddenException('You have reached your limit of functions.');
+      throw new HttpException(FUNCTIONS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
     }
     await this.authService.checkPermissions(req.user, Permission.AuthConfig);
 
@@ -114,7 +115,7 @@ export class AuthProviderController {
     );
     if (updatedFunctionCount > currentFunctionCount && !await this.limitService.checkTenantFunctionsLimit(req.user.tenant, updatedFunctionCount - currentFunctionCount)) {
       this.logger.debug(`Tenant ${req.user.tenant.id} reached its limit of functions while creating auth provider functions.`);
-      throw new ForbiddenException('You have reached your limit of functions.');
+      throw new HttpException(FUNCTIONS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     await this.authService.checkEnvironmentEntityAccess(authProvider, req.user, false, Permission.AuthConfig);

@@ -3,9 +3,10 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Headers,
+  HttpException,
+  HttpStatus,
   Logger,
   NotFoundException,
   Param,
@@ -39,6 +40,7 @@ import { LimitService } from 'limit/limit.service';
 import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
 import { Tenant } from '@prisma/client';
 import { StatisticsService } from 'statistics/statistics.service';
+import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -284,10 +286,7 @@ export class FunctionController {
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
-    if (!await this.limitService.checkTenantFunctionsLimit(req.user.tenant)) {
-      this.logger.debug(`Tenant ${req.user.tenant.id} reached its limit of functions while creating custom server function.`);
-      throw new ForbiddenException('You have reached your limit of functions.');
-    }
+    await this.checkFunctionsLimit(req.user.tenant, 'creating custom server function');
 
     try {
       const customFunction = await this.service.createOrUpdateCustomFunction(
@@ -393,7 +392,7 @@ export class FunctionController {
   private async checkFunctionsLimit(tenant: Tenant, debugMessage: string) {
     if (!await this.limitService.checkTenantFunctionsLimit(tenant)) {
       this.logger.debug(`Tenant ${tenant.id} reached its limit of functions while ${debugMessage}.`);
-      throw new ForbiddenException('You have reached your limit of functions.');
+      throw new HttpException(FUNCTIONS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
     }
   }
 }

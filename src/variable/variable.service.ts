@@ -1,5 +1,6 @@
 import { get, set, isEqual } from 'lodash';
 import crypto from 'crypto';
+import { toCamelCase } from '@guanghechen/helper-string';
 import { ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Variable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
@@ -139,7 +140,7 @@ export class VariableService {
   async createVariable(environmentId: string, context: string, name: string, description: string, value: ValueType, visibility: Visibility, secret = false): Promise<Variable> {
     this.logger.debug(`Creating variable '${name}' in context '${context}' for environment ${environmentId}`);
 
-    name = this.commonService.sanitizeNameIdentifier(name);
+    name = toCamelCase(this.commonService.sanitizeNameIdentifier(name));
     context = this.commonService.sanitizeContextIdentifier(context);
 
     if (!await this.checkContextAndNameDuplicates(environmentId, context, name)) {
@@ -177,7 +178,7 @@ export class VariableService {
     visibility: Visibility | undefined,
     secret: boolean | undefined,
   ): Promise<Variable> {
-    name = (name && this.commonService.sanitizeNameIdentifier(name)) || variable.name;
+    name = (name && toCamelCase(this.commonService.sanitizeNameIdentifier(name))) || variable.name;
     context = (context && this.commonService.sanitizeContextIdentifier(context)) ?? variable.context;
     secret = secret ?? variable.secret;
 

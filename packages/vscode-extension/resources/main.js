@@ -131,8 +131,7 @@ const COMMANDS = [
 
     const convertToHtml = data => {
       switch (data.type) {
-        case 'plain':
-          return `<div>${data.value}</div>`;
+        case 'plain':return `<div>${data.value}</div>`;
         case 'error':
 
           const goToSettings = `
@@ -147,7 +146,7 @@ const COMMANDS = [
               case 403:
                 return `${data.value}. ${isCredentialsIssue ? goToSettings : ''}`;
               case 429:
-                return `You have reached your limit of questions. Try again tomorrow.`;
+                return 'Oops! Your tenant has exceeded the Starter Tier daily limit for prompts. To upgrade, please contact sales@polyapi.io. Thank you for using PolyAPI!';
               default:
                 return `${data.value}`;
             }

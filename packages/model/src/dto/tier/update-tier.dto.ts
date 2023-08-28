@@ -7,13 +7,13 @@ export class UpdateTierDto {
 
   @IsInt()
   @IsOptional()
-  maxFunctions?: number;
+  maxFunctions?: number | null;
 
   @IsInt()
   @IsOptional()
-  chatQuestionsPerDay?: number;
+  chatQuestionsPerDay?: number | null;
 
   @IsInt()
   @IsOptional()
-  functionCallsPerDay?: number;
+  functionCallsPerDay?: number | null;
 }

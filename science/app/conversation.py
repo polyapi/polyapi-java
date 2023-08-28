@@ -1,9 +1,10 @@
 from typing import List, Optional
 from prisma import get_client
 from prisma.models import ConversationMessage
-from app.constants import MessageType
+from app.constants import MessageType, VarName
 from app.typedefs import MessageDict
 from app.utils import (
+    get_config_variable,
     get_last_conversations,
 )
 
@@ -30,21 +31,36 @@ Here is the question:
 """
 
 
-def previous_message_referenced(
-    user_id: str, question: str, workspace_folder: str = ""
+def get_plugin_conversation_lookback() -> int:
+    var = get_config_variable(VarName.plugin_conversation_lookback)
+    return int(var.value) if var else 3
+
+
+def get_chat_conversation_lookback() -> int:
+    var = get_config_variable(VarName.chat_conversation_lookback)
+    return int(var.value) if var else 3
+
+
+def previous_messages_referenced(
+    user_id: Optional[str], question: str, workspace_folder: str = "",  message_type: Optional[int] = None
 ) -> List[ConversationMessage]:
     """ get any previous messages referenced in the incoming question
     """
-    conversations = get_last_conversations(user_id, 3, workspace_folder)
+    if not user_id:
+        return []
+
+    if not message_type:
+        message_type = MessageType.user.value
+
+    if message_type == MessageType.plugin.value:
+        conversation_count = get_plugin_conversation_lookback()
+    else:
+        conversation_count = get_chat_conversation_lookback()
+
+    conversations = get_last_conversations(user_id, conversation_count, workspace_folder)
     conversationIds = [conversation.id for conversation in conversations]
     if not conversationIds:
         return []
-
-    # choice = simple_chatgpt_question(question)
-    # try:
-    #     answer = int(remove_punctuation(choice["message"]["content"]))
-    # except (ValueError, TypeError):
-    #     answer = 0
 
     # HACK for now this just always says YES include the previous conversations
     # TODO in future this will be wicked smaht and find only the relevant messages
@@ -53,7 +69,7 @@ def previous_message_referenced(
     if answer == 1:
         db = get_client()
         cmsgs = db.conversationmessage.find_many(
-            where={"conversationId": {"in": conversationIds}, "type": MessageType.user},
+            where={"conversationId": {"in": conversationIds}, "type": message_type},
             order={"createdAt": "asc"},
         )
         return cmsgs

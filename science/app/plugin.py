@@ -2,14 +2,22 @@ import os
 import json
 import requests
 
+from app.conversation import previous_messages_referenced
+
 assert requests
 from typing import Dict, List
 import openai
 from prisma import get_client
 
-from app.constants import CHAT_GPT_MODEL
+from app.constants import CHAT_GPT_MODEL, MessageType
 from app.typedefs import ChatGptChoice, MessageDict
-from app.utils import log
+from app.utils import (
+    create_new_conversation,
+    log,
+    msgs_to_msg_dicts,
+    store_messages,
+    strip_type_and_info,
+)
 
 
 def _get_openapi_url(plugin_id: int) -> str:
@@ -53,21 +61,34 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
             func["parameters"] = openapi["components"]["schemas"][schema_name]
         else:
             # TODO maybe this is a non-schema one?
-            func['parameters'] = {"type": "object", "properties": {}}
+            func["parameters"] = {"type": "object", "properties": {}}
         rv.append(func)
 
     return rv
 
 
-def get_plugin_chat(api_key: str, plugin_id: int, message: str) -> List[MessageDict]:
-    """ chat with a plugin
-    """
+def get_plugin_chat(
+    api_key: str,
+    plugin_id: int,
+    message: str,
+) -> List[MessageDict]:
+    """chat with a plugin"""
+    db = get_client()
+    db_api_key = db.apikey.find_unique(where={"key": api_key})
+    assert db_api_key
+    user_id = db_api_key.userId
+    prev_msgs = previous_messages_referenced(
+        user_id, message, message_type=MessageType.plugin
+    )
     openapi = _get_openapi_spec(plugin_id)
     functions = openapi_to_openai_functions(openapi)
-    messages = [MessageDict(role="user", content=message)]
+    messages = msgs_to_msg_dicts(prev_msgs) + [
+        MessageDict(role="user", content=message, type=MessageType.plugin.value)
+    ]
+
     resp = openai.ChatCompletion.create(
         model=CHAT_GPT_MODEL,
-        messages=messages,
+        messages=strip_type_and_info(messages),
         functions=functions,
         temperature=0.2,
     )
@@ -83,15 +104,19 @@ def get_plugin_chat(api_key: str, plugin_id: int, message: str) -> List[MessageD
         messages.extend([function_call_msg, function_msg])
         resp2 = openai.ChatCompletion.create(
             model=CHAT_GPT_MODEL,
-            messages=messages,
+            messages=strip_type_and_info(messages),
             functions=functions,
             temperature=0.2,
         )
         answer_msg = dict(resp2["choices"][0]["message"])
+        answer_msg["type"] = MessageType.plugin.value
         messages.append(answer_msg)  # type: ignore
-        messages = messages[
-            1:
-        ]  # lets pop off the first question, the user already knows it
+
+        if user_id:
+            # if this convo is being done by a user, let's log it!
+            conversation = create_new_conversation(user_id)
+            store_messages(user_id, conversation.id, messages)
+
         return messages
     else:
         # no function call, just return OpenAI's answer

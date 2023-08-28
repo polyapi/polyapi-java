@@ -10,6 +10,8 @@ export enum ConfigVariableName {
     OpenAIVariableKeywordSimilarityThreshold = 'OpenAIVariableKeywordSimilarityThreshold',
     OpenAIFunctionMatchLimit = 'OpenAIFunctionMatchLimit',
     OpenAIExtractKeywordsTemperature = 'OpenAIExtractKeywordsTemperature',
+    OpenAIChatConversationLookback = 'OpenAIChatConversationLookback',
+    OpenAIPluginConversationLookback = 'OpenAIPluginConversationLookback',
     TrainingDataGeneration = 'TrainingDataGeneration'
 }
 

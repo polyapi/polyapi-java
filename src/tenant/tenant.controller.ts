@@ -81,16 +81,16 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed, limitTierId = null } = data;
+    const { name, publicVisibilityAllowed, tierId = null } = data;
 
-    if (limitTierId) {
-      const limitTier = await this.limitService.findById(limitTierId);
+    if (tierId) {
+      const limitTier = await this.limitService.findById(tierId);
       if (!limitTier) {
         throw new BadRequestException('Limit tier with given id does not exist.');
       }
     }
 
-    return this.tenantService.toDto((await this.tenantService.create(name, publicVisibilityAllowed, limitTierId)).tenant);
+    return this.tenantService.toDto((await this.tenantService.create(name, publicVisibilityAllowed, tierId)).tenant);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -111,17 +111,17 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch(':id')
   async updateTenant(@Param('id') id: string, @Body() data: UpdateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed, limitTierId } = data;
+    const { name, publicVisibilityAllowed, tierId } = data;
 
-    if (limitTierId) {
-      const limitTier = await this.limitService.findById(limitTierId);
+    if (tierId) {
+      const limitTier = await this.limitService.findById(tierId);
       if (!limitTier) {
         throw new BadRequestException('Limit tier with given id does not exist.');
       }
     }
 
     return this.tenantService.toDto(
-      await this.tenantService.update(await this.findTenant(id), name, publicVisibilityAllowed, limitTierId),
+      await this.tenantService.update(await this.findTenant(id), name, publicVisibilityAllowed, tierId),
     );
   }
 

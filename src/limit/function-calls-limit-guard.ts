@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AuthRequest } from 'common/types';
 import { LimitService } from 'limit/limit.service';
+import { FUNCTION_CALLS_LIMIT_REACHED } from '@poly/common/messages';
 
 @Injectable()
 export class FunctionCallsLimitGuard implements CanActivate {
@@ -21,7 +22,7 @@ export class FunctionCallsLimitGuard implements CanActivate {
     const { user: { tenant } } = request as AuthRequest;
 
     if (!await this.limitService.checkTenantFunctionCallsLimit(tenant)) {
-      throw new HttpException('You have reached your limit of function calls per day. Try again tomorrow.', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(FUNCTION_CALLS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     return true;

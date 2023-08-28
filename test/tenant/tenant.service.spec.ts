@@ -81,7 +81,7 @@ describe('TenantService', () => {
         id: testTenant.id,
         name: testTenant.name,
         publicVisibilityAllowed: testTenant.publicVisibilityAllowed,
-        limitTierId: testTenant.limitTierId,
+        tierId: testTenant.limitTierId,
       });
     });
   });

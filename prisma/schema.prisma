@@ -322,9 +322,9 @@ model DocSection {
 model LimitTier {
   id                  String   @id @default(uuid())
   name                String   @default("")
-  maxFunctions        Int      @default(0) @map("max_functions")
-  chatQuestionsPerDay Int      @default(0) @map("chat_questions_per_day")
-  functionCallsPerDay Int      @default(0) @map("function_calls_per_day")
+  maxFunctions        Int?     @map("max_functions")
+  chatQuestionsPerDay Int?     @map("chat_questions_per_day")
+  functionCallsPerDay Int?     @map("function_calls_per_day")
   tenants             Tenant[]
 
   @@map("limit_tier")

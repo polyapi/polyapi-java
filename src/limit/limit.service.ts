@@ -35,7 +35,7 @@ export class LimitService {
     });
   }
 
-  async createLimitTier(name: string, maxFunctions: number, chatQuestionsPerDay: number, functionCallsPerDay: number) {
+  async createLimitTier(name: string, maxFunctions: number | null, chatQuestionsPerDay: number | null, functionCallsPerDay: number | null) {
     return this.prismaService.limitTier.create({
       data: {
         name,
@@ -46,7 +46,7 @@ export class LimitService {
     });
   }
 
-  async updateLimitTier(tier: LimitTier, name?: string, maxFunctions?: number, chatQuestionsPerDay?: number, functionCallsPerDay?: number) {
+  async updateLimitTier(tier: LimitTier, name?: string, maxFunctions?: number | null, chatQuestionsPerDay?: number | null, functionCallsPerDay?: number | null) {
     return this.prismaService.limitTier.update({
       where: {
         id: tier.id,
@@ -77,6 +77,10 @@ export class LimitService {
     }
     const functionsUsage = await this.getTenantFunctionsUsage(tenant.id);
     const { maxFunctions } = limitTier;
+
+    if (maxFunctions === null) {
+      return true;
+    }
 
     return (functionsUsage + addedCount) <= maxFunctions;
   }
@@ -134,6 +138,10 @@ export class LimitService {
     const functionCallsUsage = await this.getTenantFunctionCallsCurrentDayUsage(tenant.id);
     const { functionCallsPerDay } = limitTier;
 
+    if (functionCallsPerDay === null) {
+      return true;
+    }
+
     return functionCallsUsage < functionCallsPerDay;
   }
 
@@ -155,6 +163,10 @@ export class LimitService {
     }
     const chatQuestionsUsage = await this.getTenantChatQuestionsPerDayCurrentDayUsage(tenant.id);
     const { chatQuestionsPerDay } = limitTier;
+
+    if (chatQuestionsPerDay === null) {
+      return true;
+    }
 
     return chatQuestionsUsage < chatQuestionsPerDay;
   }

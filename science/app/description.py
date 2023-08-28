@@ -9,7 +9,13 @@ from app.typedefs import (
     SpecificationDto,
     VarDescInputDto,
 )
-from app.utils import camel_case, extract_code, func_path_with_args, get_chat_completion, log
+from app.utils import (
+    camel_case,
+    extract_code,
+    func_path_with_args,
+    get_chat_completion,
+    log,
+)
 from app.constants import CHAT_GPT_MODEL
 
 # this needs to be 300 or less for the OpenAPI spec
@@ -40,8 +46,7 @@ For example, to create a new product on shopify the context should be "shopify.p
 Resources should be plural. For example, shopify.products, shopify.orders, shopify.customers, etc.
 
 The description should use keywords that makes search efficient. It can be a little redundant if that adds keywords but
-needs to remain human readable. It should be limited to {description_length_limit} characters without losing meaning and also can be less than
-{description_length_limit} characters if it makes sense.
+needs to remain human readable.
 
 Here is the {call_type}:
 
@@ -118,7 +123,6 @@ Return it as JSON in the following format:
 
 
 def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto]:
-    # contexts = _get_context_and_names()
     short = data.get("short_description", "")
     short = f"User given name: {short}" if short else ""
     prompt = NAME_CONTEXT_DESCRIPTION_PROMPT.format(
@@ -129,14 +133,17 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         response=data.get("response", "None"),
         code=_get_code_prompt(data.get("code")),
         call_type="API call",
-        description_length_limit=DESCRIPTION_LENGTH_LIMIT,
         format=FUNCTION_DESCRIPTION_RETURN_FORMAT,
-        # contexts="\n".join(contexts),
     )
     prompt_msg = {"role": "user", "content": prompt}
+    limitations = {
+        "role": "user",
+        "content": f"The description must be {DESCRIPTION_LENGTH_LIMIT} characters or less.",
+    }
+    messages = [prompt_msg, limitations]
 
     resp = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
+        model=CHAT_GPT_MODEL, temperature=0.2, messages=messages
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:
@@ -175,13 +182,9 @@ def get_argument_descriptions(
     )
     path = func_path_with_args(spec)
     prompt = ARGUMENT_DESCRIPTION_PROMPT.format(
-        description,
-        path,
-        ARGUMENT_DESCRIPTION_RETURN_FORMAT)
-    prompt_msg = MessageDict(
-        role="user",
-        content=prompt
+        description, path, ARGUMENT_DESCRIPTION_RETURN_FORMAT
     )
+    prompt_msg = MessageDict(role="user", content=prompt)
 
     resp = openai.ChatCompletion.create(
         model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
@@ -210,13 +213,16 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
         response=data.get("response", "None"),
         code="",  # no code for webhooks
         call_type="Event handler",
-        description_length_limit=DESCRIPTION_LENGTH_LIMIT,
         format=FUNCTION_DESCRIPTION_RETURN_FORMAT,
         # contexts="\n".join(contexts),
     )
+    limitations = {
+        "role": "user",
+        "content": f"The description must be {DESCRIPTION_LENGTH_LIMIT} characters or less.",
+    }
     prompt_msg = {"role": "user", "content": prompt}
     resp = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg]
+        model=CHAT_GPT_MODEL, temperature=0.2, messages=[prompt_msg, limitations]
     )
     completion = resp["choices"][0]["message"]["content"].strip()
     try:

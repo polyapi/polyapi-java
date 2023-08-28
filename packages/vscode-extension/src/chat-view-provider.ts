@@ -172,7 +172,6 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
       });
       uuid = response.data.uuid;
     } catch (error) {
-      console.log('%c ERROR', 'background: yellow; color: black', error);
       this.webView?.webview.postMessage({
         type: 'addMessage',
         data: {
@@ -215,6 +214,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
     es.onerror = (error) => {
       removeLoading();
       if (error.data) {
+        console.log('%c ERROR HAPPENED', 'background: yellow; color: black');
         console.error(error);
         this.webView?.webview.postMessage({
           type: 'addMessage',
@@ -224,6 +224,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           },
         });
       } else if (error.message) {
+        console.log('%c ERROR HAPPENED', 'background: yellow; color: black');
         console.error(error);
         this.webView?.webview.postMessage({
           type: 'addMessage',
@@ -234,6 +235,7 @@ export default class ChatViewProvider implements vscode.WebviewViewProvider {
           },
         });
       } else {
+        console.log('%c ERROR HAPPENED', 'background: yellow; color: black');
         this.webView?.webview.postMessage({
           type: 'finishMessage',
           messageID,

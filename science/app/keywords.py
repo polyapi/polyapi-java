@@ -15,7 +15,7 @@ from app.utils import (
 from prisma import get_client
 
 
-KEYWORD_PROMPT = """For the following prompt, give me back the keywords from my prompt
+KEYWORD_PROMPT = """For the following prompt, give me back the keywords from my prompt.
 This will be used to power an API discovery service.
 Each keyword must be a single word.
 Return 8 or fewer keywords.
@@ -32,6 +32,8 @@ Return the keywords as a space separated list. Please return valid JSON in this 
 {"keywords": "foo bar"}
 ```
 """
+
+KEYWORD_TRANSFORM_PROMPT = "Translate the keywords to English.  Please correct typos."
 
 
 def get_function_similarity_threshold() -> int:
@@ -64,6 +66,7 @@ def extract_keywords(
     prompt = KEYWORD_PROMPT % question
     messages = [
         MessageDict(role="user", content=prompt),
+        MessageDict(role="user", content=KEYWORD_TRANSFORM_PROMPT),
     ]
     content = get_chat_completion(
         messages,

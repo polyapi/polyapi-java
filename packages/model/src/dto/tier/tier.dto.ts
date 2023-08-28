@@ -1,7 +1,7 @@
 export class TierDto {
   id: string;
   name: string;
-  maxFunctions: number;
-  chatQuestionsPerDay: number;
-  functionCallsPerDay: number;
+  maxFunctions: number | null;
+  chatQuestionsPerDay: number | null;
+  functionCallsPerDay: number | null;
 }

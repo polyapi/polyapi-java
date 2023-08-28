@@ -1,3 +1,6 @@
+### 0.3.1
+* Updated 'Too many requests' error message.
+
 ### 0.3.0
 * Adjusted 'Too many requests' error message.
 

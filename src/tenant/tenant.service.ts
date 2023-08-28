@@ -56,7 +56,7 @@ export class TenantService implements OnModuleInit {
       id: tenant.id,
       name: tenant.name,
       publicVisibilityAllowed: tenant.publicVisibilityAllowed,
-      limitTierId: tenant.limitTierId,
+      tierId: tenant.limitTierId,
     };
   }
 
@@ -104,7 +104,7 @@ export class TenantService implements OnModuleInit {
       id: fullTenant.id,
       name: fullTenant.name,
       publicVisibilityAllowed: fullTenant.publicVisibilityAllowed,
-      limitTierId: fullTenant.limitTierId,
+      tierId: fullTenant.limitTierId,
       users: fullTenant.users.map(user => this.userService.toUserDto(user)),
       environments: fullTenant.environments.map(toEnvironmentFullDto),
       applications: fullTenant.applications.map(application => this.applicationService.toApplicationDto(application)),

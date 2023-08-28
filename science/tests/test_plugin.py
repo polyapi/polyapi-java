@@ -1,4 +1,8 @@
+import json
+import datetime
 from unittest.mock import Mock, patch
+
+from pytz import timezone
 from app.plugin import (
     _get_openapi_url,
     get_plugin_chat,
@@ -171,15 +175,18 @@ class T(DbTestCase):
     def test_get_plugin_chat(
         self, requests_get: Mock, requests_post: Mock, chat_create: Mock
     ):
+        api_key = self.db.apikey.find_first(where={"userId": {"not": None}})
+        assert api_key
         requests_get.return_value = Mock(status_code=200, json=lambda: MOCK_OPENAPI)
         requests_post.return_value = Mock(
-            status_code=201, json=lambda: {"answer": "Message sent"}
+            status_code=201, text=json.dumps({"answer": "Message sent"})
         )
         chat_create.return_value = MOCK_STEP_1_RESP
         plugin = test_plugin_get_or_create("service-nexus")
 
+        before = datetime.datetime.now(tz=timezone("US/Pacific"))
         question = "please send a text message saying 'tested' to 503-267-0612"
-        resp = get_plugin_chat("foobar", plugin.id, question)
+        resp = get_plugin_chat(api_key.key, plugin.id, question)
 
         self.assertEqual(requests_get.call_count, 1)
         self.assertEqual(requests_post.call_count, 1)  # should hit execute endpoint
@@ -187,18 +194,22 @@ class T(DbTestCase):
 
         self.assertTrue(resp)
 
+        convo = self.db.conversation.find_first(where={"createdAt": {"gt": before}})
+        self.assertTrue(convo)
+
     @patch("app.plugin.openai.ChatCompletion.create")
     @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
     def test_get_plugin_chat_general(
         self, requests_get: Mock, requests_post: Mock, chat_create: Mock
     ):
+        api_key = self.db.apikey.find_first()
         chat_create.return_value = MOCK_NO_FUNCTION_STEP_1_RESP
         requests_get.return_value = Mock(status_code=200, json=lambda: MOCK_OPENAPI)
         plugin = test_plugin_get_or_create("service-nexus")
 
         question = "what is the capital of Sweden?"
-        messages = get_plugin_chat("foobar", plugin.id, question)
+        messages = get_plugin_chat(api_key.key, plugin.id, question)
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0]["role"], "assistant")
         self.assertEqual(messages[0]["content"], "The capital of Sweden is Stockholm.")

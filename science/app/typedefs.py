@@ -87,6 +87,7 @@ class MessageDict(TypedDict, total=False):
     type: int
     name: NotRequired[str]
     function_call: NotRequired[Dict]
+    functions: NotRequired[List]
 
 
 class ChatGptChoice(TypedDict):

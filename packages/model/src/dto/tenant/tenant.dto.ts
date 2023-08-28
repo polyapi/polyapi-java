@@ -7,7 +7,7 @@ export class TenantDto {
   id: string;
   name: string | null;
   publicVisibilityAllowed: boolean;
-  limitTierId: string | null;
+  tierId: string | null;
 }
 
 export class TenantFullDto extends TenantDto {

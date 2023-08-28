@@ -369,7 +369,7 @@ def general_question(
     user_id: str,
     conversation_id: str,
     question: str,
-    prev_msgs: Optional[List[Union[ConversationMessage, MessageDict]]] = None,
+    prev_msgs: Optional[List[ConversationMessage]] = None,
 ) -> Union[Generator, str]:
     """ask a general question not related to any Poly-specific functionality"""
     messages = msgs_to_msg_dicts(prev_msgs) + [

@@ -5,7 +5,7 @@ from flask import Blueprint, Response, request, jsonify
 from openai.error import OpenAIError, RateLimitError
 from app.completion import general_question, get_completion_answer
 from app.constants import MessageType
-from app.conversation import previous_message_referenced
+from app.conversation import previous_messages_referenced
 from app.description import (
     get_function_description,
     get_variable_description,
@@ -64,7 +64,7 @@ def function_completion() -> Response:
         )
 
     workspace_folder: str = data.get("workspace_folder", "")
-    prev_msgs = previous_message_referenced(user_id, question, workspace_folder)
+    prev_msgs = previous_messages_referenced(user_id, question, workspace_folder)
     stats: Dict[str, Any] = {"prev_msg_ids": [prev_msg.id for prev_msg in prev_msgs]}
 
     route, question = split_route_and_question(question)
