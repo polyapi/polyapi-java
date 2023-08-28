@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { CommonService } from 'common/common.service';
 import { PrismaService } from 'prisma/prisma.service';
 
 @Injectable()
@@ -6,6 +7,7 @@ export class TosService {
   private readonly logger = new Logger(TosService.name);
   constructor(
         private readonly prisma: PrismaService,
+        private readonly commonService: CommonService,
   ) {}
 
   async create(content: string, version: string) {
@@ -16,8 +18,8 @@ export class TosService {
           version,
         },
       });
-    } catch (err) {
-      if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('version')) {
+    } catch (error) {
+      if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'version')) {
         throw new ConflictException('Tos version already exists.');
       }
     }

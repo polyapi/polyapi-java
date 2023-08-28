@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
 import { ApiKey, Tenant, TenantAgreement, TenantSignUp, Tos } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
@@ -11,6 +11,7 @@ import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
 import { getEndOfDay } from '@poly/common/utils';
 import { EmailService } from 'email/email.service';
+import { CommonService } from 'common/common.service';
 
 type CreateTenantOptions = {
   environmentName?: string;
@@ -23,6 +24,8 @@ type CreateTenantOptions = {
 
 @Injectable()
 export class TenantService implements OnModuleInit {
+  private readonly logger = new Logger(TenantService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
@@ -32,6 +35,7 @@ export class TenantService implements OnModuleInit {
     private readonly teamService: TeamService,
     private readonly userService: UserService,
     private readonly emailService: EmailService,
+    private readonly commonService: CommonService,
   ) {
   }
 
@@ -465,11 +469,12 @@ export class TenantService implements OnModuleInit {
         await this.sendSignUpVerificationCode(verificationCode, tenantSignUp);
 
         return tenantSignUp;
-      } catch (err) {
-        if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verification_code')) {
+      } catch (error) {
+        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'verification_code')) {
+          this.logger.debug(`Duplicated verification code "${verificationCode}", retrying...`);
           return false;
         }
-        throw err;
+        throw error;
       }
     });
 
@@ -505,12 +510,12 @@ export class TenantService implements OnModuleInit {
         await this.sendSignUpVerificationCode(verificationCode, tenantSignUp);
 
         return tenantSignUp;
-      } catch (err) {
-        // Verification code collision.
-        if (err.code === 'P2002' && Array.isArray(err.meta.target) && err.meta.target.includes('verification_code')) {
+      } catch (error) {
+        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'verification_code')) {
+          this.logger.debug(`Duplicated verification code "${verificationCode}", retrying...`);
           return false;
         }
-        throw err;
+        throw error;
       }
     });
 

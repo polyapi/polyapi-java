@@ -11,6 +11,7 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { LimitModule } from 'limit/limit.module';
 import { EmailModule } from 'email/email.module';
 import { TosModule } from 'tos/tos.module';
+import { CommonModule } from 'common/common.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TosModule } from 'tos/tos.module';
     LimitModule,
     EmailModule,
     TosModule,
+    CommonModule,
   ],
   providers: [TenantService],
   controllers: [TenantController],

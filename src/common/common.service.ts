@@ -11,7 +11,7 @@ import {
   NUMBERS_AT_BEGINNING_PATTERN, Visibility, ArgumentType, PropertyType, ParsedConfigVariable, VisibilityQuery,
 } from '@poly/model';
 import { toPascalCase } from '@guanghechen/helper-string';
-import { ConfigVariable } from '@prisma/client';
+import { ConfigVariable, Prisma } from '@prisma/client';
 
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
 
@@ -276,5 +276,12 @@ export class CommonService {
     return {
       OR,
     };
+  }
+
+  isPrismaUniqueConstraintFailedError(error: unknown, field?: string) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return error.code === 'P2002' && Array.isArray(error.meta?.target) && field && (error.meta?.target || '').includes(field);
+    }
+    return false;
   }
 }
