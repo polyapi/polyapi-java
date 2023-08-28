@@ -134,6 +134,88 @@ export class TenantService implements OnModuleInit {
     });
   }
 
+  private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
+    tenant: Tenant,
+    apiKey: ApiKey
+  }> {
+    const { environmentName, teamName, userName, userRole, userApiKey, email = null } = options;
+    const tenant = await tx.tenant.create({
+      data: {
+        name,
+        publicVisibilityAllowed,
+        limitTierId,
+        users: {
+          create: [
+            {
+              name: userName || 'admin',
+              role: userRole || Role.Admin,
+              email,
+            },
+          ],
+        },
+        environments: {
+          create: [
+            {
+              name: environmentName || 'default',
+              subdomain: this.environmentService.generateSubdomainID(),
+            },
+          ],
+        },
+        teams: {
+          create: [
+            {
+              name: teamName || 'default',
+            },
+          ],
+        },
+      },
+      include: {
+        users: true,
+        environments: true,
+        teams: true,
+      },
+    });
+
+    // add user to team
+    await tx.teamMember.create({
+      data: {
+        team: {
+          connect: {
+            id: tenant.teams[0].id,
+          },
+        },
+        user: {
+          connect: {
+            id: tenant.users[0].id,
+          },
+        },
+      },
+    });
+
+    // create API key for user
+    const apiKey = await tx.apiKey.create({
+      data: {
+        name: `api-key-${userRole || Role.Admin}`,
+        key: userApiKey || crypto.randomUUID(),
+        user: {
+          connect: {
+            id: tenant.users[0].id,
+          },
+        },
+        environment: {
+          connect: {
+            id: tenant.environments[0].id,
+          },
+        },
+      },
+    });
+
+    return {
+      tenant,
+      apiKey,
+    };
+  }
+
   async update(tenant: Tenant, name: string | undefined, publicVisibilityAllowed: boolean | undefined, limitTierId: string | null | undefined) {
     return this.prisma.tenant.update({
       where: {
@@ -165,7 +247,6 @@ export class TenantService implements OnModuleInit {
     };
   }
 
-  // crear tenant agreement dto
   toTenantAgreementDto(tenantAgreement: TenantAgreement & { tos: Tos }): TenantAgreementDto {
     return {
       tosId: tenantAgreement.tos.id,
@@ -368,87 +449,7 @@ export class TenantService implements OnModuleInit {
     }
   }
 
-  private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
-    tenant: Tenant,
-    apiKey: ApiKey
-  }> {
-    const { environmentName, teamName, userName, userRole, userApiKey, email = null } = options;
-    const tenant = await tx.tenant.create({
-      data: {
-        name,
-        publicVisibilityAllowed,
-        limitTierId,
-        users: {
-          create: [
-            {
-              name: userName || 'admin',
-              role: userRole || Role.Admin,
-              email,
-            },
-          ],
-        },
-        environments: {
-          create: [
-            {
-              name: environmentName || 'default',
-              subdomain: this.environmentService.generateSubdomainID(),
-            },
-          ],
-        },
-        teams: {
-          create: [
-            {
-              name: teamName || 'default',
-            },
-          ],
-        },
-      },
-      include: {
-        users: true,
-        environments: true,
-        teams: true,
-      },
-    });
-
-    // add user to team
-    await tx.teamMember.create({
-      data: {
-        team: {
-          connect: {
-            id: tenant.teams[0].id,
-          },
-        },
-        user: {
-          connect: {
-            id: tenant.users[0].id,
-          },
-        },
-      },
-    });
-
-    // create API key for user
-    const apiKey = await tx.apiKey.create({
-      data: {
-        name: `api-key-${userRole || Role.Admin}`,
-        key: userApiKey || crypto.randomUUID(),
-        user: {
-          connect: {
-            id: tenant.users[0].id,
-          },
-        },
-        environment: {
-          connect: {
-            id: tenant.environments[0].id,
-          },
-        },
-      },
-    });
-
-    return {
-      tenant,
-      apiKey,
-    };
-  }
+  
 
   private async updateAndResendVerificationCode(id: string, name: string | null = null): Promise<TenantSignUp> {
     const result = await this.prisma.$transaction(async tx => {
