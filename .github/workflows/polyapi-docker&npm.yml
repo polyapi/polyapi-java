@@ -4,12 +4,13 @@ on:
     branches:
       - develop
       - main
+      - postgres
 
 jobs:
   develop:
     name: Development Docker / NPM build and push.
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/develop' }}
+    # if: ${{ github.ref == 'refs/heads/develop' }}
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -24,7 +25,7 @@ jobs:
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker build -t demo-1 -f docker/Dockerfile .
         docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
 
     - uses: dorny/paths-filter@v2
