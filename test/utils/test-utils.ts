@@ -33,6 +33,7 @@ export const mockedAuthData: AuthData = {
     vip: false,
     tenantId,
     createdAt: currentDate,
+    email: null,
   },
   environment: {
     createdAt: currentDate,

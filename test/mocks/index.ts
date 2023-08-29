@@ -18,3 +18,4 @@ export { default as variableServiceMock } from './variable.service';
 export { default as cacheManagerMock } from './cache-manager';
 export { default as secretServiceProviderMock } from './secret-service-provider';
 export { default as configVariableServiceMock } from './config-variable.service';
+export { default as emailServiceMock } from './email.service';

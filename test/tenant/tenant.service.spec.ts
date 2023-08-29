@@ -5,7 +5,9 @@ import { EnvironmentService } from 'environment/environment.service';
 import {
   applicationServiceMock,
   authServiceMock,
+  commonServiceMock,
   configServiceMock,
+  emailServiceMock,
   environmentServiceMock,
   prismaServiceMock, teamServiceMock, userServiceMock,
 } from '../mocks';
@@ -16,6 +18,8 @@ import { AuthService } from 'auth/auth.service';
 import { ApplicationService } from 'application/application.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
+import { EmailService } from 'email/email.service';
+import { CommonService } from 'common/common.service';
 
 describe('TenantService', () => {
   const testTenant: Tenant = {
@@ -59,6 +63,14 @@ describe('TenantService', () => {
         {
           provide: ConfigService,
           useValue: configServiceMock,
+        },
+        {
+          provide: EmailService,
+          useValue: emailServiceMock,
+        },
+        {
+          provide: CommonService,
+          useValue: commonServiceMock,
         },
       ],
     }).compile();
