@@ -1,12 +1,12 @@
 generator js {
   provider = "prisma-client-js"
-  default  = true
+  default  = "true"
 }
 
 generator py {
   provider             = "prisma-client-py"
+  recursive_type_depth = "5"
   interface            = "sync"
-  recursive_type_depth = 5
 }
 
 datasource db {
@@ -15,330 +15,348 @@ datasource db {
 }
 
 model Tenant {
-  id                      String           @id @default(uuid())
-  createdAt               DateTime         @default(now()) @map("created_at")
-  name                    String
-  users                   User[]
-  teams                   Team[]
-  environments            Environment[]
-  applications            Application[]
-  publicVisibilityAllowed Boolean          @default(false) @map("public_visibility_allowed")
-  configVariables         ConfigVariable[]
-  limitTier               LimitTier?       @relation(fields: [limitTierId], references: [id])
+  id                      String           @id(map: "idx_20369_sqlite_autoindex_tenant_1") @default(uuid())
+  createdAt               String?          @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  name                    String?
+  publicVisibilityAllowed Boolean?         @default(false) @map("public_visibility_allowed")
   limitTierId             String?          @map("limit_tier_id")
+  applications            Application[]
+  configVariables         ConfigVariable[]
+  environments            Environment[]
+  teams                   Team[]
+  limitTier               LimitTier?       @relation(fields: [limitTierId], references: [id])
+  users                   User[]
 
   @@map("tenant")
 }
 
 model User {
-  id                   String                @id @default(uuid())
-  createdAt            DateTime              @default(now()) @map("created_at")
-  name                 String
-  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantId             String                @map("tenant_id")
-  role                 String                @default("USER")
-  vip                  Boolean               @default(false) // is this person a VIP we want to track carefully?
-  conversations        Conversation[]
-  conversationMessages ConversationMessage[]
+  id                   String                @id(map: "idx_20220_sqlite_autoindex_user_1") @default(uuid())
+  createdAt            String?               @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  name                 String?
+  tenantId             String?               @map("tenant_id")
+  role                 String?               @default("USER")
+  vip                  Boolean?              @default(false)
   apiKeys              ApiKey[]
+  conversation         conversation[]
+  conversationMessages ConversationMessage[]
   teamMembers          TeamMember[]
+  tenant               Tenant?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("user")
 }
 
 model Team {
-  id          String       @id @default(uuid())
-  createdAt   DateTime     @default(now()) @map("created_at")
-  name        String
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantId    String       @map("tenant_id")
+  id          String       @id(map: "idx_20235_sqlite_autoindex_team_1") @default(uuid())
+  createdAt   String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  name        String?
+  tenantId    String?      @map("tenant_id")
+  tenant      Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   teamMembers TeamMember[]
 
   @@map("team")
 }
 
 model TeamMember {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId    String   @map("team_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String   @map("user_id")
+  id        String  @id(map: "idx_20260_sqlite_autoindex_team_member_1") @default(uuid())
+  createdAt String? @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  teamId    String? @map("team_id")
+  userId    String? @map("user_id")
+  team      Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("team_member")
 }
 
 model Environment {
-  id              String           @id @default(uuid())
-  createdAt       DateTime         @default(now()) @map("created_at")
-  name            String
-  tenant          Tenant           @relation(fields: [tenantId], references: [id])
-  tenantId        String           @map("tenant_id")
-  subdomain       String           @unique
+  id              String           @id(map: "idx_20318_sqlite_autoindex_environment_1") @default(uuid())
+  createdAt       String?          @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  name            String?
+  tenantId        String?          @map("tenant_id")
+  subdomain       String?          @unique(map: "idx_20318_environment_subdomain_key")
   apiFunctions    ApiFunction[]
-  webhookHandles  WebhookHandle[]
-  customFunctions CustomFunction[]
-  authProviders   AuthProvider[]
-  systemPrompts   SystemPrompt[]
   apiKeys         ApiKey[]
-  gptPlugins      GptPlugin[]
+  authProviders   AuthProvider[]
   configVariables ConfigVariable[]
+  customFunctions CustomFunction[]
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  gptPlugins      GptPlugin[]
+  systemPrompts   SystemPrompt[]
   variables       Variable[]
+  webhookHandles  WebhookHandle[]
 
   @@map("environment")
 }
 
 model Application {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantId    String   @map("tenant_id")
-  name        String
-  description String   @default("")
+  id          String   @id(map: "idx_20241_sqlite_autoindex_application_1") @default(uuid())
+  createdAt   String?  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  tenantId    String?  @map("tenant_id")
+  name        String?
+  description String?  @default("")
   apiKeys     ApiKey[]
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("application")
 }
 
 model ApiKey {
-  id            String       @id @default(uuid())
-  createdAt     DateTime     @default(now()) @map("created_at")
-  name          String
-  environment   Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String       @map("environment_id")
-  key           String       @unique
-  permissions   String       @default("{}")
-  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  id            String       @id(map: "idx_20228_sqlite_autoindex_api_key_1") @default(uuid())
+  createdAt     String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  name          String?
+  environmentId String?      @map("environment_id")
+  key           String?      @unique(map: "idx_20228_api_key_key_key")
+  permissions   String?      @default("{}")
   applicationId String?      @map("application_id")
-  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String?      @map("user_id")
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("api_key")
 }
 
 model ApiFunction {
-  id                           String      @id @default(uuid())
-  createdAt                    DateTime    @default(now()) @map("created_at")
-  environment                  Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId                String      @map("environment_id")
-  name                         String
-  context                      String
-  description                  String      @default("")
+  id                           String       @id(map: "idx_20274_sqlite_autoindex_api_function_1") @default(uuid())
+  createdAt                    String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  environmentId                String?      @map("environment_id")
+  name                         String?
+  context                      String?
+  description                  String?      @default("")
   payload                      String?
-  method                       String
-  url                          String
+  method                       String?
+  url                          String?
   headers                      String?
   body                         String?
   auth                         String?
-  responseType                 String?     @map("response_type")
-  argumentsMetadata            String?     @map("arguments_metadata")
-  trained                      Boolean     @default(false)
-  visibility                   String      @default("ENVIRONMENT")
-  graphqlIdentifier            String?     @map("graphql_identifier")
-  graphqlIntrospectionResponse String?     @map("introspection_response")
+  responseType                 String?      @map("response_type")
+  argumentsMetadata            String?      @map("arguments_metadata")
+  trained                      Boolean?     @default(false)
+  visibility                   String?      @default("ENVIRONMENT")
+  graphqlIdentifier            String?      @map("graphql_identifier")
+  graphqlIntrospectionResponse String?      @map("introspection_response")
+  environment                  Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("api_function")
 }
 
 model CustomFunction {
-  id            String      @id @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at")
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String      @map("environment_id")
-  name          String
-  context       String
-  description   String      @default("")
-  code          String
-  arguments     String
-  returnType    String?     @map("return_type")
-  synchronous   Boolean     @default(true)
-  requirements  String?     @map("requirements")
-  trained       Boolean     @default(false)
-  serverSide    Boolean     @default(false) @map("server_side")
-  apiKey        String?     @map("api_key")
-  visibility    String      @default("ENVIRONMENT")
+  id            String       @id(map: "idx_20324_sqlite_autoindex_custom_function_1") @default(uuid())
+  createdAt     String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  environmentId String?      @map("environment_id")
+  name          String?
+  context       String?
+  description   String?      @default("")
+  code          String?
+  arguments     String?
+  returnType    String?      @map("return_type")
+  synchronous   Boolean?     @default(true)
+  requirements  String?      @map("requirements")
+  trained       Boolean?     @default(false)
+  serverSide    Boolean?     @default(false) @map("server_side")
+  visibility    String?      @default("ENVIRONMENT")
+  apiKey        String?      @map("api_key")
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("custom_function")
 }
 
 model AuthProvider {
-  id               String      @id @default(uuid())
-  createdAt        DateTime    @default(now()) @map("created_at")
-  environment      Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId    String      @map("environment_id")
+  id               String       @id(map: "idx_20283_sqlite_autoindex_auth_provider_1") @default(uuid())
+  createdAt        String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  environmentId    String?      @map("environment_id")
   name             String?
-  context          String
-  authorizeUrl     String      @map("authorize_url")
-  tokenUrl         String      @map("token_url")
-  revokeUrl        String?     @map("revoke_url")
-  introspectUrl    String?     @map("introspect_url")
-  audienceRequired Boolean     @default(false) @map("audience_required")
-  refreshEnabled   Boolean     @default(false) @map("refresh_enabled")
-  trained          Boolean     @default(false)
+  context          String?
+  authorizeUrl     String?      @map("authorize_url")
+  tokenUrl         String?      @map("token_url")
+  revokeUrl        String?      @map("revoke_url")
+  introspectUrl    String?      @map("introspect_url")
+  audienceRequired Boolean?     @default(false) @map("audience_required")
+  refreshEnabled   Boolean?     @default(false) @map("refresh_enabled")
+  trained          Boolean?     @default(false)
+  visibility       String?      @default("ENVIRONMENT")
+  environment      Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   authTokens       AuthToken[]
-  visibility       String      @default("ENVIRONMENT")
 
   @@map("auth_provider")
 }
 
 model WebhookHandle {
-  id            String      @id @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at")
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String      @map("environment_id")
-  context       String
-  name          String
-  eventPayload  String      @map("event_payload")
-  description   String      @default("")
-  visibility    String      @default("ENVIRONMENT")
+  id            String       @id(map: "idx_20293_sqlite_autoindex_webhook_handle_1") @default(uuid())
+  createdAt     String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  environmentId String?      @map("environment_id")
+  context       String?
+  name          String?
+  eventPayload  String?      @map("event_payload")
+  description   String?      @default("")
+  visibility    String?      @default("ENVIRONMENT")
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("webhook_handle")
 }
 
-// which thread are the messages a part of?
-model Conversation {
-  id        String                @id @default(uuid())
-  createdAt DateTime              @default(now())
-  user      User                  @relation(fields: [userId], references: [id])
-  userId    String
-  workspaceFolder String          @default("")
-  messages  ConversationMessage[]
-}
-
-// store all the messages in a conversation
 model ConversationMessage {
-  id        String   @id @default(uuid())
-  createdAt DateTime @unique() @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String   @map("user_id")
-  name      String   @default("") // not used for now. in future, will allow the user to have multiple conversations
-  role      String // assistant or user or system or info
-
-  // see MessageType in science/app/constant.py for values
-  type Int @default(1)
-
-  content        String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  conversationId String       @map("conversation_id")
+  id             String        @id(map: "idx_20266_sqlite_autoindex_conversation_message_1") @default(uuid())
+  createdat      String?       @unique(map: "idx_20266_conversation_message_createdat_key") @default(dbgenerated("CURRENT_TIMESTAMP"))
+  userId         String?       @map("user_id")
+  name           String?       @default("")
+  role           String?
+  type           BigInt?       @default(1)
+  content        String?
+  conversationId String?       @map("conversation_id")
+  conversation   conversation? @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("conversation_message")
 }
 
-// customizable prompt per user
 model SystemPrompt {
-  id            String      @id @default(uuid())
-  createdAt     DateTime    @default(now())
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String      @map("environment_id")
-  content       String
+  id            String       @id(map: "idx_20254_sqlite_autoindex_system_prompt_1") @default(uuid())
+  createdat     String?      @default(dbgenerated("CURRENT_TIMESTAMP"))
+  environmentId String?      @map("environment_id")
+  content       String?
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("system_prompt")
 }
 
 model AuthToken {
-  id             String       @id @default(uuid())
-  createdAt      DateTime     @default(now()) @map("created_at")
-  authProvider   AuthProvider @relation(fields: [authProviderId], references: [id], onDelete: Cascade)
-  authProviderId String       @map("auth_provider_id")
-  clientId       String       @map("client_id")
-  clientSecret   String       @map("client_secret")
-  callbackUrl    String?      @map("callback_url")
+  id             String        @id(map: "idx_20248_sqlite_autoindex_auth_token_1") @default(uuid())
+  createdAt      String?       @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  authProviderId String?       @map("auth_provider_id")
+  clientId       String?       @map("client_id")
+  clientSecret   String?       @map("client_secret")
+  callbackUrl    String?       @map("callback_url")
   audience       String?
-  scopes         String
+  scopes         String?
   state          String?
-  accessToken    String?      @map("access_token")
-  refreshToken   String?      @map("refresh_token")
-  eventsClientId String?      @map("events_client_id")
-  userId         String?      @map("user_id")
+  accessToken    String?       @map("access_token")
+  refreshToken   String?       @map("refresh_token")
+  eventsClientId String?       @map("events_client_id")
+  userId         String?       @map("user_id")
+  authProvider   AuthProvider? @relation(fields: [authProviderId], references: [id], onDelete: Cascade)
 
   @@map("auth_token")
 }
 
 model ConfigVariable {
-  id            Int          @id @default(autoincrement())
-  createdAt     DateTime     @default(now()) @map("created_at")
-  name          String
-  value         String
-  tenant        Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id            BigInt       @id(map: "idx_20302_config_variable_pkey") @default(autoincrement())
+  createdAt     String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  name          String?
+  value         String?
   tenantId      String?      @map("tenant_id")
-  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   environmentId String?      @map("environment_id")
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  tenant        Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("config_variable")
 }
 
 model GptPlugin {
-  id                        Int         @id @default(autoincrement())
-  slug                      String
-  name                      String
-  contactEmail              String      @default("info@polyapi.io")
-  legalUrl                  String      @default("https://polyapi.io/legal")
-  descriptionForMarketplace String      @default("") @map("description_for_marketplace")
-  descriptionForModel       String      @default("") @map("description_for_model")
-  iconUrl                   String      @map("icon_url")
-  functionIds               String // json array of function publicIds for now
-  environment               Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId             String      @map("environment_id")
-  authType                  String      @default("user_http") @map("auth_type")
-  authToken                 String      @default("") //
+  id                        BigInt       @id(map: "idx_20342_gpt_plugin_pkey") @default(autoincrement())
+  slug                      String?
+  name                      String?
+  contactemail              String?      @default("info@polyapi.io")
+  legalurl                  String?      @default("https://polyapi.io/legal")
+  descriptionForMarketplace String?      @default("") @map("description_for_marketplace")
+  descriptionForModel       String?      @default("") @map("description_for_model")
+  iconUrl                   String?      @map("icon_url")
+  functionids               String?
+  environmentId             String?      @map("environment_id")
+  authType                  String?      @default("user_http") @map("auth_type")
+  authtoken                 String?      @default("")
+  environment               Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
-  @@unique(fields: [slug, environmentId])
+  @@unique([slug, environmentId], map: "idx_20342_gpt_plugin_slug_environment_id_key")
   @@map("gpt_plugin")
 }
 
 model Variable {
-  id            String      @id @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at")
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  environmentId String      @map("environment_id")
-  name          String
-  context       String
-  description   String      @default("")
-  secret        Boolean     @default(false)
-  visibility    String      @default("ENVIRONMENT")
+  id            String       @id(map: "idx_20309_sqlite_autoindex_variable_1") @default(uuid())
+  createdAt     String?      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  environmentId String?      @map("environment_id")
+  name          String?
+  context       String?
+  description   String?      @default("")
+  visibility    String?      @default("ENVIRONMENT")
+  secret        Boolean?     @default(false)
+  environment   Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("variable")
 }
 
 model Migration {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  fileName  String   @map("file_name")
+  id        String  @id(map: "idx_20335_sqlite_autoindex_migration_1") @default(uuid())
+  createdAt String? @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  fileName  String? @map("file_name")
 
   @@map("migration")
 }
 
-model DocSection {
-  // a section of our documentation
-  // for now all documentation is related to Poly
-  // but in future this might be tenanted and used for customer docs
-  id     String @id @default(uuid())
-  title  String @default("")
-  text   String @default("")
-  vector String @default("") // JSON of OpenAI embedding vector of the title+text
-}
-
 model LimitTier {
-  id                  String   @id @default(uuid())
-  name                String   @default("")
-  maxFunctions        Int?     @map("max_functions")
-  chatQuestionsPerDay Int?     @map("chat_questions_per_day")
-  functionCallsPerDay Int?     @map("function_calls_per_day")
+  id                  String   @id(map: "idx_20382_sqlite_autoindex_limit_tier_1") @default(uuid())
+  name                String?  @default("")
+  maxFunctions        BigInt?  @map("max_functions")
+  chatQuestionsPerDay BigInt?  @map("chat_questions_per_day")
+  functionCallsPerDay BigInt?  @map("function_calls_per_day")
   tenants             Tenant[]
 
   @@map("limit_tier")
 }
 
 model Statistics {
-  id            String   @id @default(uuid())
-  createdAt     DateTime @default(now()) @map("created_at")
-  type          String
-  apiKey        String   @map("api_key")
-  tenantId      String   @map("tenant_id")
-  environmentId String   @map("environment_id")
-  userId        String?  @map("user_id")
-  applicationId String?  @map("application_id")
+  id            String  @id(map: "idx_20376_sqlite_autoindex_statistics_1") @default(uuid())
+  createdAt     String? @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  type          String?
+  apiKey        String? @map("api_key")
+  tenantId      String? @map("tenant_id")
+  environmentId String? @map("environment_id")
+  userId        String? @map("user_id")
+  applicationId String? @map("application_id")
   data          String?
 
   @@map("statistics")
+}
+
+model conversation {
+  id              String                @id(map: "idx_20362_sqlite_autoindex_conversation_1")
+  createdat       String?               @default(dbgenerated("CURRENT_TIMESTAMP"))
+  userid          String?
+  workspacefolder String?               @default("")
+  user            User?                 @relation(fields: [userid], references: [id], onDelete: Restrict)
+  messages        ConversationMessage[]
+}
+
+model docsection {
+  id     String  @id(map: "idx_20354_sqlite_autoindex_docsection_1")
+  title  String? @default("")
+  text   String? @default("")
+  vector String? @default("")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model lost_and_found {
+  rootpgno BigInt?
+  pgno     BigInt?
+  nfield   BigInt?
+  id       BigInt?
+  c0       String?
+  c1       String?
+  c2       String?
+  c3       String?
+  c4       String?
+  c5       String?
+  c6       String?
+  c7       String?
+  c8       String?
+  c9       String?
+  c10      String?
+  c11      String?
+  c12      String?
+  c13      String?
+  c14      String?
+  c15      String?
+  c16      String?
+
+  @@ignore
 }
