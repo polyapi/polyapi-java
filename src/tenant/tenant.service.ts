@@ -128,12 +128,6 @@ export class TenantService implements OnModuleInit {
     });
   }
 
-  async create(name: string, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}) {
-    return this.prisma.$transaction(async tx => {
-      return this.createTenantRecord(tx, name, publicVisibilityAllowed, limitTierId, options);
-    });
-  }
-
   private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
     tenant: Tenant,
     apiKey: ApiKey
@@ -214,6 +208,12 @@ export class TenantService implements OnModuleInit {
       tenant,
       apiKey,
     };
+  }
+
+  async create(name: string, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}) {
+    return this.prisma.$transaction(async tx => {
+      return this.createTenantRecord(tx, name, publicVisibilityAllowed, limitTierId, options);
+    });
   }
 
   async update(tenant: Tenant, name: string | undefined, publicVisibilityAllowed: boolean | undefined, limitTierId: string | null | undefined) {
@@ -448,8 +448,6 @@ export class TenantService implements OnModuleInit {
       }
     }
   }
-
-  
 
   private async updateAndResendVerificationCode(id: string, name: string | null = null): Promise<TenantSignUp> {
     const result = await this.prisma.$transaction(async tx => {
