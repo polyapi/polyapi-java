@@ -130,6 +130,16 @@ export class ChatService {
     return parts.join('\n\n');
   }
 
+  async deleteConversation(conversationId: string): Promise<string> {
+    try {
+      await this.prisma.conversation.delete({ where: { id: conversationId } });
+    } catch {
+      return new Promise((resolve) => resolve('Conversation not found.'));
+    }
+
+    return new Promise((resolve) => resolve('Conversation deleted!'));
+  }
+
   async getHistory(userId: string | undefined, perPage = 10, firstMessageDate: Date | null = null, workspaceFolder = '') {
     if (!userId) {
       return [];

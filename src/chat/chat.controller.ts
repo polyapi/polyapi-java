@@ -142,8 +142,7 @@ export class ChatController {
     @Query('userId') userId: string,
     @Param('conversationId') conversationId: string,
   ) {
-    const conversation = await this.service.getConversationDetail(userId, conversationId);
-    return conversation;
+    return this.service.getConversationDetail(userId, conversationId);
   }
 
   @UseGuards(new PolyAuthGuard())

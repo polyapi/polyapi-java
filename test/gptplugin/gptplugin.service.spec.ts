@@ -352,7 +352,7 @@ describe('GptPluginService', () => {
         key: '123',
         environment,
       };
-      const resp = await service.chat(authData, plugin.slug, 'hello world');
+      const resp = await service.chat(authData, plugin.slug, 'foobar', 'hello world');
       expect(chatMock).toHaveBeenCalledTimes(1);
       expect(resp).toBe('Pong');
     });

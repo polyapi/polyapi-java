@@ -535,8 +535,8 @@ export class GptPluginService {
     };
   }
 
-  async chat(authData, slug: string, message: string) {
+  async chat(authData, slug: string, conversationId: string, message: string) {
     const plugin = await this.getPlugin(slug, authData.environment.id);
-    return await this.aiService.pluginChat(authData.key, plugin.id, message);
+    return await this.aiService.pluginChat(authData.key, plugin.id, conversationId, message);
   }
 }

@@ -40,7 +40,9 @@ class T(DbTestCase):
     @patch("app.views.redis_get")
     @patch("app.views.split_route_and_question")
     @patch("app.views.get_completion_answer")
-    def test_function_completion_question_uuid(self, get_answer: Mock, route_question, redis_get: Mock) -> None:
+    def test_function_completion_question_uuid(
+        self, get_answer: Mock, route_question, redis_get: Mock
+    ) -> None:
         # setup
         user = test_user_get_or_create()
         redis_get.return_value = json.dumps({"message": "first three numbers"})
@@ -153,3 +155,9 @@ class T(DbTestCase):
         resp = self.client.get("/error-rate-limit")
         self.assertStatus(resp, 500)
         self.assertTrue(resp.text.startswith("OpenAI is overloaded"))
+
+    def test_plugin_chat_error(self):
+        resp = self.client.post("/plugin-chat", json={"conversationId": "foo"})
+        self.assertStatus(resp, 400)
+        data = resp.get_json()
+        self.assertNotIn("conversationId", data["message"])

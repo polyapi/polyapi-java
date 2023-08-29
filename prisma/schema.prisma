@@ -218,7 +218,7 @@ model ConversationMessage {
   type Int @default(1)
 
   content        String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId String       @map("conversation_id")
 
   @@map("conversation_message")
