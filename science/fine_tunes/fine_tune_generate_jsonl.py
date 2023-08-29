@@ -1,32 +1,20 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import json
-from prisma import Prisma
-from ..completion import (
-    get_completion_answer,
-    question_processing,
-)
-from ..server import get_function_prompt
+from first_10 import FIRST_10
 
-db = Prisma()
-db.connect()
-# HACK why this no work?
-# register(db)
+SYSTEM = "TODO"
 
 
 def transform_to_jsonl() -> str:
     data = []
-    # TODO add webhooks
-    for func in db.apifunction.find_many(where={"NOT": {"description": ""}}):  # type: ignore
-        question = f"how do I {func.description}?"
-        parts = [question]
-        prompt = "\n\n".join(parts)
+    for example in FIRST_10:
         data.append(
             {
-                "prompt": prompt,
+                "prompt": SYSTEM + "\n\n" + example["prompt"],
                 # TODO make a `converation_get_completion_answer`
                 # and make this base one not require db/user_id
-                "completion": get_completion_answer(base_prompt, question),
+                "completion": example["completion"],
             }
         )
 
