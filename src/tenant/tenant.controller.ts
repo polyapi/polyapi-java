@@ -772,7 +772,7 @@ export class TenantController {
   }
 
   @UseGuards(PolyAuthGuard)
-  @Get('/:id/tos')
+  @Get('/:id/tos-agreements')
   async getTenantAgreements(
     @Req() req: AuthRequest,
     @Param('id') tenantId: string,
@@ -784,7 +784,7 @@ export class TenantController {
   }
 
   @UseGuards(PolyAuthGuard)
-  @Post('/:id/tos')
+  @Post('/:id/tos-agreements')
   async createTenantAgreements(
     @Req() req: AuthRequest,
     @Param('id') tenantId: string,
