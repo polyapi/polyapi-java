@@ -4,8 +4,4 @@ export class SignUpVerificationDto {
     @IsString()
     @IsNotEmpty()
     code: string;
-
-    @IsString()
-    @IsNotEmpty()
-    tosId: string;
 }

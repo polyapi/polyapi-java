@@ -1,8 +1,8 @@
 import shell from 'shelljs';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { createTenantSignUp, getLastTos, resendVerificationCode, verifyTenantSignUp } from '../api';
-import { SignUpDto, TosDto } from '../../../model/src/dto';
+import { createTenantSignUp, resendVerificationCode, verifyTenantSignUp } from '../api';
+import { SignUpDto } from '../../../model/src/dto';
 import { saveConfig } from '../config';
 import { exec as execCommand } from 'child_process';
 import { promisify } from 'util';
@@ -11,16 +11,6 @@ import isEmail from 'validator/lib/isEmail';
 const exec = promisify(execCommand);
 
 export const create = async (instance: string, loadedTenantSignUp = null) => {
-  let tos: TosDto | null = null;
-
-  try {
-    tos = await getLastTos(instance);
-  } catch (error) {
-    shell.echo(chalk.red('ERROR\n'));
-    console.log(error.message);
-    return;
-  }
-
   let tenantSignUp: SignUpDto | null = loadedTenantSignUp;
 
   let credentials: {
@@ -149,7 +139,7 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
     shell.echo('-n', chalk.rgb(255, 255, 255)('Verifying your code...\n\n'));
 
     try {
-      const response = await verifyTenantSignUp(instance, tenantSignUp.id, code, tos.id);
+      const response = await verifyTenantSignUp(instance, tenantSignUp.id, code);
 
       shell.echo(chalk.green('Tenant created sucesfully, details:\n'));
       shell.echo(chalk.bold('Instance url:'), response.apiBaseUrl, '\n');

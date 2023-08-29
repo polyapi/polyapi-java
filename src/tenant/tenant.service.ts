@@ -322,7 +322,7 @@ export class TenantService implements OnModuleInit {
     return this.createSignUpRecord(email, tenantName);
   }
 
-  async signUpVerify(id: string, code: string, tosId: string): Promise<SignUpVerificationResultDto> {
+  async signUpVerify(id: string, code: string): Promise<SignUpVerificationResultDto> {
     const [tenantSignUp, tier] = await Promise.all([
       this.prisma.tenantSignUp.findFirst({
         where: {
@@ -352,13 +352,25 @@ export class TenantService implements OnModuleInit {
         tenant,
       } = await this.createTenantRecord(tx, tenantSignUp.name, false, tier?.id, { email: tenantSignUp.email });
 
-      await tx.tenantAgreement.create({
-        data: {
-          tosId,
-          email: tenantSignUp.email,
-          tenantId: tenant.id,
-        },
+      const lastTos = await tx.tos.findFirst({
+        orderBy: [
+          {
+            createdAt: 'desc',
+          },
+        ],
       });
+
+      if (!lastTos) {
+        this.logger.debug('Tos record not found.');
+      } else {
+        await tx.tenantAgreement.create({
+          data: {
+            tosId: lastTos.id,
+            email: tenantSignUp.email,
+            tenantId: tenant.id,
+          },
+        });
+      }
 
       await tx.tenantSignUp.delete({
         where: {

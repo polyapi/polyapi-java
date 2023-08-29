@@ -104,11 +104,10 @@ export const createTenantSignUp = async (instance: string, email: string, tenant
   ).data;
 };
 
-export const verifyTenantSignUp = async (instance: string, id: string, code: string, tosId: string) => {
+export const verifyTenantSignUp = async (instance: string, id: string, code: string) => {
   return (
     await axios.post<any, AxiosResponse<SignUpVerificationResultDto>>(`${getInstanceUrl(instance)}/tenants/sign-up/${id}/verify`, {
       code,
-      tosId,
     }, {
       headers: {
         'Content-Type': 'application/json',

@@ -759,9 +759,7 @@ export class TenantController {
     @Param('id') id: string,
     @Body() data: SignUpVerificationDto,
   ) {
-    await this.findTos(data.tosId);
-
-    return this.tenantService.signUpVerify(id, data.code, data.tosId);
+    return this.tenantService.signUpVerify(id, data.code);
   }
 
   @Post('/sign-up/:id/resend-verification-code')
