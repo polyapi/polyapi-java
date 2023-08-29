@@ -76,7 +76,7 @@ export const create = async (instance: string, loadedTenantSignUp = null) => {
           {
             type: 'confirm',
             name: 'acceptedTos',
-            message: 'Do you agree with terms and service expressed in https://https://polyapi.io',
+            message: 'Do you agree with terms and service expressed in https://polyapi.io',
           },
         ]);
 
