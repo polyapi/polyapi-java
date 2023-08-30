@@ -16,7 +16,7 @@ datasource db {
 
 model Tenant {
   id                      String           @id(map: "idx_20369_sqlite_autoindex_tenant_1") @default(uuid())
-  createdAt               timestamp          @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt               DateTime          @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name                    String
   publicVisibilityAllowed Boolean         @default(false) @map("public_visibility_allowed")
   limitTierId             String          @map("limit_tier_id")
@@ -32,7 +32,7 @@ model Tenant {
 
 model User {
   id                   String                @id(map: "idx_20220_sqlite_autoindex_user_1") @default(uuid())
-  createdAt            timestamp               @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt            DateTime               @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name                 String
   tenantId             String               @map("tenant_id")
   role                 String               @default("USER")
@@ -48,7 +48,7 @@ model User {
 
 model Team {
   id          String       @id(map: "idx_20235_sqlite_autoindex_team_1") @default(uuid())
-  createdAt   timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt   DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name        String
   tenantId    String      @map("tenant_id")
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -59,7 +59,7 @@ model Team {
 
 model TeamMember {
   id        String  @id(map: "idx_20260_sqlite_autoindex_team_member_1") @default(uuid())
-  createdAt timestamp @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   teamId    String @map("team_id")
   userId    String @map("user_id")
   team      Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -70,7 +70,7 @@ model TeamMember {
 
 model Environment {
   id              String           @id(map: "idx_20318_sqlite_autoindex_environment_1") @default(uuid())
-  createdAt       timestamp          @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt       DateTime          @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name            String
   tenantId        String          @map("tenant_id")
   subdomain       String          @unique(map: "idx_20318_environment_subdomain_key")
@@ -90,7 +90,7 @@ model Environment {
 
 model Application {
   id          String   @id(map: "idx_20241_sqlite_autoindex_application_1") @default(uuid())
-  createdAt   timestamp  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt   DateTime  @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   tenantId    String  @map("tenant_id")
   name        String
   description String  @default("")
@@ -102,7 +102,7 @@ model Application {
 
 model ApiKey {
   id            String       @id(map: "idx_20228_sqlite_autoindex_api_key_1") @default(uuid())
-  createdAt     timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name          String
   environmentId String      @map("environment_id")
   key           String      @unique(map: "idx_20228_api_key_key_key")
@@ -118,7 +118,7 @@ model ApiKey {
 
 model ApiFunction {
   id                           String       @id(map: "idx_20274_sqlite_autoindex_api_function_1") @default(uuid())
-  createdAt                    timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt                    DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   environmentId                String      @map("environment_id")
   name                         String
   context                      String
@@ -142,7 +142,7 @@ model ApiFunction {
 
 model CustomFunction {
   id            String       @id(map: "idx_20324_sqlite_autoindex_custom_function_1") @default(uuid())
-  createdAt     timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   environmentId String      @map("environment_id")
   name          String
   context       String
@@ -163,7 +163,7 @@ model CustomFunction {
 
 model AuthProvider {
   id               String       @id(map: "idx_20283_sqlite_autoindex_auth_provider_1") @default(uuid())
-  createdAt        timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt        DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   environmentId    String      @map("environment_id")
   name             String?
   context          String
@@ -183,7 +183,7 @@ model AuthProvider {
 
 model WebhookHandle {
   id            String       @id(map: "idx_20293_sqlite_autoindex_webhook_handle_1") @default(uuid())
-  createdAt     timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     String      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   environmentId String      @map("environment_id")
   context       String
   name          String
@@ -197,7 +197,7 @@ model WebhookHandle {
 
 model ConversationMessage {
   id             String        @id(map: "idx_20266_sqlite_autoindex_conversation_message_1") @default(uuid())
-  createdat      timestamp       @unique(map: "idx_20266_conversation_message_createdat_key") @default(dbgenerated("CURRENT_TIMESTAMP"))
+  createdat      DateTime       @unique(map: "idx_20266_conversation_message_createdat_key") @default(dbgenerated("CURRENT_TIMESTAMP"))
   userId         String       @map("user_id")
   name           String       @default("")
   role           String
@@ -212,7 +212,7 @@ model ConversationMessage {
 
 model SystemPrompt {
   id            String       @id(map: "idx_20254_sqlite_autoindex_system_prompt_1") @default(uuid())
-  createdat     timestamp      @default(dbgenerated("CURRENT_TIMESTAMP"))
+  createdat     DateTime      @default(dbgenerated("CURRENT_TIMESTAMP"))
   environmentId String      @map("environment_id")
   content       String
   environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
@@ -222,7 +222,7 @@ model SystemPrompt {
 
 model AuthToken {
   id             String        @id(map: "idx_20248_sqlite_autoindex_auth_token_1") @default(uuid())
-  createdAt      timestamp       @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt      DateTime       @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   authProviderId String       @map("auth_provider_id")
   clientId       String       @map("client_id")
   clientSecret   String       @map("client_secret")
@@ -241,7 +241,7 @@ model AuthToken {
 
 model ConfigVariable {
   id            Int       @id(map: "idx_20302_config_variable_pkey") @default(autoincrement())
-  createdAt     timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     String      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name          String
   value         String
   tenantId      String?      @map("tenant_id")
@@ -273,7 +273,7 @@ model GptPlugin {
 
 model Variable {
   id            String       @id(map: "idx_20309_sqlite_autoindex_variable_1") @default(uuid())
-  createdAt     timestamp      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   environmentId String      @map("environment_id")
   name          String
   context       String
@@ -306,7 +306,7 @@ model LimitTier {
 
 model Statistics {
   id            String  @id(map: "idx_20376_sqlite_autoindex_statistics_1") @default(uuid())
-  createdAt     timestamp @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   type          String
   apiKey        String @map("api_key")
   tenantId      String @map("tenant_id")
@@ -320,7 +320,7 @@ model Statistics {
 
 model conversation {
   id              String                @id(map: "idx_20362_sqlite_autoindex_conversation_1")
-  createdat       timestamp               @default(dbgenerated("CURRENT_TIMESTAMP"))
+  createdat       DateTime               @default(dbgenerated("CURRENT_TIMESTAMP"))
   userid          String
   workspacefolder String               @default("")
   user            User                 @relation(fields: [userid], references: [id], onDelete: Restrict)
