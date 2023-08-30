@@ -212,7 +212,7 @@ export class TenantService implements OnModuleInit {
 
   async create(name: string, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}) {
     return this.prisma.$transaction(async tx => {
-      return this.createTenantRecord(tx, name, publicVisibilityAllowed, limitTierId, options);
+      return (await this.createTenantRecord(tx, name, publicVisibilityAllowed, limitTierId, options)).tenant;
     });
   }
 
@@ -487,7 +487,7 @@ export class TenantService implements OnModuleInit {
           },
         });
 
-        await this.sendSignUpVerificationCode(verificationCode, tenantSignUp);
+        await this.emailService.sendSignUpVerificationCode(verificationCode, tenantSignUp);
 
         return tenantSignUp;
       } catch (error) {
@@ -528,7 +528,7 @@ export class TenantService implements OnModuleInit {
           },
         });
 
-        await this.sendSignUpVerificationCode(verificationCode, tenantSignUp);
+        await this.emailService.sendSignUpVerificationCode(verificationCode, tenantSignUp);
 
         return tenantSignUp;
       } catch (error) {
@@ -545,9 +545,5 @@ export class TenantService implements OnModuleInit {
     }
 
     return result;
-  }
-
-  private sendSignUpVerificationCode(verificationCode: string, tenantSignUp: TenantSignUp) {
-    return this.emailService.send(this.config.signUpEmail, 'Poly API Verification Code', `Verification Code: ${verificationCode.toUpperCase()}`, tenantSignUp.email);
   }
 }

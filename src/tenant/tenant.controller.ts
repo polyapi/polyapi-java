@@ -90,7 +90,7 @@ export class TenantController {
       }
     }
 
-    return this.tenantService.toDto((await this.tenantService.create(name, publicVisibilityAllowed, tierId)).tenant);
+    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed, tierId));
   }
 
   @UseGuards(PolyAuthGuard)

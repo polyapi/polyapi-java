@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { CommonService } from 'common/common.service';
 import { PrismaService } from 'prisma/prisma.service';
 
@@ -36,10 +36,6 @@ export class TosService {
         },
       ],
     });
-
-    if (!tos) {
-      throw new NotFoundException('Tos version not found.');
-    }
 
     return tos;
   }

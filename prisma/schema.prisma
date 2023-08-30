@@ -350,7 +350,7 @@ model TenantSignUp {
   email             String   @unique
   name              String?  @unique
   verificationCode  String   @unique @map("verification_code")
-  expiresAt         DateTime
+  expiresAt         DateTime @map("expires_at")
 
   @@map("tenant_sign_up")
 }

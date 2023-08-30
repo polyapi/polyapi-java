@@ -91,7 +91,7 @@ export const createClientFunction = async (
   ).data;
 };
 
-export const createTenantSignUp = async (instance: string, email: string, tenantName = null) => {
+export const createTenantSignUp = async (instance: string, email: string, tenantName: string | null = null) => {
   return (
     await axios.post<any, AxiosResponse<SignUpDto>>(`${getInstanceUrl(instance)}/tenants/sign-up`, {
       email,

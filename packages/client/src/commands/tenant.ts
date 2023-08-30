@@ -10,7 +10,7 @@ import isEmail from 'validator/lib/isEmail';
 
 const exec = promisify(execCommand);
 
-export const create = async (instance: string, loadedTenantSignUp = null) => {
+export const create = async (instance: string, loadedTenantSignUp: SignUpDto | null = null) => {
   let tenantSignUp: SignUpDto | null = loadedTenantSignUp;
 
   let credentials: {
