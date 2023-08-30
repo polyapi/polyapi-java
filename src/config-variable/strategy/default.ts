@@ -4,7 +4,7 @@ import { ConfigVariableStrategy } from './base';
 /**
  * In this strategy,`get` method returns the nearest child value, or child itself if exists.
  */
-export class DefaultConfigVariableStrategy extends ConfigVariableStrategy {
+export class DefaultConfigVariableStrategy extends ConfigVariableStrategy<unknown> {
   getOneFromList(configVariables: ConfigVariable[]): ConfigVariable | null {
     return configVariables.sort(this.getSortHandler())[configVariables.length - 1] || null;
   }

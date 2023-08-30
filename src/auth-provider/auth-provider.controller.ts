@@ -18,7 +18,16 @@ import {
 } from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
-import { AuthTokenDto, CreateAuthProviderDto, ExecuteAuthProviderDto, ExecuteAuthProviderResponseDto, Permission, UpdateAuthProviderDto } from '@poly/model';
+import {
+  AuthProviderPublicDto,
+  AuthTokenDto,
+  CreateAuthProviderDto,
+  ExecuteAuthProviderDto,
+  ExecuteAuthProviderResponseDto,
+  Permission,
+  Role,
+  UpdateAuthProviderDto,
+} from '@poly/model';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
@@ -47,6 +56,27 @@ export class AuthProviderController {
   async getAuthProviders(@Req() req: AuthRequest) {
     return (await this.service.getAuthProviders(req.user.environment.id))
       .map(authProvider => this.service.toAuthProviderDto(authProvider));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/public')
+  async getPublicAuthProviders(@Req() req: AuthRequest): Promise<AuthProviderPublicDto[]> {
+    const { tenant, environment, user } = req.user;
+    return (await this.service.getPublicAuthProviders(tenant, environment, user?.role === Role.Admin))
+      .map(authProvider => this.service.toAuthProviderPublicDto(authProvider));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/public/:id')
+  async getPublicAuthProvider(@Req() req: AuthRequest, @Param('id') id: string): Promise<AuthProviderPublicDto> {
+    const { tenant, environment } = req.user;
+    const authProvider = await this.service.findPublicAuthProvider(tenant, environment, id);
+
+    if (!authProvider) {
+      throw new NotFoundException('Public auth provider not found.');
+    }
+
+    return this.service.toAuthProviderPublicDto(authProvider);
   }
 
   @UseGuards(PolyAuthGuard)

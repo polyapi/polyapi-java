@@ -4,14 +4,19 @@ import jsonpath from 'jsonpath';
 import { PathError } from './path-error';
 
 import {
-  NAME_ALLOWED_CHARACTERS_PATTERN,
+  ArgumentType,
   CONTEXT_ALLOWED_CHARACTERS_PATTERN,
   DOTS_AT_BEGINNING_PATTERN,
   DOTS_AT_END_PATTERN,
-  NUMBERS_AT_BEGINNING_PATTERN, Visibility, ArgumentType, PropertyType, ParsedConfigVariable, VisibilityQuery,
+  NAME_ALLOWED_CHARACTERS_PATTERN,
+  NUMBERS_AT_BEGINNING_PATTERN,
+  ParsedConfigVariable,
+  PropertyType,
+  Visibility,
+  VisibilityQuery,
 } from '@poly/model';
 import { toPascalCase } from '@guanghechen/helper-string';
-import { ConfigVariable, Prisma } from '@prisma/client';
+import { ConfigVariable, Tenant, Prisma } from '@prisma/client';
 
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
 
@@ -283,5 +288,22 @@ export class CommonService {
       return error.code === 'P2002' && Array.isArray(error.meta?.target) && field && (error.meta?.target || '').includes(field);
     }
     return false;
+  }
+
+  getPublicContext(entity: { context: string | null, environment: { tenant: Tenant }}) {
+    const { context, environment: { tenant } } = entity;
+    return `${tenant.publicNamespace ? `${tenant.publicNamespace}${context ? '.' : ''}` : ''}${context || ''}`;
+  }
+
+  isPublicVisibilityAllowed(
+    entity: { context: string | null, environment: { tenant: Tenant }},
+    defaultHidden: boolean,
+    visibleContexts: string[] | null,
+  ): boolean {
+    if (!defaultHidden || !visibleContexts) {
+      return true;
+    }
+    const publicContext = `${this.getPublicContext(entity)}.`;
+    return visibleContexts.some(visibleContext => publicContext.startsWith(`${visibleContext}.`));
   }
 }

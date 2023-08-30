@@ -13,3 +13,8 @@ export class AuthProviderDto {
   callbackUrl: string;
   visibility: Visibility;
 }
+
+export class AuthProviderPublicDto extends AuthProviderDto {
+  tenant: string;
+  hidden: boolean;
+}

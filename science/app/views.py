@@ -22,6 +22,7 @@ from app.utils import (
     log,
     redis_get,
     store_messages,
+    verify_required_fields,
 )
 from app.router import split_route_and_question
 
@@ -155,7 +156,8 @@ def variable_description() -> Response:
 @bp.route("/plugin-chat", methods=["POST"])
 def plugin_chat() -> Response:
     data = request.get_json(force=True)
-    resp = get_plugin_chat(data['apiKey'], data['pluginId'], data['message'])
+    verify_required_fields(data, ['apiKey', 'pluginId', 'conversationId', 'message'])
+    resp = get_plugin_chat(data['apiKey'], data['pluginId'], data['conversationId'], data['message'])
     return jsonify(resp)
 
 
@@ -196,3 +198,13 @@ def handle_open_ai_error(e):
         msg = "OpenAI Error: {}".format(str(e))
     current_app.log_exception(msg)
     return msg, 500
+
+
+@bp.errorhandler(400)
+def handle_400(e):
+    return e.description, 400
+
+
+@bp.errorhandler(401)
+def handle_401(e):
+    return e.description, 401

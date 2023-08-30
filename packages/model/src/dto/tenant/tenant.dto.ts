@@ -8,6 +8,7 @@ export class TenantDto {
   name: string | null;
   publicVisibilityAllowed: boolean;
   tierId: string | null;
+  publicNamespace: string | null;
 }
 
 export class TenantFullDto extends TenantDto {

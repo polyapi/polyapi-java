@@ -15,9 +15,11 @@ import {
   WebhookHandleSpecification,
 } from '@poly/model';
 
-import { functionServiceMock, webhookServiceMock, authProviderServiceMock, variableServiceMock } from '../mocks';
+import { functionServiceMock, webhookServiceMock, authProviderServiceMock, variableServiceMock, commonServiceMock, configVariableServiceMock } from '../mocks';
 import { resetMocks } from '../mocks/utils';
 import { VariableService } from 'variable/variable.service';
+import { CommonService } from 'common/common.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 describe('SpecsService', () => {
   let specsService: SpecsService;
@@ -41,6 +43,14 @@ describe('SpecsService', () => {
         {
           provide: VariableService,
           useValue: variableServiceMock,
+        },
+        {
+          provide: CommonService,
+          useValue: commonServiceMock,
+        },
+        {
+          provide: ConfigVariableService,
+          useValue: configVariableServiceMock,
         },
       ],
     }).compile();
@@ -140,6 +150,10 @@ describe('SpecsService', () => {
       authProviderServiceMock.toAuthFunctionSpecifications?.mockResolvedValue(authFunctionSpecifications);
 
       variableServiceMock.toServerVariableSpecification?.mockResolvedValue(serverVariableSpecification);
+
+      configVariableServiceMock.getEffectiveValue?.mockResolvedValue({
+        defaultHidden: false,
+      });
 
       // Action
       const result = await specsService.getSpecifications(mockedAuthData.environment.id, mockedAuthData.tenant.id, contexts, names, ids);

@@ -30,13 +30,14 @@ export class AiService {
     return new EventSource(scienceUrl);
   }
 
-  async pluginChat(apiKey: string, pluginId: number, message: string): Promise<unknown> {
+  async pluginChat(apiKey: string, pluginId: number, conversationId: string, message: string): Promise<unknown> {
     this.logger.debug(`Sending message to Science server for plugin chat: ${message}`);
     return await lastValueFrom(
       this.httpService
         .post(`${this.config.scienceServerBaseUrl}/plugin-chat`, {
           apiKey,
           pluginId,
+          conversationId,
           message,
         })
         .pipe(map((response) => response.data))

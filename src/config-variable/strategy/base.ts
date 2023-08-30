@@ -3,12 +3,13 @@ import { ConfigVariable } from '@prisma/client';
 import { ParsedConfigVariable } from '@poly/model';
 import { CommonService } from 'common/common.service';
 
-interface Strategy {
+interface Strategy<T> {
   getOneFromList(configVariable: ConfigVariable[]): ConfigVariable | null;
   configure(name: string, value: unknown, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable>;
+  getEffectiveValue(configVariables: ConfigVariable[]): T | null;
 }
 
-export abstract class ConfigVariableStrategy implements Strategy {
+export abstract class ConfigVariableStrategy<T> implements Strategy<T> {
   constructor(protected prisma: PrismaService, protected commonService: CommonService) {}
 
   protected create({
@@ -80,6 +81,12 @@ export abstract class ConfigVariableStrategy implements Strategy {
       configVariable.tenantId === null && configVariable.environmentId === null;
   }
 
-  abstract getOneFromList(configVariable): ConfigVariable | null;
+  abstract getOneFromList(configVariables: ConfigVariable[]): ConfigVariable | null;
+
   abstract configure(name: string, value: unknown, tenantId: string | null, environmentId: string | null): Promise<ConfigVariable>;
+
+  public getEffectiveValue(configVariables: ConfigVariable[]): T | null {
+    const configVariable = this.getOneFromList(configVariables);
+    return configVariable ? JSON.parse(configVariable.value) : null;
+  }
 }

@@ -17,10 +17,10 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
   ContextVariableValues,
   CreateVariableDto,
-  Permission,
+  Permission, Role,
   UpdateVariableDto,
   ValueType,
-  VariableDto,
+  VariableDto, VariablePublicDto,
   Visibility,
 } from '@poly/model';
 import { AuthData, AuthRequest } from 'common/types';
@@ -51,6 +51,38 @@ export class VariableController {
     return Promise.all(
       variables.map(async variable => await this.service.toDto(variable)),
     );
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/public')
+  async getPublicVariables(@Req() req: AuthRequest): Promise<VariablePublicDto[]> {
+    await this.authService.checkPermissions(req.user, [
+      Permission.ManageSecretVariables,
+      Permission.ManageNonSecretVariables,
+      Permission.Use,
+    ]);
+
+    const { tenant, environment, user } = req.user;
+    const variables = await this.service.getAllPublic(tenant, environment, user?.role === Role.Admin);
+    return Promise.all(
+      variables.map(async variable => await this.service.toPublicDto(variable)),
+    );
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/public')
+  async getPublicVariable(@Req() req: AuthRequest, @Param('id') id: string): Promise<VariablePublicDto> {
+    const { tenant, environment } = req.user;
+
+    await this.authService.checkPermissions(req.user, Permission.Use);
+
+    const variable = await this.service.findPublicById(tenant, environment, id);
+
+    if (!variable) {
+      throw new NotFoundException(`Variable with id '${id}' not found`);
+    }
+
+    return this.service.toPublicDto(variable);
   }
 
   @UseGuards(PolyAuthGuard)

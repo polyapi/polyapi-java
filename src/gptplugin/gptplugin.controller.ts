@@ -16,13 +16,14 @@ import { CreatePluginDto, Role } from '@poly/model';
 import { GptPluginService, getSlugSubdomain } from 'gptplugin/gptplugin.service';
 import { AuthRequest } from 'common/types';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
+import { ChatService } from 'chat/chat.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller()
 export class GptPluginController {
   private readonly logger = new Logger(GptPluginController.name);
 
-  constructor(private readonly service: GptPluginService) {}
+  constructor(private readonly service: GptPluginService, private readonly chatService: ChatService) {}
 
   @Get('.well-known/ai-plugin.json')
   public async aiPluginJson(@Req() req: Request): Promise<unknown> {
@@ -54,17 +55,29 @@ export class GptPluginController {
     return 'deleted';
   }
 
+  @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))
+  @Get('api/conversations/:id')
+  public async apiConversationGet(@Req() req: AuthRequest, @Param('id') conversationId: string): Promise<unknown> {
+    return this.chatService.getConversationDetail('', conversationId);
+  }
+
   @UseGuards(PolyAuthGuard)
-  @Post('api')
-  public async pluginChat(@Req() req: AuthRequest, @Body() body): Promise<unknown> {
+  @Post('api/conversations/:id')
+  public async apiConversationPost(@Req() req: AuthRequest, @Param('id') conversationId: string, @Body() body): Promise<unknown> {
     const slug = getSlugSubdomain(req.hostname)[0];
     // for testing locally!
     // const slug = 'megatronical';
     if (!slug) {
       throw new BadRequestException('Slug not found! Please use your plugin subdomain like "foo-1234.na1.polyapi.io".');
     }
-    const resp = await this.service.chat(req.user, slug, body.message);
+    const resp = await this.service.chat(req.user, slug, conversationId, body.message);
     return resp;
+  }
+
+  @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))
+  @Delete('api/conversations/:id')
+  public async apiConversationDelete(@Req() req: AuthRequest, @Param('id') conversationId: string): Promise<unknown> {
+    return this.chatService.deleteConversation(conversationId);
   }
 
   @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))

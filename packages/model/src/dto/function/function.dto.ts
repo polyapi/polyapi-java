@@ -25,3 +25,13 @@ export interface FunctionBasicDto {
 export interface FunctionDetailsDto extends FunctionBasicDto {
   arguments: Omit<FunctionArgument, 'location'>[];
 }
+
+export interface FunctionPublicBasicDto extends FunctionBasicDto {
+  tenant: string;
+  hidden: boolean;
+}
+
+export interface FunctionPublicDetailsDto extends FunctionDetailsDto {
+  tenant: string;
+  hidden: boolean;
+}

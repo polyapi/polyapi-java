@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConfigVariableDto, ConfigVariableName } from '@poly/model';
-import { ConfigVariableStrategy, DefaultConfigVariableStrategy, TrainingDataGenerationStrategy } from './strategy';
+import { ConfigVariableDto, ConfigVariableName, PublicVisibilityValue, TrainingDataGeneration } from '@poly/model';
+import { ConfigVariableStrategy, DefaultConfigVariableStrategy, TrainingDataGenerationStrategy, PublicVisibilityStrategy } from './strategy';
 import { CommonService } from 'common/common.service';
 
 @Injectable()
@@ -10,14 +10,16 @@ export class ConfigVariableService {
   private readonly prisma: PrismaService;
   private readonly commonService: CommonService;
 
-  private defaultConfigVariableStrategy: ConfigVariableStrategy;
-  private trainingDataStrategy: ConfigVariableStrategy;
+  private readonly defaultConfigVariableStrategy: ConfigVariableStrategy<unknown>;
+  private readonly trainingDataStrategy: ConfigVariableStrategy<TrainingDataGeneration>;
+  private readonly publicVisibilityStrategy: ConfigVariableStrategy<PublicVisibilityValue>;
 
   constructor(prisma: PrismaService, commonService: CommonService) {
     this.prisma = prisma;
     this.commonService = commonService;
     this.defaultConfigVariableStrategy = new DefaultConfigVariableStrategy(prisma, commonService);
     this.trainingDataStrategy = new TrainingDataGenerationStrategy(prisma, commonService);
+    this.publicVisibilityStrategy = new PublicVisibilityStrategy(prisma, commonService);
   }
 
   toDto(data: ConfigVariable): ConfigVariableDto {
@@ -47,12 +49,15 @@ export class ConfigVariableService {
     });
   }
 
-  private getStrategy(name: string): ConfigVariableStrategy {
-    if (name === ConfigVariableName.TrainingDataGeneration) {
-      return this.trainingDataStrategy;
+  private getStrategy<T>(name: string): ConfigVariableStrategy<T> {
+    switch (name) {
+      case ConfigVariableName.TrainingDataGeneration:
+        return this.trainingDataStrategy as ConfigVariableStrategy<T>;
+      case ConfigVariableName.PublicVisibility:
+        return this.publicVisibilityStrategy as ConfigVariableStrategy<T>;
+      default:
+        return this.defaultConfigVariableStrategy as ConfigVariableStrategy<T>;
     }
-
-    return this.defaultConfigVariableStrategy;
   }
 
   async getOneParsed<T>(
@@ -107,5 +112,13 @@ export class ConfigVariableService {
         id: configVariable.id,
       },
     });
+  }
+
+  async getEffectiveValue<T>(name: ConfigVariableName, tenantId: string | null, environmentId: string | null) {
+    const configVariables = await this.prisma.configVariable.findMany({
+      where: this.commonService.getConfigVariableFilters(name, tenantId, environmentId),
+    });
+
+    return this.getStrategy<T>(name).getEffectiveValue(configVariables);
   }
 }

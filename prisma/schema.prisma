@@ -23,6 +23,7 @@ model Tenant {
   environments            Environment[]
   applications            Application[]
   publicVisibilityAllowed Boolean          @default(false) @map("public_visibility_allowed")
+  publicNamespace         String?          @map("public_namespace")
   configVariables         ConfigVariable[]
   limitTier               LimitTier?       @relation(fields: [limitTierId], references: [id])
   limitTierId             String?          @map("limit_tier_id")
@@ -219,7 +220,7 @@ model ConversationMessage {
   type Int @default(1)
 
   content        String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId String       @map("conversation_id")
 
   @@map("conversation_message")

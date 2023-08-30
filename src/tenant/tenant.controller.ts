@@ -81,7 +81,12 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed, tierId = null } = data;
+    const {
+      name,
+      publicVisibilityAllowed,
+      publicNamespace = null,
+      tierId = null,
+    } = data;
 
     if (tierId) {
       const limitTier = await this.limitService.findById(tierId);
@@ -90,7 +95,11 @@ export class TenantController {
       }
     }
 
-    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed, tierId));
+    if (!await this.tenantService.isPublicNamespaceAvailable(publicNamespace)) {
+      throw new BadRequestException(`Public namespace '${publicNamespace}' is not available.`);
+    }
+
+    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed, publicNamespace, tierId));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -108,10 +117,26 @@ export class TenantController {
     return full ? this.tenantService.toFullDto(tenant) : this.tenantService.toDto(tenant);
   }
 
-  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
+  @UseGuards(new PolyAuthGuard([Role.SuperAdmin, Role.Admin]))
   @Patch(':id')
-  async updateTenant(@Param('id') id: string, @Body() data: UpdateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed, tierId } = data;
+  async updateTenant(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateTenantDto): Promise<TenantDto> {
+    const { name, publicVisibilityAllowed, publicNamespace, tierId } = data;
+    const tenant = await this.findTenant(id);
+
+    if (req.user.user?.role !== Role.SuperAdmin) {
+      if (tenant.id !== req.user.tenant.id) {
+        throw new BadRequestException('You are not allowed to update this tenant.');
+      }
+      if (name != null) {
+        throw new BadRequestException('You are not allowed to update the name of this tenant.');
+      }
+      if (publicVisibilityAllowed != null) {
+        throw new BadRequestException('You are not allowed to update the public visibility of this tenant.');
+      }
+      if (tierId != null) {
+        throw new BadRequestException('You are not allowed to update the limit tier of this tenant.');
+      }
+    }
 
     if (tierId) {
       const limitTier = await this.limitService.findById(tierId);
@@ -119,9 +144,12 @@ export class TenantController {
         throw new BadRequestException('Limit tier with given id does not exist.');
       }
     }
+    if (!await this.tenantService.isPublicNamespaceAvailable(publicNamespace, [tenant.id])) {
+      throw new BadRequestException(`Public namespace '${publicNamespace}' is not available.`);
+    }
 
     return this.tenantService.toDto(
-      await this.tenantService.update(await this.findTenant(id), name, publicVisibilityAllowed, tierId),
+      await this.tenantService.update(tenant, name, publicVisibilityAllowed, publicNamespace, tierId),
     );
   }
 

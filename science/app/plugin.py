@@ -1,8 +1,7 @@
 import os
 import json
+from flask import abort
 import requests
-
-from app.conversation import previous_messages_referenced
 
 assert requests
 from typing import Dict, List
@@ -12,7 +11,6 @@ from prisma import get_client
 from app.constants import CHAT_GPT_MODEL, MessageType
 from app.typedefs import ChatGptChoice, MessageDict
 from app.utils import (
-    create_new_conversation,
     log,
     msgs_to_msg_dicts,
     store_messages,
@@ -70,6 +68,7 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
 def get_plugin_chat(
     api_key: str,
     plugin_id: int,
+    conversation_id: str,
     message: str,
 ) -> List[MessageDict]:
     """chat with a plugin"""
@@ -77,18 +76,30 @@ def get_plugin_chat(
     db_api_key = db.apikey.find_unique(where={"key": api_key})
     assert db_api_key
     user_id = db_api_key.userId
-    prev_msgs = previous_messages_referenced(
-        user_id, message, message_type=MessageType.plugin
-    )
+    assert user_id
+
+    conversation = db.conversation.find_first(where={"id": conversation_id})
+    if conversation:
+        if conversation.userId != user_id:
+            abort(401, {"message": "Not authorized. User id and conversation user id mismatch."})
+
+        prev_msgs = db.conversationmessage.find_many(
+            where={"conversationId": conversation_id, "type": MessageType.plugin.value},
+            order={"createdAt": "asc"},
+        )
+    else:
+        conversation = db.conversation.create(data={"id": conversation_id, "userId": user_id})
+        prev_msgs = []
+
     openapi = _get_openapi_spec(plugin_id)
     functions = openapi_to_openai_functions(openapi)
-    messages = msgs_to_msg_dicts(prev_msgs) + [
+    messages = [
         MessageDict(role="user", content=message, type=MessageType.plugin.value)
     ]
 
     resp = openai.ChatCompletion.create(
         model=CHAT_GPT_MODEL,
-        messages=strip_type_and_info(messages),
+        messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),
         functions=functions,
         temperature=0.2,
     )
@@ -108,19 +119,17 @@ def get_plugin_chat(
             functions=functions,
             temperature=0.2,
         )
-        answer_msg = dict(resp2["choices"][0]["message"])
+        answer_msg: MessageDict = resp2["choices"][0]["message"]
         answer_msg["type"] = MessageType.plugin.value
         messages.append(answer_msg)  # type: ignore
-
-        if user_id:
-            # if this convo is being done by a user, let's log it!
-            conversation = create_new_conversation(user_id)
-            store_messages(user_id, conversation.id, messages)
-
-        return messages
     else:
         # no function call, just return OpenAI's answer
-        return [choice["message"]]
+        answer_msg: MessageDict = choice['message']  # type: ignore
+        answer_msg['type'] = MessageType.plugin.value
+        messages.append(answer_msg)
+
+    store_messages(user_id, conversation_id, messages)
+    return messages
 
 
 def _get_name_path_map(openapi: Dict) -> Dict:

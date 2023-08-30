@@ -11,3 +11,8 @@ export interface VariableDto {
   secret: boolean;
   value?: ValueType;
 }
+
+export interface VariablePublicDto extends VariableDto {
+  tenant: string;
+  hidden: boolean;
+}

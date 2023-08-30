@@ -2,16 +2,20 @@ import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { FunctionService } from 'function/function.service';
 import { WebhookService } from 'webhook/webhook.service';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
-import { Specification, SpecificationPath, Visibility, VisibilityQuery } from '@poly/model';
+import { ConfigVariableName, PublicVisibilityValue, Specification, SpecificationPath, Visibility, VisibilityQuery } from '@poly/model';
 import { toCamelCase } from '@guanghechen/helper-string';
-import { Environment, Tenant } from '@prisma/client';
+import { ApiFunction, AuthProvider, CustomFunction, Environment, Tenant, Variable, WebhookHandle } from '@prisma/client';
 import { VariableService } from 'variable/variable.service';
+import { CommonService } from 'common/common.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
+import { WithTenant } from 'common/types';
 
 @Injectable()
 export class SpecsService {
   private logger: Logger = new Logger(SpecsService.name);
 
   constructor(
+    private readonly commonService: CommonService,
     @Inject(forwardRef(() => FunctionService))
     private readonly functionService: FunctionService,
     @Inject(forwardRef(() => WebhookService))
@@ -20,6 +24,7 @@ export class SpecsService {
     private readonly authProviderService: AuthProviderService,
     @Inject(forwardRef(() => VariableService))
     private readonly variableService: VariableService,
+    private readonly configVariableService: ConfigVariableService,
   ) {
   }
 
@@ -44,68 +49,106 @@ export class SpecsService {
       this.functionService.getCustomFunctions(environmentId, contexts, names, ids, visibilityQuery, true),
       this.webhookService.getWebhookHandles(environmentId, contexts, names, ids, visibilityQuery, true),
       this.authProviderService.getAuthProviders(environmentId, contexts, ids, visibilityQuery, true),
-    ]);
+    ]) as [
+      WithTenant<ApiFunction>[],
+      WithTenant<CustomFunction>[],
+      WithTenant<WebhookHandle>[],
+      WithTenant<AuthProvider>[]
+    ];
+    const {
+      defaultHidden = false,
+      visibleContexts = null,
+    } = await this.configVariableService.getEffectiveValue<PublicVisibilityValue>(
+      ConfigVariableName.PublicVisibility,
+      tenantId,
+      environmentId,
+    ) || {};
+
+    const filterByPublicVisibility = <T extends {
+      context: string | null,
+      environment: {
+        tenant: Tenant
+      },
+      visibility: string
+    }>(entities: T[]): T[] => {
+      return entities.filter(entity => {
+        if (entity.visibility !== Visibility.Public) {
+          return true;
+        }
+
+        if (tenantId && entity.environment.tenant.id === tenantId) {
+          return true;
+        }
+
+        return this.commonService.isPublicVisibilityAllowed(entity, defaultHidden, visibleContexts);
+      });
+    };
 
     const getApiFunctionsSpecifications = async () => {
       return await Promise.all(
-        apiFunctions.map(async apiFunction =>
-          await this.fillMetadata(
-            tenantId,
-            apiFunction as any,
-            await this.functionService.toApiFunctionSpecification(apiFunction)),
-        ),
+        filterByPublicVisibility(apiFunctions)
+          .map(async apiFunction =>
+            await this.updateWithAdditionalData(
+              tenantId,
+              apiFunction as any,
+              await this.functionService.toApiFunctionSpecification(apiFunction)),
+          ),
       );
     };
 
     const getCustomFunctionsSpecifications = async () => {
       return await Promise.all(
-        customFunctions.map(async customFunction =>
-          await this.fillMetadata(
-            tenantId,
-            customFunction as any,
-            await this.functionService.toCustomFunctionSpecification(customFunction)),
-        ),
+        filterByPublicVisibility(customFunctions)
+          .map(async customFunction =>
+            await this.updateWithAdditionalData(
+              tenantId,
+              customFunction as any,
+              await this.functionService.toCustomFunctionSpecification(customFunction)),
+          ),
       );
     };
 
     const getWebhookHandlesSpecifications = async () => {
       return await Promise.all(
-        webhookHandles.map(async webhookHandle =>
-          await this.fillMetadata(
-            tenantId,
-            webhookHandle as any,
-            await this.webhookService.toWebhookHandleSpecification(webhookHandle)),
-        ),
+        filterByPublicVisibility(webhookHandles)
+          .map(async webhookHandle =>
+            await this.updateWithAdditionalData(
+              tenantId,
+              webhookHandle as any,
+              await this.webhookService.toWebhookHandleSpecification(webhookHandle)),
+          ),
       );
     };
 
     const getAuthProvidersSpecifications = async () => {
       return (
         await Promise.all(
-          authProviders.map(async authProvider => {
-            const specifications = await this.authProviderService.toAuthFunctionSpecifications(authProvider, names);
-            return await Promise.all(
-              specifications.map(async specification =>
-                await this.fillMetadata(
-                  tenantId,
-                  authProvider as any,
-                  specification,
-                ),
-              ));
-          }),
+          filterByPublicVisibility(authProviders)
+            .map(async authProvider => {
+              const specifications = await this.authProviderService.toAuthFunctionSpecifications(authProvider, names);
+              return await Promise.all(
+                specifications.map(async specification =>
+                  await this.updateWithAdditionalData(
+                    tenantId,
+                    authProvider as any,
+                    specification,
+                  ),
+                ));
+            }),
         )
       ).flat();
     };
 
     const getServerVariablesSpecifications = async () => {
-      const serverVariables = await this.variableService.getAll(environmentId, contexts, names, ids, visibilityQuery, true);
+      const serverVariables = await this.variableService.getAll(environmentId, contexts, names, ids, visibilityQuery, true) as WithTenant<Variable>[];
       return await Promise.all(
-        serverVariables.map(async serverVariable =>
-          await this.fillMetadata(
-            tenantId,
+        filterByPublicVisibility(serverVariables)
+          .map(async serverVariable =>
+            await this.updateWithAdditionalData(
+              tenantId,
             serverVariable as any,
             await this.variableService.toServerVariableSpecification(serverVariable)),
-        ),
+          ),
       );
     };
 
@@ -126,20 +169,29 @@ export class SpecsService {
     ].sort(this.sortSpecifications);
   }
 
-  private async fillMetadata(
+  private async updateWithAdditionalData(
     tenantId: string | null,
-    tenantEntity: { environment: Environment & { tenant: Tenant } },
+    tenantEntity: {
+      environment: Environment & {
+        tenant: Tenant
+      }
+    },
     specification: Specification,
   ): Promise<Specification> {
-    specification = this.fillVisibilityMetadata(tenantId, specification, tenantEntity);
+    specification = this.updateWithVisibilityMetadata(tenantId, specification, tenantEntity);
+    specification = this.updateWithPublicNamespace(tenantId, specification, tenantEntity);
 
     return specification;
   }
 
-  private fillVisibilityMetadata(
+  private updateWithVisibilityMetadata(
     tenantId: string | null,
     specification: Specification,
-    tenantEntity: { environment?: Environment & { tenant?: Tenant } }): Specification {
+    tenantEntity: {
+      environment?: Environment & {
+        tenant?: Tenant
+      }
+    }): Specification {
     if (!tenantId || specification.visibilityMetadata.visibility !== Visibility.Public || !tenantEntity.environment?.tenant) {
       return specification;
     }
@@ -152,6 +204,24 @@ export class SpecsService {
           ? tenantEntity.environment.tenant.name
           : undefined,
       },
+    };
+  }
+
+  private updateWithPublicNamespace(
+    tenantId: string | null,
+    specification: Specification,
+    tenantEntity: {
+      environment: Environment & {
+        tenant: Tenant
+      }
+    }): Specification {
+    if (!tenantId || specification.visibilityMetadata.visibility !== Visibility.Public || !tenantEntity.environment.tenant.publicNamespace) {
+      return specification;
+    }
+
+    return {
+      ...specification,
+      context: `${tenantEntity.environment.tenant.publicNamespace}${specification.context ? `.${specification.context}` : ''}`,
     };
   }
 

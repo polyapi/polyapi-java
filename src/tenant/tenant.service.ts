@@ -46,7 +46,7 @@ export class TenantService implements OnModuleInit {
   private async checkPolyTenant() {
     const tenant = await this.findByName(this.config.polyTenantName);
     if (!tenant) {
-      await this.create(this.config.polyTenantName, true, null, {
+      await this.create(this.config.polyTenantName, true, null, null, {
         teamName: this.config.polyAdminsTeamName,
         userName: this.config.polyAdminUserName,
         userRole: Role.SuperAdmin,
@@ -60,6 +60,7 @@ export class TenantService implements OnModuleInit {
       id: tenant.id,
       name: tenant.name,
       publicVisibilityAllowed: tenant.publicVisibilityAllowed,
+      publicNamespace: tenant.publicNamespace,
       tierId: tenant.limitTierId,
     };
   }
@@ -108,6 +109,7 @@ export class TenantService implements OnModuleInit {
       id: fullTenant.id,
       name: fullTenant.name,
       publicVisibilityAllowed: fullTenant.publicVisibilityAllowed,
+      publicNamespace: tenant.publicNamespace,
       tierId: fullTenant.limitTierId,
       users: fullTenant.users.map(user => this.userService.toUserDto(user)),
       environments: fullTenant.environments.map(toEnvironmentFullDto),
@@ -128,7 +130,7 @@ export class TenantService implements OnModuleInit {
     });
   }
 
-  private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
+  private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, publicNamespace: string | null = null, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
     tenant: Tenant,
     apiKey: ApiKey
   }> {
@@ -137,6 +139,7 @@ export class TenantService implements OnModuleInit {
       data: {
         name,
         publicVisibilityAllowed,
+        publicNamespace,
         limitTierId,
         users: {
           create: [
@@ -210,13 +213,19 @@ export class TenantService implements OnModuleInit {
     };
   }
 
-  async create(name: string, publicVisibilityAllowed = false, limitTierId: string | null = null, options: CreateTenantOptions = {}) {
+  async create(name: string, publicVisibilityAllowed = false, publicNamespace: string | null = null, limitTierId: string | null = null, options: CreateTenantOptions = {}) {
     return this.prisma.$transaction(async tx => {
-      return (await this.createTenantRecord(tx, name, publicVisibilityAllowed, limitTierId, options)).tenant;
+      return (await this.createTenantRecord(tx, name, publicVisibilityAllowed, publicNamespace, limitTierId, options)).tenant;
     });
   }
 
-  async update(tenant: Tenant, name: string | undefined, publicVisibilityAllowed: boolean | undefined, limitTierId: string | null | undefined) {
+  async update(
+    tenant: Tenant,
+    name: string | undefined,
+    publicVisibilityAllowed: boolean | undefined,
+    publicNamespace: string | null | undefined,
+    limitTierId: string | null | undefined,
+  ) {
     return this.prisma.tenant.update({
       where: {
         id: tenant.id,
@@ -224,6 +233,7 @@ export class TenantService implements OnModuleInit {
       data: {
         name,
         publicVisibilityAllowed,
+        publicNamespace,
         limitTierId,
       },
     });
@@ -257,7 +267,7 @@ export class TenantService implements OnModuleInit {
     };
   }
 
-  private createSignUpVerfificationCode() {
+  private createSignUpVerificationCode() {
     return Math.random().toString(36).slice(2, 8);
   }
 
@@ -350,7 +360,7 @@ export class TenantService implements OnModuleInit {
       const {
         apiKey,
         tenant,
-      } = await this.createTenantRecord(tx, tenantSignUp.name, false, tier?.id, { email: tenantSignUp.email });
+      } = await this.createTenantRecord(tx, tenantSignUp.name, false, tier?.id, null, { email: tenantSignUp.email });
 
       const lastTos = await tx.tos.findFirst({
         orderBy: [
@@ -425,6 +435,21 @@ export class TenantService implements OnModuleInit {
     });
   }
 
+  async isPublicNamespaceAvailable(publicNamespace: string | null | undefined, excludedTenantIds?: string[]) {
+    if (!publicNamespace) {
+      return true;
+    }
+
+    return !await this.prisma.tenant.findFirst({
+      where: {
+        publicNamespace,
+        id: {
+          notIn: excludedTenantIds,
+        },
+      },
+    });
+  }
+
   async verifyAvailability(email: string, tenantName: string) {
     if (email) {
       const [user, tenantSignUp] = await Promise.all([
@@ -473,7 +498,7 @@ export class TenantService implements OnModuleInit {
         throw new NotFoundException('Tenant sign up not found.');
       }
 
-      const verificationCode = this.createSignUpVerfificationCode();
+      const verificationCode = this.createSignUpVerificationCode();
 
       try {
         const tenantSignUp = await tx.tenantSignUp.update({
@@ -515,7 +540,7 @@ export class TenantService implements OnModuleInit {
   }
 
   private async createSignUpRecord(email: string, name: string | null): Promise<TenantSignUp> {
-    const verificationCode = this.createSignUpVerfificationCode();
+    const verificationCode = this.createSignUpVerificationCode();
 
     const result = await this.prisma.$transaction(async tx => {
       try {

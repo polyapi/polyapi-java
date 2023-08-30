@@ -3,9 +3,7 @@ import { plainToClass } from 'class-transformer';
 import { validateObjectValue } from '../../utils';
 import { ConfigVariableLevel, ConfigVariableValueConstraints } from './types';
 
-const getMessageFn = (message: string) => {
-  return (validationArguments: ValidationArguments) => `${validationArguments.property} ${message}`;
-};
+const getMessageFn = (message: string) => (validationArguments: ValidationArguments) => `${validationArguments.property} ${message}`;
 
 const falseOrNull = 'must be false or null at non instance level.';
 const booleanOrUndefined = 'must be boolean';

@@ -1,21 +1,8 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Logger,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Req,
-  UseGuards,
-  NotFoundException,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, NotFoundException, Param, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { WebhookService } from 'webhook/webhook.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
-import { CreateWebhookHandleDto, Permission, UpdateWebhookHandleDto } from '@poly/model';
+import { CreateWebhookHandleDto, Permission, Role, UpdateWebhookHandleDto, WebhookHandlePublicDto } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 
@@ -31,6 +18,26 @@ export class WebhookController {
   public async getWebhookHandles(@Req() req: AuthRequest) {
     const webhookHandles = await this.webhookService.getWebhookHandles(req.user.environment.id);
     return webhookHandles.map((handle) => this.webhookService.toDto(handle));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/public')
+  public async getPublicWebhookHandles(@Req() req: AuthRequest): Promise<WebhookHandlePublicDto[]> {
+    const { tenant, environment, user } = req.user;
+    const webhookHandles = await this.webhookService.getPublicWebhookHandles(tenant, environment, user?.role === Role.Admin);
+    return webhookHandles.map((handle) => this.webhookService.toPublicDto(handle));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/public/:id')
+  async getPublicClientFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<WebhookHandlePublicDto> {
+    const { tenant, environment } = req.user;
+    const webhookHandle = await this.webhookService.findPublicWebhookHandle(tenant, environment, id);
+    if (webhookHandle === null) {
+      throw new NotFoundException(`Public webhook handle with ID ${id} not found.`);
+    }
+
+    return this.webhookService.toPublicDto(webhookHandle);
   }
 
   @UseGuards(PolyAuthGuard)

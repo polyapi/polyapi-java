@@ -8,3 +8,8 @@ export interface WebhookHandleDto {
   url: string;
   visibility: Visibility;
 }
+
+export interface WebhookHandlePublicDto extends WebhookHandleDto {
+  tenant: string;
+  hidden: boolean;
+}
