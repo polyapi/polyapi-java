@@ -240,7 +240,7 @@ model AuthToken {
 }
 
 model ConfigVariable {
-  id            serial       @id(map: "idx_20302_config_variable_pkey") @default(autoincrement())
+  id            integer       @id(map: "idx_20302_config_variable_pkey") @default(autoincrement())
   createdAt     String      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name          String
   value         String
@@ -253,7 +253,7 @@ model ConfigVariable {
 }
 
 model GptPlugin {
-  id                        serial       @id(map: "idx_20342_gpt_plugin_pkey") @default(autoincrement())
+  id                        integer       @id(map: "idx_20342_gpt_plugin_pkey") @default(autoincrement())
   slug                      String
   name                      String
   contactemail              String      @default("info@polyapi.io")
