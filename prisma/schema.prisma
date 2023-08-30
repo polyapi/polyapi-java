@@ -183,7 +183,7 @@ model AuthProvider {
 
 model WebhookHandle {
   id            String       @id(map: "idx_20293_sqlite_autoindex_webhook_handle_1") @default(uuid())
-  createdAt     String      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   environmentId String      @map("environment_id")
   context       String
   name          String
@@ -241,7 +241,7 @@ model AuthToken {
 
 model ConfigVariable {
   id            Int       @id(map: "idx_20302_config_variable_pkey") @default(autoincrement())
-  createdAt     String      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt     DateTime      @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   name          String
   value         String
   tenantId      String?      @map("tenant_id")
@@ -287,7 +287,7 @@ model Variable {
 
 model Migration {
   id        String  @id(map: "idx_20335_sqlite_autoindex_migration_1") @default(uuid())
-  createdAt String @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
+  createdAt DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @map("created_at")
   fileName  String @map("file_name")
 
   @@map("migration")
