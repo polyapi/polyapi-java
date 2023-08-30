@@ -9,6 +9,7 @@ import { Role, TenantDto, TenantFullDto } from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
+import { SecretService } from 'secret/secret.service';
 
 type CreateTenantOptions = {
   environmentName?: string;
@@ -28,6 +29,7 @@ export class TenantService implements OnModuleInit {
     private readonly applicationService: ApplicationService,
     private readonly teamService: TeamService,
     private readonly userService: UserService,
+    private readonly secretService: SecretService,
   ) {
   }
 
@@ -190,6 +192,8 @@ export class TenantService implements OnModuleInit {
           },
         },
       });
+
+      await this.secretService.initForEnvironment(tenant.environments[0]);
 
       return tenant;
     });
