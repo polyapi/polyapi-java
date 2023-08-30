@@ -3,7 +3,7 @@ import { ValidatorOptions, validateSync } from 'class-validator';
 
 import { isPlainObjectPredicate } from '@poly/common/utils';
 
-export function validateObjectValue(validationClass: new (...args: any[]) => any, value: unknown, validatorOptions?: ValidatorOptions) {
+export const validateObjectValue = (validationClass: new (...args: any[]) => any, value: unknown, validatorOptions?: ValidatorOptions) => {
   if (!isPlainObjectPredicate(value)) {
     throw new BadRequestException(['value must be an object']);
   }
@@ -21,4 +21,4 @@ export function validateObjectValue(validationClass: new (...args: any[]) => any
   if (flattenErrors.length) {
     throw new BadRequestException(flattenErrors);
   }
-}
+};

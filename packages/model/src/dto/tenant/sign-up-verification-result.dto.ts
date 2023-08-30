@@ -1,4 +1,4 @@
 export class SignUpVerificationResultDto {
-    apiBaseUrl: string;
-    apiKey: string;
+  apiBaseUrl: string;
+  apiKey: string;
 }

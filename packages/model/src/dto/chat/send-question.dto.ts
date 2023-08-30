@@ -11,6 +11,5 @@ export class SendQuestionDto {
 
   @IsOptional()
   @IsString()
-  workspaceFolder: string = '';
+  workspaceFolder = '';
 }
-

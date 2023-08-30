@@ -3,9 +3,9 @@ import { plainToClass } from 'class-transformer';
 import { validateObjectValue } from '../../utils';
 import { ConfigVariableLevel, ConfigVariableValueConstraints } from './types';
 
-function getMessageFn(message: string) {
+const getMessageFn = (message: string) => {
   return (validationArguments: ValidationArguments) => `${validationArguments.property} ${message}`;
-}
+};
 
 const falseOrNull = 'must be false or null at non instance level.';
 const booleanOrUndefined = 'must be boolean';
@@ -38,7 +38,7 @@ export class SetInstanceTrainingDataGenerationValue {
     apiFunctions: boolean;
 }
 
-export function validate(value: unknown, constraints: ConfigVariableValueConstraints) {
+export const validate = (value: unknown, constraints: ConfigVariableValueConstraints) => {
   const isInstanceLevel = constraints.find(constraint => constraint.level === ConfigVariableLevel.Instance);
 
   let ValidationClass: any = plainToClass(SetTrainingDataGenerationValue, value);
@@ -48,4 +48,4 @@ export function validate(value: unknown, constraints: ConfigVariableValueConstra
   }
 
   validateObjectValue(ValidationClass, value);
-}
+};

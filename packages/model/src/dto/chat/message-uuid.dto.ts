@@ -1,3 +1,3 @@
 export class MessageUUIDDto {
-    uuid: string
+  uuid: string;
 }
