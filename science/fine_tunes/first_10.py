@@ -13,9 +13,8 @@ poly.PS.twilio.messages.send1(
 toNumber: string,
 message: string,
 )
-
-Question: "how do I send an sms through Twilio?"
 """,
+        "question": "how do I send an sms through Twilio?",
         "completion": """Sure, here's an example of how you can do it:
 
 ```typescript
@@ -54,9 +53,8 @@ shop: string,
 productId: number,
 shopToken: string,
 )
-
-Question: "how do I get product details via shopify?"
 """,
+        "question": "how do I get product details via shopify?",
         "completion": """Certainly! You can use the `getProductDetails` function from the Poly API library to get product details from Shopify. Here's an example:
 
 ```typescript
@@ -134,9 +132,8 @@ percentage: integer
 }],
 },
 )
-
-Question: "how do I create a new bird in the pstmn database?"
 """,
+        "question": "how do I create a new bird in the pstmn database?",
         "completion": """Sure, you can use either the `create1` or `create` function from the `poly.pstmn.birds` API. Here's an example of how to use each:
 
 Using `create1`:
@@ -214,9 +211,8 @@ sectionId: number,  // A number that represents the ID of the section in the Asa
 taskName: string,  // A string that represents the name of the task that will be created in Asana.
 taskDetails: string,  // A string that represents the details or notes of the task that will be created in Asana.
 )
-
-Question: "how do I create a new task in asana?"
 """,
+        "question": "how do I create a new task in asana?",
         "completion": """Sure, you can use the `create1` function from the `poly.asana.tasks` API. Here's an example of how to use it:
 
 ```typescript
@@ -240,7 +236,8 @@ poly.asana.tasks.create1(asanaToken, projectId, sectionId, taskName, taskDetails
 Make sure to replace `'your_asana_token'`, `123456`, `78910`, `'New Task'`, and `'Details for the new task'` with your actual Asana token, project ID, section ID, task name, and task details, respectively.
 """,
     },
-    {"prompt": """To import the Poly API Library:
+    {
+        "prompt": """To import the Poly API Library:
 `import poly from 'polyapi'`
 
 Use any combination of only the following functions to answer my question:
@@ -254,9 +251,9 @@ poly.asana.tasks.getDetails(
 taskId: number,  // This is a number that represents the unique identifier of the specific task in Asana. It is used to retrieve the details of the specific task.
 asanaToken: string,  // This is a string that represents the user's authentication token for Asana. It is used to authenticate the user's account and grant access to the specific task details.
 )
-
-Question: "how do I get the details of an asana task?"
-     """, "completion": """Sure, to get the details of an Asana task, you'll need to use the `poly.asana.tasks.getDetails` function. Here's an example of how to use it:
+     """,
+        "question": "how do I get the details of an asana task?",
+        "completion": """Sure, to get the details of an Asana task, you'll need to use the `poly.asana.tasks.getDetails` function. Here's an example of how to use it:
 
 ```typescript
 import poly from 'polyapi';
@@ -271,5 +268,6 @@ getTaskDetails(12345, 'your_asana_token');
 ```
 
 In this example, replace `12345` with your task ID and `'your_asana_token'` with your actual Asana token. The function will return the task details.
-"""}
+""",
+    },
 ]

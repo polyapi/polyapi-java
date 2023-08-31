@@ -13,10 +13,11 @@ def transform_to_jsonl() -> str:
     data = []
     for example in FIRST_10:
         user_prompt = {"role": "user", "content": example['prompt']}
+        question_prompt = {"role": "user", "content": example['question']}
         assistant_prompt = {"role": "assistant", "content": example['completion']}
         data.append(
             {
-                "messages": [SYSTEM_PROMPT, user_prompt, assistant_prompt],
+                "messages": [SYSTEM_PROMPT, question_prompt, user_prompt, assistant_prompt],
             }
         )
 
