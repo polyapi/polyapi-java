@@ -201,7 +201,7 @@ model conversation {
   createdAt       String                @default(dbgenerated("CURRENT_TIMESTAMP"))
   userId          String
   workspaceFolder String                @default("")
-  user            User                  @relation(fields: [userid], references: [id], onDelete: Restrict)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
   messages        ConversationMessage[]
 }
 
