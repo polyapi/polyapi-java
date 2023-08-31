@@ -22,9 +22,9 @@ const checkForLibraryInstalled = () => {
   const installed = isPolyLibraryInstalled();
 
   if (installed && !prevPolyLibraryInstalledState) {
-    const initCredentials = getCredentialsFromExtension();
-    if (initCredentials.apiBaseUrl && initCredentials.apiKey) {
-      saveCredentialsOnClientLibrary(initCredentials.apiBaseUrl, initCredentials.apiKey);
+    const extensionCredentials = getCredentialsFromExtension();
+    if (extensionCredentials.apiBaseUrl && extensionCredentials.apiKey) {
+      saveCredentialsOnClientLibrary(extensionCredentials.apiBaseUrl, extensionCredentials.apiKey);
     } else {
       vscode.commands.executeCommand('setContext', 'missingCredentials', false);
     }
@@ -37,12 +37,12 @@ const checkForLibraryInstalled = () => {
 };
 
 const watchCredentials = () => {
-  vscode.workspace.onDidChangeConfiguration(event => {
+  return vscode.workspace.onDidChangeConfiguration(event => {
     if (event.affectsConfiguration('poly.apiBaseUrl') || event.affectsConfiguration('poly.apiKey')) {
       const credentials = getCredentialsFromExtension();
       if (!credentials.apiBaseUrl || !credentials.apiKey) {
         vscode.commands.executeCommand('setContext', 'missingCredentials', true);
-      } else {
+      } else if (isPolyLibraryInstalled()) {
         saveCredentialsOnClientLibrary(credentials.apiBaseUrl, credentials.apiKey);
         vscode.commands.executeCommand('setContext', 'missingCredentials', false);
       }
@@ -61,7 +61,7 @@ export const start = () => {
 
   checkForLibraryInstalled();
 
-  watchCredentials();
+  const credentialsWatcherDisposable = watchCredentials();
 
   return () => {
     watchedWorkspaceInfos.forEach((_, folder) => unwatchWorkspace(folder));
@@ -69,6 +69,7 @@ export const start = () => {
       clearTimeout(libraryInstalledCheckerTimeoutID);
     }
     prevPolyLibraryInstalledState = false;
+    credentialsWatcherDisposable.dispose();
   };
 };
 
