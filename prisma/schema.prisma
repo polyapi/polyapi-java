@@ -214,7 +214,6 @@ model ConversationMessage {
   role           String
 
   // 1 is gpt messages, aka messages between us and ChatGPT, 2 is user messages, 3 is internal that was never sent anywhere (like "start stage 1")
-  type Int @default(1)
 
   type           Int          @default(1)
   content        String
