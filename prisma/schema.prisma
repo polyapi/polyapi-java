@@ -10,8 +10,8 @@ generator py {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./data/poly.db"
+  provider = "postgres"
+  url      = env("DATABASE_URL")
 }
 
 model Tenant {
