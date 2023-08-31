@@ -54,9 +54,29 @@ export const saveCredentialsOnClientLibrary = (apiBaseUrl: unknown, apiKey: unkn
 
   const polyFolder = path.join(getWorkspacePath(), 'node_modules/.poly');
 
-  fs.mkdirSync(polyFolder, { recursive: true });
-  fs.writeFileSync(
-    path.join(polyFolder, '.config.env'),
-        `POLY_API_BASE_URL=${apiBaseUrl}\nPOLY_API_KEY=${apiKey}\n`,
-  );
+  /*
+    `vscode.workspace.workspaceFolders[0].uri.path` on windows starts with \ and that is invalid
+    for absolute windows paths since it should be c: instead of \c:.
+  */
+  const fixedPolyFolder = polyFolder.match(/^\\/) ? polyFolder.substring(1) : polyFolder;
+
+  try {
+    fs.mkdirSync(fixedPolyFolder, { recursive: true });
+    fs.writeFileSync(
+      path.join(fixedPolyFolder, '.config.env'),
+          `POLY_API_BASE_URL=${apiBaseUrl}\nPOLY_API_KEY=${apiKey}\n`,
+    );
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+export const isPolyLibraryInstalled = () => {
+  return vscode.workspace.workspaceFolders?.some((folder) => {
+    if (fs.existsSync(`${folder.uri.fsPath}/node_modules/polyapi/package.json`)) {
+      return true;
+    }
+
+    return false;
+  });
 };
