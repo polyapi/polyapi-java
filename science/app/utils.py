@@ -165,7 +165,7 @@ def store_message(
         "conversationId": conversation_id,
         "role": data["role"],
         "content": _get_content(data),
-        "type": data.get("type", MessageType.user.value),
+        "type": data.get("type", MessageType.gpt.value),
     }
 
     rv = db.conversationmessage.create(data=create_input)  # type: ignore

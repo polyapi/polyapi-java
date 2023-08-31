@@ -27,7 +27,7 @@ import {
   ExecuteCustomFunctionDto,
   ExecuteCustomFunctionQueryParams,
   FunctionBasicDto,
-  FunctionDetailsDto,
+  FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
   Permission,
   Role,
   UpdateApiFunctionDto,
@@ -60,7 +60,7 @@ export class FunctionController {
   @Get('/api')
   async getApiFunctions(@Req() req: AuthRequest): Promise<FunctionBasicDto[]> {
     const apiFunctions = await this.service.getApiFunctions(req.user.environment.id);
-    return apiFunctions.map((apiFunction) => this.service.apiFunctionToBasicDto(apiFunction));
+    return apiFunctions.map(apiFunction => this.service.apiFunctionToBasicDto(apiFunction));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -117,6 +117,28 @@ export class FunctionController {
         () => this.checkFunctionsLimit(req.user.tenant, 'training function'),
       ),
     );
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/api/public')
+  async getPublicApiFunctions(@Req() req: AuthRequest): Promise<FunctionPublicBasicDto[]> {
+    const { tenant, environment, user } = req.user;
+    const apiFunctions = await this.service.getPublicApiFunctions(tenant, environment, user?.role === Role.Admin);
+
+    return apiFunctions
+      .map(apiFunction => this.service.apiFunctionToPublicBasicDto(apiFunction));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/api/public/:id')
+  async getPublicApiFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionPublicDetailsDto> {
+    const { tenant, environment } = req.user;
+    const apiFunction = await this.service.findPublicApiFunction(tenant, environment, id);
+    if (apiFunction === null) {
+      throw new NotFoundException(`Public API function with ID ${id} not found.`);
+    }
+
+    return this.service.apiFunctionToPublicDetailsDto(apiFunction);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -226,6 +248,27 @@ export class FunctionController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @Get('/client/public')
+  async getPublicClientFunctions(@Req() req: AuthRequest): Promise<FunctionPublicBasicDto[]> {
+    const { tenant, environment, user } = req.user;
+    const functions = await this.service.getPublicClientFunctions(tenant, environment, user?.role === Role.Admin);
+    return functions
+      .map((clientFunction) => this.service.customFunctionToPublicBasicDto(clientFunction));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/client/public/:id')
+  async getPublicClientFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionPublicDetailsDto> {
+    const { tenant, environment } = req.user;
+    const clientFunction = await this.service.findPublicClientFunction(tenant, environment, id);
+    if (clientFunction === null) {
+      throw new NotFoundException(`Public client function with ID ${id} not found.`);
+    }
+
+    return this.service.customFunctionToPublicDetailsDto(clientFunction);
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Get('/client/:id')
   async getClientFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionDetailsDto> {
     const clientFunction = await this.service.findClientFunction(id);
@@ -303,6 +346,27 @@ export class FunctionController {
     } catch (e) {
       throw new BadRequestException(e.message);
     }
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/server/public')
+  async getPublicServerFunctions(@Req() req: AuthRequest): Promise<FunctionPublicBasicDto[]> {
+    const { tenant, environment, user } = req.user;
+    const functions = await this.service.getPublicServerFunctions(tenant, environment, user?.role === Role.Admin);
+    return functions
+      .map((serverFunction) => this.service.customFunctionToPublicBasicDto(serverFunction));
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/server/public/:id')
+  async getPublicServerFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionPublicDetailsDto> {
+    const { tenant, environment } = req.user;
+    const serverFunction = await this.service.findPublicServerFunction(tenant, environment, id);
+    if (serverFunction === null) {
+      throw new NotFoundException(`Public server function with ID ${id} not found.`);
+    }
+
+    return this.service.customFunctionToPublicDetailsDto(serverFunction);
   }
 
   @UseGuards(PolyAuthGuard)

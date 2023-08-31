@@ -1,6 +1,6 @@
 import { IntrospectionQuery } from 'graphql';
 import { Body, Variables, Header, Auth, Method } from '../..';
-import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
+import { IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
 
 import { ContextIdentifier, NameIdentifier } from './../validators';
 

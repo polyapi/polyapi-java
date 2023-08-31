@@ -178,4 +178,12 @@ export class ConfigService {
   get statisticsFunctionCallsRetentionDays(): number {
     return Number(this.get('STATISTICS_FUNCTION_CALLS_RETENTION_DAYS', 7));
   }
+
+  get mailchimpApikey(): string {
+    return this.get('MAILCHIMP_API_KEY', '');
+  }
+
+  get signUpEmail(): string {
+    return this.get('SIGN_UP_EMAIL', 'signup@polyapi.io');
+  }
 }

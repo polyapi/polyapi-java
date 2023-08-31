@@ -17,16 +17,17 @@ datasource db {
 model Tenant {
   id                      String           @id @default(uuid())
   createdAt               DateTime         @default(now()) @map("created_at")
-  name                    String
+  name                    String?           @unique
   users                   User[]
   teams                   Team[]
   environments            Environment[]
   applications            Application[]
   publicVisibilityAllowed Boolean          @default(false) @map("public_visibility_allowed")
+  publicNamespace         String?          @map("public_namespace")
   configVariables         ConfigVariable[]
   limitTier               LimitTier?       @relation(fields: [limitTierId], references: [id])
   limitTierId             String?          @map("limit_tier_id")
-
+  agreements              TenantAgreement[]
   @@map("tenant")
 }
 
@@ -34,6 +35,7 @@ model User {
   id                   String                @id @default(uuid())
   createdAt            DateTime              @default(now()) @map("created_at")
   name                 String
+  email                String?               @unique
   tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId             String                @map("tenant_id")
   role                 String                @default("USER")
@@ -312,10 +314,10 @@ model DocSection {
   // a section of our documentation
   // for now all documentation is related to Poly
   // but in future this might be tenanted and used for customer docs
-  id     String @id @default(uuid())
-  title  String @default("")
-  text   String @default("")
-  vector String @default("") // JSON of OpenAI embedding vector of the title+text
+  id        String   @id @default(uuid())
+  title     String   @default("")
+  text      String   @default("")
+  vector    String   @default("")  // JSON of OpenAI embedding vector of the title+text
 }
 
 model LimitTier {
@@ -341,4 +343,39 @@ model Statistics {
   data          String?
 
   @@map("statistics")
+}
+
+model TenantSignUp {
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now()) @map("created_at")
+  email             String   @unique
+  name              String?  @unique
+  verificationCode  String   @unique @map("verification_code")
+  expiresAt         DateTime @map("expires_at")
+
+  @@map("tenant_sign_up")
+}
+
+model Tos {
+  id          String @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  content     String
+  version     String   @unique
+  agreements  TenantAgreement[]
+
+  @@map("tos")
+}
+
+model TenantAgreement {
+  id          String @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  notes       String?
+  agreedAt    DateTime @default(now()) @map("agreed_at")
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId    String @map("tenant_id")
+  tos         Tos @relation(fields: [tosId], references: [id], onDelete: Cascade)
+  tosId       String @map("tos_id")
+  email       String
+
+  @@map("tenant_agreement")
 }

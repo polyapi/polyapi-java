@@ -6,6 +6,8 @@ import setup from './commands/setup';
 import { generate } from './commands/generate';
 import { addCustomFunction } from './commands/function';
 import { loadConfig } from './config';
+import { create as createTenant } from './commands/tenant';
+import { INSTANCE_URL_MAP } from '@poly/common/utils';
 
 const checkPolyConfig = () => {
   loadConfig();
@@ -88,6 +90,28 @@ void yargs
         }
 
         await addCustomFunction(context, name, description, file, server);
+      },
+    );
+  })
+  .command('tenant <command>', 'Manages tenants', (yargs) => {
+    yargs.command(
+      'create [options]',
+      'Creates a new tenant',
+      {
+        instance: {
+          describe: 'Instance where you want to create tenant (develop | na1 | local)',
+          demandOption: false,
+          type: 'string',
+        },
+      },
+      async ({
+        instance = 'na1',
+      }) => {
+        if (!Object.keys(INSTANCE_URL_MAP).includes(instance)) {
+          yargs.showHelp();
+          return;
+        }
+        await createTenant(instance);
       },
     );
   })

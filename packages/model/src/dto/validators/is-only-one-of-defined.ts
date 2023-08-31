@@ -1,7 +1,7 @@
 import { registerDecorator, ValidationOptions } from 'class-validator';
 
-export function IsOnlyOneOfDefined(properties: string[], validationOptions?: ValidationOptions) {
-  return function (object: any, propertyName: string) {
+export const IsOnlyOneOfDefined = (properties: string[], validationOptions?: ValidationOptions) =>
+  (object: any, propertyName: string) => {
     registerDecorator({
       name: 'isOnlyOneOfDefined',
       target: object.constructor,
@@ -23,4 +23,3 @@ export function IsOnlyOneOfDefined(properties: string[], validationOptions?: Val
       },
     });
   };
-}

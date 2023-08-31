@@ -9,6 +9,7 @@ import { SpecsModule } from 'specs/specs.module';
 import { FunctionModule } from 'function/function.module';
 import { EventModule } from 'event/event.module';
 import { AiModule } from 'ai/ai.module';
+import { ConfigVariableModule } from 'config-variable/config-variable.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AiModule } from 'ai/ai.module';
     forwardRef(() => FunctionModule),
     forwardRef(() => EventModule),
     AiModule,
+    ConfigVariableModule,
   ],
   controllers: [VariableController],
   providers: [VariableService],

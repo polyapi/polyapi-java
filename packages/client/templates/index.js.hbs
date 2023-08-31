@@ -1,6 +1,6 @@
 const set = require('lodash/set');
 const merge = require('lodash/merge');
-const { io } = require("socket.io-client");
+const { io } = require('socket.io-client');
 const apiFunctions = require('./api');
 const clientFunctions = require('./client');
 const webhooks = require('./webhooks');
@@ -9,10 +9,18 @@ const serverFunctions = require('./server');
 const vari = require('./vari');
 
 const clientID = '{{clientID}}';
+const nodeEnv = process.env.NODE_ENV;
+const isDevEnv = nodeEnv === 'development';
+
 let socket = null;
 const getSocket = () => {
+  let apiBaseUrl = '{{apiBaseUrl}}';
+  if (!isDevEnv) {
+    apiBaseUrl = apiBaseUrl.replace(/^http:/, 'https:');
+  }
+
   if (!socket) {
-    socket = io('{{apiBaseUrl}}/events');
+    socket = io(`${apiBaseUrl}/events`);
   }
   return socket;
 };

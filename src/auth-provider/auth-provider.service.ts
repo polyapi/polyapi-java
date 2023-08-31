@@ -1,16 +1,26 @@
 import crypto from 'crypto';
 import { BadRequestException, ConflictException, forwardRef, Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { AuthProvider, AuthToken, Environment } from '@prisma/client';
+import { AuthProvider, AuthToken, Environment, Tenant } from '@prisma/client';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from 'prisma/prisma.service';
-import { AuthFunctionSpecification, AuthProviderDto, ExecuteAuthProviderResponseDto, PropertySpecification, Visibility, VisibilityQuery } from '@poly/model';
+import {
+  AuthFunctionSpecification,
+  AuthProviderDto,
+  ConfigVariableName,
+  ExecuteAuthProviderResponseDto,
+  PropertySpecification,
+  PublicVisibilityValue,
+  Visibility,
+  VisibilityQuery,
+} from '@poly/model';
 import { ConfigService } from 'config/config.service';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
 import { SpecsService } from 'specs/specs.service';
 import { CommonService } from 'common/common.service';
-import { LimitService } from 'limit/limit.service';
+import { WithTenant } from 'common/types';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 @Injectable()
 export class AuthProviderService {
@@ -24,7 +34,7 @@ export class AuthProviderService {
     private readonly eventService: EventService,
     @Inject(forwardRef(() => SpecsService))
     private readonly specsService: SpecsService,
-    private readonly limitService: LimitService,
+    private readonly configVariableService: ConfigVariableService,
   ) {
   }
 
@@ -53,9 +63,9 @@ export class AuthProviderService {
     ];
 
     this.logger.debug(`auth providers filter conditions: ${JSON.stringify([
-{ AND: filterConditions },
+      { AND: filterConditions },
       ...idConditions,
-])}`);
+    ])}`);
 
     return [{ AND: filterConditions }, ...idConditions];
   }
@@ -87,6 +97,62 @@ export class AuthProviderService {
           }
         : undefined,
     });
+  }
+
+  async getPublicAuthProviders(tenant: Tenant, environment: Environment, includeHidden = false) {
+    const authProviders = await this.prisma.authProvider.findMany({
+      where: {
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            NOT: {
+              id: tenant.id,
+            },
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    return (
+      await Promise.all(
+        authProviders.map(authProvider => this.resolveVisibility(tenant, environment, authProvider)),
+      )
+    ).filter(authProvider => includeHidden || !authProvider.hidden);
+  }
+
+  async findPublicAuthProvider(tenant: Tenant, environment: Environment, id: string) {
+    const authProvider = await this.prisma.authProvider.findFirst({
+      where: {
+        id,
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!authProvider) {
+      return null;
+    }
+
+    return await this.resolveVisibility(tenant, environment, authProvider);
   }
 
   async getAuthProvider(id: string, includeEnvironment = false): Promise<AuthProvider | null> {
@@ -201,6 +267,15 @@ export class AuthProviderService {
       introspectUrl: authProvider.introspectUrl,
       callbackUrl: this.getAuthProviderCallbackUrl(authProvider),
       visibility: authProvider.visibility as Visibility,
+    };
+  }
+
+  toAuthProviderPublicDto(authProvider: WithTenant<AuthProvider> & { hidden: boolean }) {
+    return {
+      ...this.toAuthProviderDto(authProvider),
+      context: this.commonService.getPublicContext(authProvider),
+      tenant: authProvider.environment.tenant.id,
+      hidden: authProvider.hidden,
     };
   }
 
@@ -849,5 +924,25 @@ export class AuthProviderService {
     }
 
     return true;
+  }
+
+  private async resolveVisibility(
+    tenant: Tenant,
+    environment: Environment,
+    authProvider: WithTenant<AuthProvider>,
+  ): Promise<WithTenant<AuthProvider> & {hidden: boolean}> {
+    const {
+      defaultHidden = false,
+      visibleContexts = null,
+    } = await this.configVariableService.getEffectiveValue<PublicVisibilityValue>(
+      ConfigVariableName.PublicVisibility,
+      tenant.id,
+      environment.id,
+    ) || {};
+
+    return {
+      ...authProvider,
+      hidden: !this.commonService.isPublicVisibilityAllowed(authProvider, defaultHidden, visibleContexts),
+    };
   }
 }

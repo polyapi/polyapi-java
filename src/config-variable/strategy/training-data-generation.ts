@@ -9,7 +9,7 @@ import { SetTrainingDataGenerationValue, TrainingDataGeneration } from '@poly/mo
  * of levels as default value.
  * On updating, will merge incomming value with previous saved one.
  */
-export class TrainingDataGenerationStrategy extends ConfigVariableStrategy {
+export class TrainingDataGenerationStrategy extends ConfigVariableStrategy<TrainingDataGeneration> {
   getOneFromList(configVariables: ConfigVariable[]): ConfigVariable | null {
     if (!configVariables.length) {
       return null;

@@ -15,7 +15,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, from, lastValueFrom, map } from 'rxjs';
 import mustache from 'mustache';
 import { stripComments } from 'jsonc-parser';
-import { ApiFunction, CustomFunction, Environment } from '@prisma/client';
+import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ApiFunctionResponseDto,
@@ -27,13 +27,14 @@ import {
   CustomFunctionSpecification,
   FunctionArgument,
   FunctionBasicDto,
-  FunctionDetailsDto,
+  FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
   GraphQLBody,
   Header,
   Method,
   PostmanVariableEntry,
   PropertySpecification,
   PropertyType,
+  PublicVisibilityValue,
   Role,
   ServerFunctionSpecification,
   TrainingDataGeneration,
@@ -60,6 +61,7 @@ import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
 import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospectionQuery, resolveGraphqlArgumentType } from './graphql/utils';
 import { AuthService } from 'auth/auth.service';
 import crypto from 'crypto';
+import { WithTenant } from 'common/types';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -137,13 +139,72 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
+  async getPublicApiFunctions(tenant: Tenant, environment: Environment, includeHidden = false) {
+    const apiFunctions = await this.prisma.apiFunction.findMany({
+      where: {
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            NOT: {
+              id: tenant.id,
+            },
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return (
+      await Promise.all(
+        apiFunctions
+          .map(apiFunction => this.resolveVisibility(tenant, environment, apiFunction)),
+      )
+    ).filter(apiFunction => includeHidden || !apiFunction.hidden);
+  }
+
+  async findPublicApiFunction(tenant: Tenant, environment: Environment, id: string) {
+    const apiFunction = await this.prisma.apiFunction.findFirst({
+      where: {
+        id,
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!apiFunction) {
+      return null;
+    }
+
+    return await this.resolveVisibility(tenant, environment, apiFunction);
+  }
+
   apiFunctionToBasicDto(apiFunction: ApiFunction): FunctionBasicDto {
+    const visibility = apiFunction.visibility as Visibility;
     return {
       id: apiFunction.id,
       name: apiFunction.name,
       context: apiFunction.context,
       description: apiFunction.description,
-      visibility: apiFunction.visibility as Visibility,
+      visibility,
     };
   }
 
@@ -152,6 +213,24 @@ export class FunctionService implements OnModuleInit {
       ...this.apiFunctionToBasicDto(apiFunction),
       arguments: this.getFunctionArguments(apiFunction)
         .map(arg => omit(arg, 'location')),
+    };
+  }
+
+  apiFunctionToPublicBasicDto(apiFunction: WithTenant<ApiFunction> & { hidden: boolean }): FunctionPublicBasicDto {
+    return {
+      ...this.apiFunctionToBasicDto(apiFunction),
+      context: this.commonService.getPublicContext(apiFunction),
+      tenant: apiFunction.environment.tenant.name || '',
+      hidden: apiFunction.hidden,
+    };
+  }
+
+  apiFunctionToPublicDetailsDto(apiFunction: WithTenant<ApiFunction> & { hidden: boolean }): FunctionPublicDetailsDto {
+    return {
+      ...this.apiFunctionToDetailsDto(apiFunction),
+      context: this.commonService.getPublicContext(apiFunction),
+      tenant: apiFunction.environment.tenant.name || '',
+      hidden: apiFunction.hidden,
     };
   }
 
@@ -723,6 +802,25 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
+  customFunctionToPublicBasicDto(customFunction: WithTenant<CustomFunction> & { hidden: boolean }): FunctionPublicBasicDto {
+    const tenant = customFunction.environment.tenant;
+    return {
+      ...this.customFunctionToBasicDto(customFunction),
+      context: this.commonService.getPublicContext(customFunction),
+      tenant: tenant.name || '',
+      hidden: customFunction.hidden,
+    };
+  }
+
+  customFunctionToPublicDetailsDto(customFunction: WithTenant<CustomFunction> & { hidden: boolean }): FunctionPublicDetailsDto {
+    return {
+      ...this.customFunctionToDetailsDto(customFunction),
+      context: this.commonService.getPublicContext(customFunction),
+      tenant: customFunction.environment.tenant.name || '',
+      hidden: customFunction.hidden,
+    };
+  }
+
   async createOrUpdateCustomFunction(
     environment: Environment,
     context: string,
@@ -933,6 +1031,64 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
+  async getPublicClientFunctions(tenant: Tenant, environment: Environment, includeHidden = false) {
+    const clientFunctions = await this.prisma.customFunction.findMany({
+      where: {
+        visibility: Visibility.Public,
+        serverSide: false,
+        environment: {
+          tenant: {
+            NOT: {
+              id: tenant.id,
+            },
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return (
+      await Promise.all(
+        clientFunctions.map(clientFunction => this.resolveVisibility(tenant, environment, clientFunction)),
+      )
+    ).filter(clientFunction => includeHidden || !clientFunction.hidden);
+  }
+
+  async findPublicClientFunction(tenant: Tenant, environment: Environment, id: string) {
+    const clientFunction = await this.prisma.customFunction.findFirst({
+      where: {
+        id,
+        serverSide: false,
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+    if (!clientFunction) {
+      return null;
+    }
+
+    return this.resolveVisibility(tenant, environment, clientFunction);
+  }
+
   async getServerFunctions(environmentId: string, contexts?: string[], names?: string[], ids?: string[]) {
     return this.prisma.customFunction.findMany({
       where: {
@@ -963,6 +1119,64 @@ export class FunctionService implements OnModuleInit {
         environment: includeEnvironment,
       },
     });
+  }
+
+  async getPublicServerFunctions(tenant: Tenant, environment: Environment, includeHidden = false) {
+    const serverFunctions = await this.prisma.customFunction.findMany({
+      where: {
+        visibility: Visibility.Public,
+        serverSide: true,
+        environment: {
+          tenant: {
+            NOT: {
+              id: tenant.id,
+            },
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return (
+      await Promise.all(
+        serverFunctions.map(clientFunction => this.resolveVisibility(tenant, environment, clientFunction)),
+      )
+    ).filter(clientFunction => includeHidden || !clientFunction.hidden);
+  }
+
+  async findPublicServerFunction(tenant: Tenant, environment: Environment, id: string) {
+    const serverFunction = await this.prisma.customFunction.findFirst({
+      where: {
+        id,
+        serverSide: true,
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+    if (!serverFunction) {
+      return null;
+    }
+
+    return this.resolveVisibility(tenant, environment, serverFunction);
   }
 
   async executeServerFunction(
@@ -1884,5 +2098,25 @@ export class FunctionService implements OnModuleInit {
     }
 
     return JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap));
+  }
+
+  private async resolveVisibility<T extends { environment: Environment & { tenant: Tenant }, context: string | null }>(
+    tenant: Tenant,
+    environment: Environment,
+    entity: T,
+  ): Promise<T & { hidden: boolean }> {
+    const {
+      defaultHidden = false,
+      visibleContexts = null,
+    } = await this.configVariableService.getEffectiveValue<PublicVisibilityValue>(
+      ConfigVariableName.PublicVisibility,
+      tenant.id,
+      environment.id,
+    ) || {};
+
+    return {
+      ...entity,
+      hidden: !this.commonService.isPublicVisibilityAllowed(entity, defaultHidden, visibleContexts),
+    };
   }
 }

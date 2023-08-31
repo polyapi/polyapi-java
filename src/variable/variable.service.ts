@@ -1,25 +1,29 @@
-import { get, set, isEqual } from 'lodash';
+import { get, isEqual, set } from 'lodash';
 import crypto from 'crypto';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
-import { Variable } from '@prisma/client';
+import { Environment, Tenant, Variable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
+  ConfigVariableName,
   ContextVariableValues,
+  PublicVisibilityValue,
   ServerVariableSpecification,
   ValueType,
   VariableDto,
+  VariablePublicDto,
   Visibility,
   VisibilityQuery,
 } from '@poly/model';
 import { SecretService } from 'secret/secret.service';
 import { CommonService } from 'common/common.service';
 import { SpecsService } from 'specs/specs.service';
-import { AuthData } from 'common/types';
+import { AuthData, WithTenant } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { FunctionService } from 'function/function.service';
 import { EventService } from 'event/event.service';
 import { AiService } from 'ai/ai.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 @Injectable()
 export class VariableService {
@@ -36,6 +40,7 @@ export class VariableService {
     private readonly functionService: FunctionService,
     private readonly eventService: EventService,
     private readonly aiService: AiService,
+    private readonly configVariableService: ConfigVariableService,
   ) {
   }
 
@@ -48,6 +53,15 @@ export class VariableService {
       visibility: variable.visibility as Visibility,
       secret: variable.secret,
       value: variable.secret ? undefined : await this.getVariableValue(variable),
+    };
+  }
+
+  async toPublicDto(variable: WithTenant<Variable> & { hidden: boolean }): Promise<VariablePublicDto> {
+    return {
+      ...await this.toDto(variable),
+      context: this.commonService.getPublicContext(variable),
+      tenant: variable.environment.tenant.name || '',
+      hidden: variable.hidden,
     };
   }
 
@@ -121,6 +135,67 @@ export class VariableService {
     );
 
     return variables[0] || null;
+  }
+
+  async getAllPublic(tenant: Tenant, environment: Environment, includeHidden = false) {
+    const variables = await this.prisma.variable.findMany({
+      where: {
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            NOT: {
+              id: tenant.id,
+            },
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    return (
+      await Promise.all(
+        variables.map(variable => this.resolveVisibility(tenant, environment, variable)),
+      )
+    ).filter(variable => includeHidden || !variable.hidden);
+  }
+
+  async findPublicById(tenant: Tenant, environment: Environment, id: string) {
+    const variable = await this.prisma.variable.findFirst({
+      where: {
+        id,
+        visibility: Visibility.Public,
+        environment: {
+          tenant: {
+            NOT: {
+              id: tenant.id,
+            },
+            publicVisibilityAllowed: true,
+          },
+        },
+      },
+      include: {
+        environment: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!variable) {
+      return null;
+    }
+    return this.resolveVisibility(tenant, environment, variable);
   }
 
   async getVariableValue(variable: Variable, path?: string) {
@@ -405,5 +480,25 @@ export class VariableService {
       this.logger.warn(`Unknown value type: ${typeof value}`);
       return '********';
     }
+  }
+
+  private async resolveVisibility(
+    tenant: Tenant,
+    environment: Environment,
+    variable: WithTenant<Variable>,
+  ): Promise<WithTenant<Variable> & {hidden: boolean}> {
+    const {
+      defaultHidden = false,
+      visibleContexts = null,
+    } = await this.configVariableService.getEffectiveValue<PublicVisibilityValue>(
+      ConfigVariableName.PublicVisibility,
+      tenant.id,
+      environment.id,
+    ) || {};
+
+    return {
+      ...variable,
+      hidden: !this.commonService.isPublicVisibilityAllowed(variable, defaultHidden, visibleContexts),
+    };
   }
 }

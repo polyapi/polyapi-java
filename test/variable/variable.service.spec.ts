@@ -10,7 +10,7 @@ import {
   aiServiceMock,
   authServiceMock,
   commonServiceMock,
-  configServiceMock,
+  configServiceMock, configVariableServiceMock,
   eventServiceMock,
   functionServiceMock,
   prismaServiceMock,
@@ -25,6 +25,7 @@ import { AuthService } from 'auth/auth.service';
 import { EventService } from 'event/event.service';
 import { FunctionService } from 'function/function.service';
 import { AiService } from 'ai/ai.service';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 describe('VariableService', () => {
   const testVariable: Variable = {
@@ -79,6 +80,10 @@ describe('VariableService', () => {
         {
           provide: AiService,
           useValue: aiServiceMock,
+        },
+        {
+          provide: ConfigVariableService,
+          useValue: configVariableServiceMock,
         },
       ],
     }).compile();

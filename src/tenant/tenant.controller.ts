@@ -14,7 +14,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiSecurity } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiConflictResponse, ApiNotFoundResponse, ApiOperation, ApiQuery, ApiSecurity } from '@nestjs/swagger';
 import { TenantService } from 'tenant/tenant.service';
 import {
   ApiKeyDto,
@@ -40,6 +40,11 @@ import {
   UpdateUserDto,
   UserDto,
   SetConfigVariableDto,
+  CreateSignUpDto,
+  SignUpVerificationDto,
+  CreateTenantAgreement,
+  TenantAgreementDto,
+  ResendVerificationCodeDto,
 } from '@poly/model';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
@@ -51,6 +56,7 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { MergeRequestData } from 'common/decorators';
 import { LimitService } from 'limit/limit.service';
+import { TosService } from 'tos/tos.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('tenants')
@@ -64,6 +70,7 @@ export class TenantController {
     private readonly applicationService: ApplicationService,
     private readonly configVariableService: ConfigVariableService,
     private readonly limitService: LimitService,
+    private readonly tosService: TosService,
   ) {}
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
@@ -75,7 +82,12 @@ export class TenantController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed, tierId = null } = data;
+    const {
+      name,
+      publicVisibilityAllowed,
+      publicNamespace = null,
+      tierId = null,
+    } = data;
 
     if (tierId) {
       const limitTier = await this.limitService.findById(tierId);
@@ -84,7 +96,11 @@ export class TenantController {
       }
     }
 
-    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed, tierId));
+    if (!await this.tenantService.isPublicNamespaceAvailable(publicNamespace)) {
+      throw new BadRequestException(`Public namespace '${publicNamespace}' is not available.`);
+    }
+
+    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed, publicNamespace, tierId));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -102,10 +118,26 @@ export class TenantController {
     return full ? this.tenantService.toFullDto(tenant) : this.tenantService.toDto(tenant);
   }
 
-  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
+  @UseGuards(new PolyAuthGuard([Role.SuperAdmin, Role.Admin]))
   @Patch(':id')
-  async updateTenant(@Param('id') id: string, @Body() data: UpdateTenantDto): Promise<TenantDto> {
-    const { name, publicVisibilityAllowed, tierId } = data;
+  async updateTenant(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateTenantDto): Promise<TenantDto> {
+    const { name, publicVisibilityAllowed, publicNamespace, tierId } = data;
+    const tenant = await this.findTenant(id);
+
+    if (req.user.user?.role !== Role.SuperAdmin) {
+      if (tenant.id !== req.user.tenant.id) {
+        throw new BadRequestException('You are not allowed to update this tenant.');
+      }
+      if (name != null) {
+        throw new BadRequestException('You are not allowed to update the name of this tenant.');
+      }
+      if (publicVisibilityAllowed != null) {
+        throw new BadRequestException('You are not allowed to update the public visibility of this tenant.');
+      }
+      if (tierId != null) {
+        throw new BadRequestException('You are not allowed to update the limit tier of this tenant.');
+      }
+    }
 
     if (tierId) {
       const limitTier = await this.limitService.findById(tierId);
@@ -113,9 +145,12 @@ export class TenantController {
         throw new BadRequestException('Limit tier with given id does not exist.');
       }
     }
+    if (!await this.tenantService.isPublicNamespaceAvailable(publicNamespace, [tenant.id])) {
+      throw new BadRequestException(`Public namespace '${publicNamespace}' is not available.`);
+    }
 
     return this.tenantService.toDto(
-      await this.tenantService.update(await this.findTenant(id), name, publicVisibilityAllowed, tierId),
+      await this.tenantService.update(tenant, name, publicVisibilityAllowed, publicNamespace, tierId),
     );
   }
 
@@ -669,6 +704,128 @@ export class TenantController {
     await this.applicationService.delete(application.id);
   }
 
+  @ApiQuery({
+    name: 'email',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'tenant_name',
+    required: false,
+  })
+  @ApiOperation({
+    description: 'One of email or tenant_name must be provided, You can send 2 query params at the same time,it  will check email first.',
+  })
+  @ApiConflictResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          enum: ['EMAIL_ALREADY_EXISTS', 'TENANT_ALREADY_EXISTS'],
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'If neither of email and tenant_name are provided.',
+  })
+  @Get('/sign-up/availability')
+  async verifyAvailability(
+    @Query('email') email: string,
+    @Query('tenant_name') tenantName: string,
+  ) {
+    if (!email && !tenantName) {
+      throw new BadRequestException('You should provide one of "email" | "tenant_name" query params.');
+    }
+
+    return this.tenantService.verifyAvailability(email || '', tenantName || '');
+  }
+
+  @ApiConflictResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          enum: ['EMAIL_ALREADY_EXISTS', 'TENANT_ALREADY_EXISTS'],
+        },
+      },
+    },
+  })
+  @Post('/sign-up')
+  async signUp(
+    @Body() data: CreateSignUpDto,
+  ) {
+    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, data.tenantName || null));
+  }
+
+  @ApiConflictResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          enum: ['INVALID_VERIFICATION_CODE', 'EXPIRED_VERIFICATION_CODE'],
+
+        },
+      },
+      description: 'If 409 code is "EXPIRED_VERIFICATION_CODE", server automatically sends a new one to user\'s email before returning response.',
+    },
+  })
+  @ApiNotFoundResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+        },
+      },
+    },
+    description: 'When tos sent does not exist in database.',
+  })
+
+  @Post('/sign-up/verify')
+  async signUpVerify(
+    @Body() data: SignUpVerificationDto,
+  ) {
+    return this.tenantService.signUpVerify(data.email, data.code);
+  }
+
+  @Post('/sign-up/resend-verification-code')
+  async signUpResendVerificationCode(
+    @Body() data: ResendVerificationCodeDto,
+  ) {
+    await this.tenantService.resendVerificationCode(data.email);
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Get('/:id/tos-agreements')
+  async getTenantAgreements(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+  ) {
+    await this.findTenant(tenantId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return (await this.tenantService.getTenantAgreements(tenantId)).map(this.tenantService.toTenantAgreementDto);
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @Post('/:id/tos-agreements')
+  async createTenantAgreements(
+    @Req() req: AuthRequest,
+    @Param('id') tenantId: string,
+    @Body() data: CreateTenantAgreement,
+  ): Promise<TenantAgreementDto> {
+    await this.findTenant(tenantId);
+    await this.findTos(data.tosId);
+    await this.authService.checkTenantAccess(tenantId, req.user, [Role.Admin]);
+
+    return this.tenantService.toTenantAgreementDto(
+      await this.tenantService.createTenantAgreement(tenantId, data.tosId, req.user.user?.email || '', data.agreedAt, data.notes),
+    );
+  }
+
   private async findTenant(id: string) {
     const tenant = await this.tenantService.findById(id);
     if (!tenant) {
@@ -755,5 +912,15 @@ export class TenantController {
     }
 
     return configVariable;
+  }
+
+  private async findTos(id: string) {
+    const tosRecord = await this.tosService.findOne(id);
+
+    if (!tosRecord) {
+      throw new NotFoundException('Tos record not found.');
+    }
+
+    return tosRecord;
   }
 }
