@@ -21,7 +21,7 @@ export const saveCredentialsInExtension = (apiBaseUrl: unknown, apiKey: unknown)
 };
 
 export const getWorkspacePath = () => {
-  return vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.path : '';
+  return vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri.fsPath : '';
 };
 
 export const getPackageManager = (): 'yarn' | 'npm' => {
@@ -54,16 +54,10 @@ export const saveCredentialsOnClientLibrary = (apiBaseUrl: unknown, apiKey: unkn
 
   const polyFolder = path.join(getWorkspacePath(), 'node_modules/.poly');
 
-  /*
-    `vscode.workspace.workspaceFolders[0].uri.path` on windows starts with \ and that is invalid
-    for absolute windows paths since it should be c: instead of \c:.
-  */
-  const fixedPolyFolder = polyFolder.match(/^\\/) ? polyFolder.substring(1) : polyFolder;
-
   try {
-    fs.mkdirSync(fixedPolyFolder, { recursive: true });
+    fs.mkdirSync(polyFolder, { recursive: true });
     fs.writeFileSync(
-      path.join(fixedPolyFolder, '.config.env'),
+      path.join(polyFolder, '.config.env'),
           `POLY_API_BASE_URL=${apiBaseUrl}\nPOLY_API_KEY=${apiKey}\n`,
     );
   } catch (err) {
