@@ -1864,6 +1864,9 @@ export class FunctionService implements OnModuleInit {
           typeObject: srcValue.typeObject,
         };
       }
+      if (Array.isArray(objValue) && Array.isArray(srcValue) && srcValue.length === 0) {
+        return srcValue;
+      }
     });
   }
 
