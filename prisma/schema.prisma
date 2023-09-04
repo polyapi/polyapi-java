@@ -349,7 +349,7 @@ model TenantSignUp {
   id                String   @id @default(uuid())
   createdAt         DateTime @default(now()) @map("created_at")
   email             String   @unique
-  name              String?  @unique
+  name              String?
   verificationCode  String   @unique @map("verification_code")
   expiresAt         DateTime @map("expires_at")
 
