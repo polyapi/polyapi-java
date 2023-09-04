@@ -28,7 +28,6 @@ export class EmailService {
   }
 
   async sendEmailTemplate<T extends Record<string, any>>(fromEmail: string, subject: string, to: string, templateName: string, variables: T): Promise<any> {
-    this.logger.debug(`Sending template email with values "fromEmail": "${fromEmail}", "subject": "${subject}",  "to": "${to}", "templateName": "${templateName}", "variables": ${JSON.stringify(variables)}`);
     return this.emailServiceProvider.sendEmailTemplate<T>(fromEmail, subject, to, templateName, variables);
   }
 
