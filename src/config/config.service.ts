@@ -175,6 +175,14 @@ export class ConfigService {
     return this.get('KNATIVE_TRIGGER_NAMESPACE', 'default');
   }
 
+  get knativeTriggerResponseUrl(): string {
+    return this.get('KNATIVE_TRIGGER_RESPONSE_URL', `${this.hostUrl}/triggers/response`);
+  }
+
+  get knativeTriggerResponseTimeoutSeconds(): number {
+    return Number(this.get('KNATIVE_TRIGGER_RESPONSE_TIMEOUT_SECONDS', 30));
+  }
+
   get statisticsFunctionCallsRetentionDays(): number {
     return Number(this.get('STATISTICS_FUNCTION_CALLS_RETENTION_DAYS', 7));
   }

@@ -284,13 +284,11 @@ export class TenantService implements OnModuleInit {
           email,
         },
       }),
-      tenantName
-        ? this.prisma.tenantSignUp.findFirst({
-          where: {
-            email,
-          },
-        })
-        : null,
+      this.prisma.tenantSignUp.findFirst({
+        where: {
+          email,
+        },
+      }),
       tenantName
         ? this.prisma.tenant.findFirst({
           where: {

@@ -273,7 +273,7 @@ export class WebhookService {
   async triggerWebhookHandle(webhookHandle: WebhookHandle, eventPayload: any) {
     this.logger.debug(`Triggering webhook for ${webhookHandle.id}...`);
     this.eventService.sendWebhookEvent(webhookHandle.id, eventPayload);
-    await this.triggerService.triggerWebhookEvent(webhookHandle.id, eventPayload);
+    return await this.triggerService.triggerWebhookEvent(webhookHandle.id, eventPayload);
   }
 
   toDto(webhookHandle: WebhookHandle): WebhookHandleDto {

@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { AuthData, AuthRequest } from 'common/types';
 import { TriggerService } from 'trigger/trigger.service';
-import { CreateTriggerDto, Role, TriggerDestination, TriggerSource } from '@poly/model';
+import { CreateTriggerDto, Role, TriggerDestination, TriggerResponseDto, TriggerSource } from '@poly/model';
 import { WebhookService } from 'webhook/webhook.service';
 import { FunctionService } from 'function/function.service';
 import { AuthService } from 'auth/auth.service';
@@ -11,6 +11,8 @@ import { AuthService } from 'auth/auth.service';
 @ApiSecurity('PolyApiKey')
 @Controller('triggers')
 export class TriggerController {
+  private readonly logger = new Logger(TriggerController.name);
+
   constructor(
     private readonly triggerService: TriggerService,
     private readonly webhookService: WebhookService,
@@ -46,6 +48,14 @@ export class TriggerController {
   async deleteTrigger(@Req() req: AuthRequest, @Param('id') id: string) {
     const trigger = await this.findTrigger(req.user, id);
     return await this.triggerService.deleteTrigger(req.user.environment.id, trigger);
+  }
+
+  @Post('/response')
+  async postTriggerResponse(@Body() response: TriggerResponseDto) {
+    const { executionId, data } = response;
+    this.logger.debug(`Received trigger response ${executionId} with data ${JSON.stringify(data)}`);
+
+    await this.triggerService.processTriggerResponse(executionId, data);
   }
 
   private async findTrigger(authData: AuthData, id: string) {

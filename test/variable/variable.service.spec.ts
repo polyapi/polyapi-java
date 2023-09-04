@@ -140,6 +140,7 @@ describe('VariableService', () => {
         ...data,
         id: 'id12345',
       }) as any);
+      commonServiceMock.sanitizeNameIdentifier?.mockImplementationOnce((name) => name);
     });
 
     it('should call secretService.set when variable is created', async () => {
