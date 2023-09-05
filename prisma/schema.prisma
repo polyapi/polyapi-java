@@ -379,10 +379,3 @@ model TenantAgreement {
 
   @@map("tenant_agreement")
 }
-
-model testaca {
-  id          String @id @default(uuid())
-  createdAt   String 
-
-  @@map("testaca")
-}
