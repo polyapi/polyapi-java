@@ -18,7 +18,7 @@ model Tenant {
   id                      String           @id @default(uuid())
   createdAt               DateTime         @default(now()) @map("created_at")
   name                    String?           @unique
-  users                   User[]
+  users                   Users[]
   teams                   Team[]
   environments            Environment[]
   applications            Application[]
@@ -31,7 +31,7 @@ model Tenant {
   @@map("tenant")
 }
 
-model User {
+model Users {
   id                   String                @id @default(uuid())
   createdAt            DateTime              @default(now()) @map("created_at")
   name                 String
@@ -45,7 +45,7 @@ model User {
   apiKeys              ApiKey[]
   teamMembers          TeamMember[]
 
-  @@map("user")
+  @@map("users")
 }
 
 model Team {
@@ -64,7 +64,7 @@ model TeamMember {
   createdAt DateTime @default(now()) @map("created_at")
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId    String   @map("team_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @map("user_id")
 
   @@map("team_member")
@@ -112,7 +112,7 @@ model ApiKey {
   permissions   String       @default("{}")
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   applicationId String?      @map("application_id")
-  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          Users?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String?      @map("user_id")
 
   @@map("api_key")
@@ -201,17 +201,18 @@ model WebhookHandle {
 model Conversation {
   id        String                @id @default(uuid())
   createdAt DateTime              @default(now())
-  user      User                  @relation(fields: [userId], references: [id])
+  user      Users                  @relation(fields: [userId], references: [id])
   userId    String
   workspaceFolder String          @default("")
   messages  ConversationMessage[]
+  @@map("conversation")
 }
 
 // store all the messages in a conversation
 model ConversationMessage {
   id        String   @id @default(uuid())
   createdAt DateTime @unique() @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String   @map("user_id")
   name      String   @default("") // not used for now. in future, will allow the user to have multiple conversations
   role      String // assistant or user or system or info
@@ -318,6 +319,7 @@ model DocSection {
   title     String   @default("")
   text      String   @default("")
   vector    String   @default("")  // JSON of OpenAI embedding vector of the title+text
+  @@map("docsection")
 }
 
 model LimitTier {
@@ -379,3 +381,4 @@ model TenantAgreement {
 
   @@map("tenant_agreement")
 }
+

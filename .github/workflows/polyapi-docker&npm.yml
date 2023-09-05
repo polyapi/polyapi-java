@@ -15,7 +15,7 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-      IMAGE: ghcr.io/polyapi/demo-20
+      IMAGE: ghcr.io/polyapi/demo-21
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       
