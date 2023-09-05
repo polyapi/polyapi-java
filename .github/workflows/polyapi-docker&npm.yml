@@ -4,17 +4,19 @@ on:
     branches:
       - develop
       - main
+      - postgres-fm
+
 
 jobs:
   develop:
     name: Development Docker / NPM build and push.
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/develop' }}
+    # if: ${{ github.ref == 'refs/heads/develop' }}
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-      IMAGE: ghcr.io/polyapi/polyapi-dev
+      IMAGE: demo-12
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       
@@ -24,8 +26,8 @@ jobs:
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
-        docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+        docker build -t ${{ env.IMAGE }} -f docker/Dockerfile .
+        docker push ${{ env.IMAGE }}
 
     - uses: dorny/paths-filter@v2
       id: changes
