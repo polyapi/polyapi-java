@@ -32,7 +32,6 @@ import {
   Role,
   UpdateApiFunctionDto,
   UpdateCustomFunctionDto,
-  Visibility,
 } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
@@ -42,6 +41,7 @@ import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
 import { Tenant } from '@prisma/client';
 import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
+import { CommonService } from 'common/common.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -54,6 +54,7 @@ export class FunctionController {
     private readonly variableService: VariableService,
     private readonly limitService: LimitService,
     private readonly statisticsService: StatisticsService,
+    private readonly commonService: CommonService,
   ) {
   }
 
@@ -176,7 +177,7 @@ export class FunctionController {
       throw new BadRequestException('`payload` cannot be updated without `response`');
     }
 
-    this.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
+    this.commonService.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
 
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, false, Permission.Teach);
 
@@ -297,7 +298,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    this.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
+    this.commonService.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
 
     await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user, false, Permission.CustomDev);
 
@@ -401,7 +402,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    this.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
+    this.commonService.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
 
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, false, Permission.CustomDev);
 
@@ -464,12 +465,6 @@ export class FunctionController {
     if (!await this.limitService.checkTenantFunctionsLimit(tenant)) {
       this.logger.debug(`Tenant ${tenant.id} reached its limit of functions while ${debugMessage}.`);
       throw new HttpException(FUNCTIONS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
-    }
-  }
-
-  private checkIfIsAbleToChangeVisibility(tenant: Tenant, visibility: Visibility | null) {
-    if (tenant.name === null && visibility === Visibility.Public) {
-      throw new BadRequestException(`Cannot set ${Visibility.Public} if tenant does not have a name.`);
     }
   }
 }

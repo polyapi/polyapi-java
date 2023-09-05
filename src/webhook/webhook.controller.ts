@@ -5,13 +5,14 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { CreateWebhookHandleDto, Permission, Role, UpdateWebhookHandleDto, WebhookHandlePublicDto } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
+import { CommonService } from 'common/common.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('webhooks')
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 
-  public constructor(private readonly webhookService: WebhookService, private readonly authService: AuthService) {}
+  public constructor(private readonly webhookService: WebhookService, private readonly authService: AuthService, private readonly commonService: CommonService) {}
 
   @UseGuards(PolyAuthGuard)
   @Get()
@@ -84,6 +85,8 @@ export class WebhookController {
       description = null,
       visibility = null,
     } = updateWebhookHandleDto;
+
+    this.commonService.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
 
     const webhookHandle = await this.webhookService.findWebhookHandle(id);
     if (!webhookHandle) {

@@ -36,6 +36,7 @@ import { LimitService } from 'limit/limit.service';
 import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
 import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
+import { CommonService } from 'common/common.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('auth-providers')
@@ -48,6 +49,7 @@ export class AuthProviderController {
     private readonly variableService: VariableService,
     private readonly limitService: LimitService,
     private readonly statisticsService: StatisticsService,
+    private readonly commonService: CommonService,
   ) {
   }
 
@@ -136,6 +138,8 @@ export class AuthProviderController {
     if (!authProvider) {
       throw new NotFoundException();
     }
+
+    this.commonService.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
 
     const currentFunctionCount = this.service.getFunctionCount(authProvider.introspectUrl, authProvider.revokeUrl, authProvider.refreshEnabled);
     const updatedFunctionCount = this.service.getFunctionCount(

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InputData, jsonInputForTargetLanguage, quicktype } from 'quicktype-core';
 import jsonpath from 'jsonpath';
 import { validator } from '@exodus/schemasafe';
@@ -328,6 +328,12 @@ export class CommonService {
     } catch (e) {
       this.logger.debug(`Failed to validate JSON meta schema: ${e.message}`);
       return false;
+    }
+  }
+
+  checkIfIsAbleToChangeVisibility(tenant: Tenant, visibility: Visibility | null | undefined) {
+    if (tenant.name === null && visibility === Visibility.Public) {
+      throw new BadRequestException(`Cannot set ${Visibility.Public} if tenant does not have a name.`);
     }
   }
 }
