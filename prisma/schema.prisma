@@ -27,12 +27,12 @@ model Tenant {
   teams                   Team[]
   limitTier               LimitTier?        @relation(fields: [limitTierId], references: [id])
   agreements              TenantAgreement[]
-  users                   Users[]
+  users                   User[]
 
   @@map("tenant")
 }
 
-model Users {
+model User {
   id        String    @id(map: "idx_24203_sqlite_autoindex_users_1") @default(uuid())
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   name      String
@@ -66,7 +66,7 @@ model TeamMember {
   teamId    String   @map("team_id")
   userId    String   @map("user_id")
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("team_member")
 }
@@ -114,7 +114,7 @@ model ApiKey {
   userId        String?      @map("user_id")
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  user          Users?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("api_key")
 }
@@ -200,10 +200,10 @@ model WebhookHandle {
 
 model Conversation {
   id              String                @id(map: "idx_24337_sqlite_autoindex_conversation_1") @default(uuid())
-  createdat       DateTime             @default(now()) @db.Timestamptz(6)
+  createdAt       DateTime             @default(now()) @db.Timestamptz(6) @map("createdat")
   userid          String	             
-  user            Users                @relation(fields: [userid], references: [id])
-  workspacefolder String               @default("")
+  user            User                @relation(fields: [userid], references: [id])
+  workspaceFolder String               @default("") @map("workspacefolder")
   messages        ConversationMessage[]
 
   @@map("conversation")
@@ -211,8 +211,8 @@ model Conversation {
 
 model ConversationMessage {
   id             String        @id(map: "idx_24382_sqlite_autoindex_conversation_message_1") @default(uuid())
-  createdat      String       @default(dbgenerated("CURRENT_TIMESTAMP"))
-  user           Users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(dbgenerated("CURRENT_TIMESTAMP")) @db.Timestamptz(6) @map("createdat")
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String       @map("user_id")
   name           String       @default("")
   role           String
