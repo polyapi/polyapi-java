@@ -334,7 +334,7 @@ model Statistics {
   apiKey        String   @map("api_key")
   tenantId      String   @map("tenant_id")
   environmentId String   @map("environment_id")
-  userId        String   @map("user_id")
+  userId        String?   @map("user_id")
   applicationId String?   @map("application_id")
   data          String?
 
