@@ -292,7 +292,7 @@ CREATE TABLE "statistics" (
     "api_key" TEXT NOT NULL,
     "tenant_id" TEXT NOT NULL,
     "environment_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "user_id" TEXT,
     "application_id" TEXT,
     "data" TEXT,
 

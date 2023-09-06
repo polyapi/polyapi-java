@@ -200,7 +200,7 @@ model WebhookHandle {
 
 model Conversation {
   id              String              @id(map: "idx_24337_sqlite_autoindex_conversation_1") @default(uuid())
-  createdAt       DateTime            @default(now()) @db.Timestamptz(6) @map("createdat")
+  createdAt       DateTime            @unique() @default(now()) @db.Timestamptz(6) @map("createdat")
   userId          String	            @map("userid")
   user            User                @relation(fields: [userId], references: [id])
   workspaceFolder String              @default("") @map("workspacefolder")
@@ -210,9 +210,9 @@ model Conversation {
 }
 
 model ConversationMessage {
-  id             String        @id(map: "idx_24382_sqlite_autoindex_conversation_message_1") @default(uuid())
-  createdAt      DateTime       @default(dbgenerated("CURRENT_TIMESTAMP")) @db.Timestamptz(6) @map("createdat")
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id(map: "idx_24382_sqlite_autoindex_conversation_message_1") @default(uuid())
+  createdAt      DateTime     @default(dbgenerated("CURRENT_TIMESTAMP")) @db.Timestamptz(6) @map("createdat")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String       @map("user_id")
   name           String       @default("")
   role           String
@@ -375,3 +375,5 @@ model TenantAgreement {
 
   @@map("tenant_agreement")
 }
+
+
