@@ -226,7 +226,7 @@ model ConversationMessage {
 
 model SystemPrompt {
   id            String       @id(map: "idx_24237_sqlite_autoindex_system_prompt_1") @default(uuid())
-  createdat     DateTime    @default(now()) @db.Timestamptz(6)
+  createdAt     DateTime    @default(now()) @db.Timestamptz(6) @map("createdat")
   environmentId String      @map("environment_id")
   content       String
   environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
