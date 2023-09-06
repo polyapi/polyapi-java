@@ -347,6 +347,9 @@ CREATE UNIQUE INDEX "idx_24293_environment_subdomain_key" ON "environment"("subd
 CREATE UNIQUE INDEX "idx_24211_api_key_key_key" ON "api_key"("key");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "conversation_message_createdat_key" ON "conversation_message"("createdat");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "idx_24317_gpt_plugin_slug_environment_id_key" ON "gpt_plugin"("slug", "environment_id");
 
 -- CreateIndex
@@ -404,10 +407,10 @@ ALTER TABLE "webhook_handle" ADD CONSTRAINT "webhook_handle_environment_id_fkey"
 ALTER TABLE "conversation" ADD CONSTRAINT "conversation_userid_fkey" FOREIGN KEY ("userid") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "conversation_message" ADD CONSTRAINT "conversation_message_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "conversation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "conversation_message" ADD CONSTRAINT "conversation_message_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "conversation_message" ADD CONSTRAINT "conversation_message_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "conversation_message" ADD CONSTRAINT "conversation_message_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "conversation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "system_prompt" ADD CONSTRAINT "system_prompt_environment_id_fkey" FOREIGN KEY ("environment_id") REFERENCES "environment"("id") ON DELETE CASCADE ON UPDATE CASCADE;

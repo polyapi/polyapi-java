@@ -376,4 +376,3 @@ model TenantAgreement {
   @@map("tenant_agreement")
 }
 
-
