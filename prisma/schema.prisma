@@ -199,11 +199,11 @@ model WebhookHandle {
 }
 
 model Conversation {
-  id              String                @id(map: "idx_24337_sqlite_autoindex_conversation_1") @default(uuid())
-  createdAt       DateTime             @default(now()) @db.Timestamptz(6) @map("createdat")
-  userid          String	             
-  user            User                @relation(fields: [userid], references: [id])
-  workspaceFolder String               @default("") @map("workspacefolder")
+  id              String              @id(map: "idx_24337_sqlite_autoindex_conversation_1") @default(uuid())
+  createdAt       DateTime            @default(now()) @db.Timestamptz(6) @map("createdat")
+  userId          String	            @map("userid")
+  user            User                @relation(fields: [userId], references: [id])
+  workspaceFolder String              @default("") @map("workspacefolder")
   messages        ConversationMessage[]
 
   @@map("conversation")
