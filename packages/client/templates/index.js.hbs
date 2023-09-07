@@ -1,6 +1,9 @@
 const set = require('lodash/set');
 const merge = require('lodash/merge');
 const { io } = require('socket.io-client');
+const { HttpProxyAgent } = require('http-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+
 const apiFunctions = require('./api');
 const clientFunctions = require('./client');
 const webhooks = require('./webhooks');
@@ -11,6 +14,8 @@ const vari = require('./vari');
 const clientID = '{{clientID}}';
 const nodeEnv = process.env.NODE_ENV;
 const isDevEnv = nodeEnv === 'development';
+const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy || process.env.npm_config_proxy;
+const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.npm_config_https_proxy;
 
 let socket = null;
 const getSocket = () => {
@@ -20,7 +25,25 @@ const getSocket = () => {
   }
 
   if (!socket) {
-    socket = io(`${apiBaseUrl}/events`);
+    const isSecure = apiBaseUrl.toLowerCase().startsWith('https://');
+    let agent;
+    if (isSecure && httpsProxy) {
+      console.log('Using HttpsProxyAgent')
+      agent = new HttpsProxyAgent(httpsProxy, { rejectUnauthorized: !isDevEnv });
+    } else if (httpProxy) {
+      console.log('Using HttpProxyAgent')
+      agent = new HttpProxyAgent(httpProxy);
+    }
+
+    socket = io(`${apiBaseUrl}/events`, {
+      agent
+    });
+    socket.on('connect', () => {
+      console.log("WS connection established");
+    })
+    socket.on('connect_error', (error) => {
+      console.error("Socket connect error:", error);
+    });
   }
   return socket;
 };
