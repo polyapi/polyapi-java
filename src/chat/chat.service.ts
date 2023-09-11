@@ -145,13 +145,18 @@ export class ChatService {
       return [];
     }
 
+    const conversation = await this.prisma.conversation.findFirst({ where: { userId } });
+    if (!conversation) {
+      return [];
+    }
+
     const messages = await this.prisma.conversationMessage.findMany({
       where: {
-        userId,
         type: 2,
         role: { in: ['user', 'assistant'] },
         conversation: {
           workspaceFolder,
+          id: conversation.id,
         },
       },
       orderBy: { createdAt: 'desc' },

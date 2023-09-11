@@ -16,4 +16,8 @@ export class UpdateTierDto {
   @IsInt()
   @IsOptional()
   functionCallsPerDay?: number | null;
+
+  @IsInt()
+  @IsOptional()
+  variableCallsPerDay?: number | null;
 }

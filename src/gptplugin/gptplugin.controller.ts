@@ -80,7 +80,7 @@ export class GptPluginController {
     return this.chatService.deleteConversation(conversationId);
   }
 
-  @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))
+  @UseGuards(PolyAuthGuard)
   @Get('plugins')
   public async pluginList(@Req() req: AuthRequest): Promise<unknown> {
     const plugins = await this.service.listPlugins(req.user.environment.id);

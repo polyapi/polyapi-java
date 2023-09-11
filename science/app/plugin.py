@@ -3,6 +3,8 @@ import json
 from flask import abort
 import requests
 
+from app.conversation import get_plugin_conversation_lookback, get_recent_messages
+
 assert requests
 from typing import Dict, List
 import openai
@@ -75,20 +77,33 @@ def get_plugin_chat(
     db = get_client()
     db_api_key = db.apikey.find_unique(where={"key": api_key})
     assert db_api_key
-    user_id = db_api_key.userId
-    assert user_id
 
     conversation = db.conversation.find_first(where={"id": conversation_id})
     if conversation:
-        if conversation.userId != user_id:
-            abort(401, {"message": "Not authorized. User id and conversation user id mismatch."})
+        if conversation.userId and conversation.userId != db_api_key.userId:
+            abort(
+                401,
+                {
+                    "message": "Not authorized. User id and conversation user id mismatch."
+                },
+            )
+        elif conversation.applicationId != db_api_key.applicationId:
+            abort(
+                401,
+                {
+                    "message": "Not authorized. Application and conversation application mismatch."
+                },
+            )
 
-        prev_msgs = db.conversationmessage.find_many(
-            where={"conversationId": conversation_id, "type": MessageType.plugin.value},
-            order={"createdAt": "asc"},
-        )
+        prev_msgs = get_recent_messages(conversation_id, MessageType.plugin.value, get_plugin_conversation_lookback())
     else:
-        conversation = db.conversation.create(data={"id": conversation_id, "userId": user_id})
+        conversation = db.conversation.create(
+            data={
+                "id": conversation_id,
+                "userId": db_api_key.userId,
+                "applicationId": db_api_key.applicationId,
+            }
+        )
         prev_msgs = []
 
     openapi = _get_openapi_spec(plugin_id)
@@ -124,11 +139,11 @@ def get_plugin_chat(
         messages.append(answer_msg)  # type: ignore
     else:
         # no function call, just return OpenAI's answer
-        answer_msg: MessageDict = choice['message']  # type: ignore
-        answer_msg['type'] = MessageType.plugin.value
+        answer_msg: MessageDict = choice["message"]  # type: ignore
+        answer_msg["type"] = MessageType.plugin.value
         messages.append(answer_msg)
 
-    store_messages(user_id, conversation_id, messages)
+    store_messages(conversation_id, messages)
     return messages
 
 

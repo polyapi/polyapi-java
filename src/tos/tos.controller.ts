@@ -3,7 +3,8 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { Role } from '@poly/model';
 import { TosService } from './tos.service';
 import { CreateTosDto, TosDto } from '@poly/model';
-import { ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiParam } from '@nestjs/swagger';
+import { API_TAG_INTERNAL } from 'common/constants';
 
 @Controller('tos')
 export class TosController {
@@ -11,6 +12,7 @@ export class TosController {
         private readonly service: TosService,
   ) {}
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('')
   create(

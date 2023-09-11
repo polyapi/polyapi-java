@@ -77,7 +77,7 @@ def documentation_question(
         messages.append(MessageDict(role="user", content=content))
 
     resp = get_chat_completion(messages, stream=True)
-    store_messages(user_id, conversation_id, messages)
+    store_messages(conversation_id, messages)
 
     return resp
 

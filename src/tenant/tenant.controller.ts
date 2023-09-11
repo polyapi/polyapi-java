@@ -58,6 +58,7 @@ import { MergeRequestData } from 'common/decorators';
 import { LimitService } from 'limit/limit.service';
 import { TosService } from 'tos/tos.service';
 import { LimitTier } from '@prisma/client';
+import { API_TAG_INTERNAL } from 'common/constants';
 
 @ApiSecurity('PolyApiKey')
 @Controller('tenants')
@@ -74,12 +75,14 @@ export class TenantController {
     private readonly tosService: TosService,
   ) {}
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Get()
   async getTenants(): Promise<TenantDto[]> {
     return (await this.tenantService.getAll()).map((tenant) => this.tenantService.toDto(tenant));
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
@@ -162,6 +165,7 @@ export class TenantController {
     );
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Delete(':id')
   async deleteTenant(@Param('id') id: string) {

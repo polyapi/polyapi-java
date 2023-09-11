@@ -302,14 +302,12 @@ GAPIKey: string,  // your api key
         conversation = create_new_conversation(user.id)
 
         msg = store_message(
-            user.id,
             conversation.id,
             {
                 "role": "user",
                 "content": "profound question",
             },
         )
-        self.assertEqual(msg.userId, user.id)
         self.assertEqual(msg.content, "profound question")
 
     def test_get_public_id_none(self):

@@ -2,12 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VariableController } from 'variable/variable.controller';
 import { VariableService } from 'variable/variable.service';
 import { AuthService } from 'auth/auth.service';
-import { Permission, CreateVariableDto, UpdateVariableDto } from '@poly/model';
+import { Permission, CreateVariableDto, UpdateVariableDto, Visibility } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { PrismaService } from 'prisma/prisma.service';
-import { prismaServiceMock, variableServiceMock } from '../mocks';
+import { limitServiceMock, prismaServiceMock, statisticsServiceMock, variableServiceMock } from '../mocks';
 import { ForbiddenException } from '@nestjs/common';
 import { Variable } from '@prisma/client';
+import { StatisticsService } from 'statistics/statistics.service';
+import { LimitService } from 'limit/limit.service';
 
 jest.mock('variable/variable.service');
 
@@ -26,6 +28,14 @@ describe('VariableController', () => {
         {
           provide: VariableService,
           useValue: variableServiceMock,
+        },
+        {
+          provide: StatisticsService,
+          useValue: statisticsServiceMock,
+        },
+        {
+          provide: LimitService,
+          useValue: limitServiceMock,
         },
       ],
     }).compile();
@@ -73,6 +83,19 @@ describe('VariableController', () => {
   });
 
   describe('createVariable', () => {
+    beforeEach(() => {
+      variableServiceMock.createVariable?.mockResolvedValue({
+        id: 'test_variable_id',
+        createdAt: new Date(),
+        description: 'test_description',
+        visibility: Visibility.Environment,
+        environmentId: 'test_environment_id',
+        name: 'test_variable',
+        context: 'test_context',
+        secret: false,
+      });
+    });
+
     it('should not fail when correct permission is set for creating non-secret variable', async () => {
       const req = {
         user: {

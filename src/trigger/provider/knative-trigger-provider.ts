@@ -107,6 +107,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     return {
       id: triggerDef.metadata.uid,
       name: triggerDef.metadata.labels.name || triggerDef.metadata.name,
+      environmentId: triggerDef.metadata.labels.environment,
       source: getSource(),
       destination: getDestination(),
     };
@@ -273,7 +274,11 @@ export class KNativeTriggerProvider implements TriggerProvider {
         return null;
       }
       this.logger.error('Error getting trigger:', e);
-      throw e;
+      if (process.env.SKIP_KNATIVE) {
+        return null;
+      } else {
+        throw e;
+      }
     }
   }
 

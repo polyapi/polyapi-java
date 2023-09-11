@@ -5,6 +5,7 @@ export enum Permission {
   AuthConfig = 'authConfig',
   ManageNonSecretVariables = 'manageVariables',
   ManageSecretVariables = 'manageSecretVariables',
+  ManageTriggers = 'manageTriggers',
 }
 
 export type Permissions = {
@@ -14,4 +15,5 @@ export type Permissions = {
   [Permission.AuthConfig]?: boolean;
   [Permission.ManageNonSecretVariables]?: boolean;
   [Permission.ManageSecretVariables]?: boolean;
+  [Permission.ManageTriggers]?: boolean;
 }

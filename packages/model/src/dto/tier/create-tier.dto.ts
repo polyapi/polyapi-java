@@ -15,4 +15,8 @@ export class CreateTierDto {
   @IsInt()
   @ValidateIf((o) => o.functionCallsPerDay !== null)
   functionCallsPerDay: number | null;
+
+  @IsInt()
+  @ValidateIf((o) => o.variableCallsPerDay !== null)
+  variableCallsPerDay: number | null;
 }

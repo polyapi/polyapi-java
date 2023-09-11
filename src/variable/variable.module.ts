@@ -10,6 +10,8 @@ import { FunctionModule } from 'function/function.module';
 import { EventModule } from 'event/event.module';
 import { AiModule } from 'ai/ai.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
+import { StatisticsModule } from 'statistics/statistics.module';
+import { LimitModule } from 'limit/limit.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
     forwardRef(() => EventModule),
     AiModule,
     ConfigVariableModule,
+    LimitModule,
+    StatisticsModule,
   ],
   controllers: [VariableController],
   providers: [VariableService],

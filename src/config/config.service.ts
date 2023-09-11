@@ -194,4 +194,12 @@ export class ConfigService {
   get signUpEmail(): string {
     return this.get('SIGN_UP_EMAIL', 'signup@polyapi.io');
   }
+
+  get signUpTenantInformationTemplateName(): string {
+    return this.get('SIGN_UP_TENANT_INFORMATION_TEMPLATE_NAME', 'sign-up-new-tenant-info');
+  }
+
+  get sendSignUpVerificationCodeTemplateName(): string {
+    return this.get('SIGN_UP_VERIFICATION_CODE_TEMPLATE_NAME', 'sign-up-verification-code');
+  }
 }

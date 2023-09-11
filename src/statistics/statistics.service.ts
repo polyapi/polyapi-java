@@ -43,7 +43,7 @@ export class StatisticsService {
     });
   }
 
-  async getFunctionCallForTenant(tenantId: string, from?: Date, to?: Date) {
+  async getFunctionCallsForTenant(tenantId: string, from?: Date, to?: Date) {
     return this.prisma.statistics.findMany({
       where: {
         tenantId,
@@ -74,6 +74,37 @@ export class StatisticsService {
       where: {
         tenantId,
         type: 'chat-question',
+        createdAt: {
+          gte: from,
+          lte: to,
+        },
+      },
+    });
+  }
+
+  async trackVariableCall(authData: AuthData, callType: 'create' | 'read' | 'read-context-values' | 'update' | 'delete', variableId?: string, context?: string) {
+    await this.prisma.statistics.create({
+      data: {
+        type: 'variable-call',
+        apiKey: authData.key,
+        tenantId: authData.tenant.id,
+        environmentId: authData.environment.id,
+        applicationId: authData.application?.id,
+        userId: authData.user?.id,
+        data: JSON.stringify({
+          variableId,
+          context,
+          type: callType,
+        }),
+      },
+    });
+  }
+
+  async getVariableCallsForTenant(tenantId: string, from?: Date, to?: Date) {
+    return this.prisma.statistics.findMany({
+      where: {
+        tenantId,
+        type: 'variable-call',
         createdAt: {
           gte: from,
           lte: to,

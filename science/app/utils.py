@@ -143,25 +143,17 @@ def insert_internal_step_info(messages: List[MessageDict], step: str) -> None:
 
 
 def store_messages(
-    user_id: str, conversation_id: str, messages: List[MessageDict]
+    conversation_id: str, messages: List[MessageDict]
 ) -> None:
     for message in messages:
-        store_message(
-            user_id,
-            conversation_id,
-            message
-        )
+        store_message(conversation_id, message)
 
 
 def store_message(
-    user_id: str, conversation_id: str, data: MessageDict
+    conversation_id: str, data: MessageDict
 ) -> Optional[ConversationMessage]:
-    if not user_id:
-        return None
-
     db = get_client()
     create_input = {
-        "userId": user_id,
         "conversationId": conversation_id,
         "role": data["role"],
         "content": _get_content(data),
@@ -191,22 +183,24 @@ def get_conversations_for_user(user_id: str) -> List[Conversation]:
     )
 
 
-def get_last_conversations(user_id: str, limit: int, workspace_folder: str = "") -> List[Conversation]:
+def get_last_conversation(user_id: Optional[str] = None, application_id: Optional[str] = None, workspace_folder: str = "") -> Optional[Conversation]:
+    assert user_id or application_id
     db = get_client()
-    return db.conversation.find_many(
-        where={"userId": user_id, "workspaceFolder": workspace_folder}, order={"createdAt": "desc"}, take=limit
+    return db.conversation.find_first(
+        where={"userId": user_id, "applicationId": application_id, "workspaceFolder": workspace_folder}, order={"createdAt": "desc"}
     )
 
 
-def create_new_conversation(user_id: str, workspace_folder: str = "") -> Conversation:
+def create_new_conversation(user_id: Optional[str], workspace_folder: str = "") -> Conversation:
     assert user_id
     db = get_client()
     return db.conversation.create(data={"userId": user_id, "workspaceFolder": workspace_folder})
 
 
 def clear_conversations(user_id: str) -> None:
+    assert user_id
     db = get_client()
-    db.conversationmessage.delete_many(where={"userId": user_id})
+    db.conversation.delete_many(where={"userId": user_id})
 
 
 def get_config_variable(varname: VarName) -> Optional[ConfigVariable]:

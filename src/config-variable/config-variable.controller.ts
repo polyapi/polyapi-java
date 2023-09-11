@@ -1,27 +1,31 @@
 import { Controller, UseGuards, Patch, Get, Param, Delete, NotFoundException, ValidationPipe } from '@nestjs/common';
 import { Role, SetInstanceConfigVariableDto } from '@poly/model';
-import { ApiSecurity } from '@nestjs/swagger';
+import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { ConfigVariableService } from './config-variable.service';
 import { MergeRequestData } from 'common/decorators';
+import { API_TAG_INTERNAL } from 'common/constants';
 
 @ApiSecurity('PolyApiKey')
 @Controller('config-variables')
 export class ConfigVariableController {
   constructor(private readonly service: ConfigVariableService) {}
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @Get('')
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   public async getConfigVariables() {
     return (await this.service.getMany()).map(this.service.toDto);
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Patch('/:name')
   public async createOrUpdateConfigVariable(@MergeRequestData(['body', 'params'], new ValidationPipe({ validateCustomDecorators: true })) data: SetInstanceConfigVariableDto) {
     return this.service.toDto(await this.service.configure(data.name, data.value));
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Get('/:name')
   public async getConfigVariable(@Param('name') name: string) {
@@ -29,6 +33,7 @@ export class ConfigVariableController {
     return this.service.toDto(configVariable);
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Delete('/:name')
   public async deleteConfigVariable(@Param('name') name: string) {

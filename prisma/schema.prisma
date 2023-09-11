@@ -41,7 +41,6 @@ model User {
   role                 String                @default("USER")
   vip                  Boolean               @default(false) // is this person a VIP we want to track carefully?
   conversations        Conversation[]
-  conversationMessages ConversationMessage[]
   apiKeys              ApiKey[]
   teamMembers          TeamMember[]
 
@@ -98,6 +97,7 @@ model Application {
   name        String
   description String   @default("")
   apiKeys     ApiKey[]
+  conversations Conversation[]
 
   @@map("application")
 }
@@ -201,8 +201,13 @@ model WebhookHandle {
 model Conversation {
   id        String                @id @default(uuid())
   createdAt DateTime              @default(now())
-  user      User                  @relation(fields: [userId], references: [id])
-  userId    String
+
+  // conversation must either be linked to a user or application
+  user      User?                 @relation(fields: [userId], references: [id])
+  userId    String?
+  application   Application?               @relation(fields: [applicationId], references: [id])
+  applicationId String?
+
   workspaceFolder String          @default("")
   messages  ConversationMessage[]
 }
@@ -211,8 +216,6 @@ model Conversation {
 model ConversationMessage {
   id        String   @id @default(uuid())
   createdAt DateTime @unique() @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String   @map("user_id")
   name      String   @default("") // not used for now. in future, will allow the user to have multiple conversations
   role      String // assistant or user or system or info
 
@@ -326,6 +329,7 @@ model LimitTier {
   maxFunctions        Int?     @map("max_functions")
   chatQuestionsPerDay Int?     @map("chat_questions_per_day")
   functionCallsPerDay Int?     @map("function_calls_per_day")
+  variableCallsPerDay Int?     @map("variable_calls_per_day")
   tenants             Tenant[]
 
   @@map("limit_tier")

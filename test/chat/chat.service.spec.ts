@@ -37,7 +37,6 @@ describe('ChatService', () => {
 
     it('should get the list of conversation ids', async () => {
       const user = await prisma.user.findFirstOrThrow();
-      await prisma.conversationMessage.deleteMany({ where: { userId: user.id } });
       await prisma.conversation.deleteMany({ where: { userId: user.id } });
       const conversation = await prisma.conversation.create({ data: { userId: user.id } });
       const ids = await service.getConversationIds(user.id, '');
@@ -46,12 +45,10 @@ describe('ChatService', () => {
 
     it('should get history', async () => {
       const user = await prisma.user.findFirstOrThrow();
-      await prisma.conversationMessage.deleteMany({ where: { userId: user.id } });
       await prisma.conversation.deleteMany({ where: { userId: user.id } });
       const conversation = await prisma.conversation.create({ data: { userId: user.id } });
       const msg1 = await prisma.conversationMessage.create({
         data: {
-          userId: user.id,
           conversationId: conversation.id,
           role: 'user',
           type: 2,
@@ -60,7 +57,6 @@ describe('ChatService', () => {
       });
       const msg2 = await prisma.conversationMessage.create({
         data: {
-          userId: user.id,
           conversationId: conversation.id,
           role: 'assistant',
           type: 2,

@@ -20,6 +20,7 @@ export class LimitService {
       maxFunctions: limitTier.maxFunctions,
       chatQuestionsPerDay: limitTier.chatQuestionsPerDay,
       functionCallsPerDay: limitTier.functionCallsPerDay,
+      variableCallsPerDay: limitTier.variableCallsPerDay,
     };
   }
 
@@ -35,18 +36,32 @@ export class LimitService {
     });
   }
 
-  async createLimitTier(name: string, maxFunctions: number | null, chatQuestionsPerDay: number | null, functionCallsPerDay: number | null) {
+  async createLimitTier(
+    name: string,
+    maxFunctions: number | null,
+    chatQuestionsPerDay: number | null,
+    functionCallsPerDay: number | null,
+    variableCallsPerDay: number | null,
+  ) {
     return this.prismaService.limitTier.create({
       data: {
         name,
         maxFunctions,
         chatQuestionsPerDay,
         functionCallsPerDay,
+        variableCallsPerDay,
       },
     });
   }
 
-  async updateLimitTier(tier: LimitTier, name?: string, maxFunctions?: number | null, chatQuestionsPerDay?: number | null, functionCallsPerDay?: number | null) {
+  async updateLimitTier(
+    tier: LimitTier,
+    name?: string,
+    maxFunctions?: number | null,
+    chatQuestionsPerDay?: number | null,
+    functionCallsPerDay?: number | null,
+    variableCallsPerDay?: number | null,
+  ) {
     return this.prismaService.limitTier.update({
       where: {
         id: tier.id,
@@ -56,6 +71,7 @@ export class LimitService {
         maxFunctions,
         chatQuestionsPerDay,
         functionCallsPerDay,
+        variableCallsPerDay,
       },
     });
   }
@@ -146,7 +162,7 @@ export class LimitService {
   }
 
   private async getTenantFunctionCallsCurrentDayUsage(tenantId: string): Promise<number> {
-    const functionCalls = await this.statisticsService.getFunctionCallForTenant(
+    const functionCalls = await this.statisticsService.getFunctionCallsForTenant(
       tenantId,
       getStartOfDay(),
       getEndOfDay(),
@@ -178,5 +194,31 @@ export class LimitService {
       getEndOfDay(),
     );
     return chatQuestions.length;
+  }
+
+  async checkTenantVariableCallsLimit(tenant: Tenant): Promise<boolean> {
+    const limitTier = tenant.limitTierId
+      ? await this.findById(tenant.limitTierId)
+      : null;
+    if (!limitTier) {
+      return true;
+    }
+    const variableCallsUsage = await this.getTenantVariableCallsCurrentDayUsage(tenant.id);
+    const { variableCallsPerDay } = limitTier;
+
+    if (variableCallsPerDay === null) {
+      return true;
+    }
+
+    return variableCallsUsage < variableCallsPerDay;
+  }
+
+  private async getTenantVariableCallsCurrentDayUsage(tenantId: string): Promise<number> {
+    const variableCalls = await this.statisticsService.getVariableCallsForTenant(
+      tenantId,
+      getStartOfDay(),
+      getEndOfDay(),
+    );
+    return variableCalls.length;
   }
 }

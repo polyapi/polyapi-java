@@ -55,6 +55,11 @@ def get_function_match_limit() -> int:
     return int(var.value) if var else 5
 
 
+def get_variable_match_limit() -> int:
+    var = get_config_variable(VarName.variable_match_limit)
+    return int(var.value) if var else 5
+
+
 def get_extract_keywords_temperature() -> float:
     var = get_config_variable(VarName.extract_keywords_temperature)
     return float(var.value) if var else 0.01
@@ -78,7 +83,7 @@ def extract_keywords(
     # store conversation
     messages.append(MessageDict(role="assistant", content=content))
     insert_internal_step_info(messages, "STEP 1: GET KEYWORDS")
-    store_messages(user_id, conversation_id, messages)
+    store_messages(conversation_id, messages)
 
     # continue
     try:
@@ -146,17 +151,15 @@ def get_top_function_matches(
     items: List[SpecificationDto], keyword_data: ExtractKeywordDto
 ) -> Tuple[List[SpecificationDto], StatsDict]:
     """get top function matches based on keywords"""
-    match_limit = get_function_match_limit()
-
-    # items = filter_items_based_on_http_method(items, keyword_data.get("http_methods"))
 
     keyword_matches, keyword_stats = _get_top(
-        match_limit, items, keyword_data["keywords"]
+        items, keyword_data["keywords"]
     )
 
     stats: StatsDict = {"keyword_extraction": keyword_data}
     stats["config"] = {
-        "match_limit": match_limit,
+        "function_match_limit": get_function_match_limit(),
+        "variable_match_limit": get_variable_match_limit(),
         "similarity_threshold": get_function_similarity_threshold(),
         "extract_keywords_temperature": get_extract_keywords_temperature(),
     }
@@ -201,7 +204,6 @@ def _generate_match_count(stats: StatsDict) -> int:
 
 
 def _get_top(
-    match_limit: int,
     items: List[SpecificationDto],
     keywords: str,
 ) -> Tuple[List[SpecificationDto], StatsDict]:
@@ -242,11 +244,11 @@ def _get_top(
     top_functions = [
         item for item, score in functions_with_scores if score > function_threshold
     ]
-    top_functions = top_functions[:match_limit]
+    top_functions = top_functions[:get_function_match_limit()]
     top_variables = [
         item for item, score in variables_with_scores if score > variable_threshold
     ]
-    top_variables = top_variables[:match_limit]
+    top_variables = top_variables[:get_variable_match_limit()]
 
     stats = _get_stats(functions_with_scores, variables_with_scores)
     return top_functions + top_variables, stats

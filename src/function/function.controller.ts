@@ -16,7 +16,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiSecurity } from '@nestjs/swagger';
+import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
@@ -42,6 +42,7 @@ import { Tenant } from '@prisma/client';
 import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
+import { API_TAG_INTERNAL } from 'common/constants';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -451,6 +452,7 @@ export class FunctionController {
     return await this.service.executeServerFunction(customFunction, data, headers, clientId);
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/all/update')
   async updateAllServerFunctions() {

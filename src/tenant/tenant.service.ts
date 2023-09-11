@@ -382,7 +382,7 @@ export class TenantService implements OnModuleInit {
         },
       });
 
-      await this.emailService.send(this.config.signUpEmail, 'Poly API Tenant Information', `URL: ${this.config.hostUrl}\nPoly Api Key: ${apiKey.key}\nTenant ID: ${tenant.id}`, tenantSignUp.email);
+      await this.emailService.sendWelcomeToPolyEmail(tenantSignUp, apiKey, tenant);
 
       return {
         apiKey: apiKey.key,
@@ -512,7 +512,7 @@ export class TenantService implements OnModuleInit {
           },
         });
 
-        await this.emailService.sendSignUpVerificationCode(verificationCode, tenantSignUp);
+        await this.emailService.sendSignUpVerificationCode(tenantSignUp);
 
         return tenantSignUp;
       } catch (error) {
@@ -553,7 +553,7 @@ export class TenantService implements OnModuleInit {
           },
         });
 
-        await this.emailService.sendSignUpVerificationCode(verificationCode, tenantSignUp);
+        await this.emailService.sendSignUpVerificationCode(tenantSignUp);
 
         return tenantSignUp;
       } catch (error) {
