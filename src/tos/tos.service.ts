@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { CommonService } from 'common/common.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConfigVariableName, DefaultTosValue } from '../../packages/model/src/dto';
@@ -52,19 +52,14 @@ export class TosService {
     const defaultTosConfigVariable = await this.configVariableService.getEffectiveValue<DefaultTosValue>(ConfigVariableName.DefaultTos, null, null);
 
     if (!defaultTosConfigVariable) {
-      throw new NotFoundException('No default tos configured.');
+      this.logger.debug('No default tos configured.');
+      return null;
     }
 
-    const tos = await this.prisma.tos.findFirst({
+    return this.prisma.tos.findFirst({
       where: {
         id: defaultTosConfigVariable.id,
       },
     });
-
-    if (!tos) {
-      throw new NotFoundException('No default tos found.');
-    }
-
-    return tos;
   }
 }

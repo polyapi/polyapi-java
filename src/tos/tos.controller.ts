@@ -23,7 +23,13 @@ export class TosController {
 
   @Get('/default')
   async getDefaultTos(): Promise<TosDto> {
-    return this.service.getDefault();
+    const tos = await this.service.getDefault();
+
+    if (!tos) {
+      throw new NotFoundException('Default Tos record not found.');
+    }
+
+    return tos;
   }
 
   @Get('')
