@@ -178,7 +178,7 @@ export class FunctionController {
       throw new BadRequestException('`payload` cannot be updated without `response`');
     }
 
-    this.commonService.isAbleToSetTenantPublicVisibility(req.user.tenant, visibility);
+    this.commonService.isAbleToSetPublicVisibility(req.user.tenant, visibility);
 
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, false, Permission.Teach);
 
@@ -299,7 +299,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    this.commonService.isAbleToSetTenantPublicVisibility(req.user.tenant, visibility);
+    this.commonService.isAbleToSetPublicVisibility(req.user.tenant, visibility);
 
     await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user, false, Permission.CustomDev);
 
@@ -403,7 +403,7 @@ export class FunctionController {
       throw new NotFoundException('Function not found');
     }
 
-    this.commonService.isAbleToSetTenantPublicVisibility(req.user.tenant, visibility);
+    this.commonService.isAbleToSetPublicVisibility(req.user.tenant, visibility);
 
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, false, Permission.CustomDev);
 

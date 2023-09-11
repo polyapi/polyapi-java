@@ -86,7 +86,7 @@ export class WebhookController {
       visibility = null,
     } = updateWebhookHandleDto;
 
-    this.commonService.isAbleToSetTenantPublicVisibility(req.user.tenant, visibility);
+    this.commonService.isAbleToSetPublicVisibility(req.user.tenant, visibility);
 
     const webhookHandle = await this.webhookService.findWebhookHandle(id);
     if (!webhookHandle) {
