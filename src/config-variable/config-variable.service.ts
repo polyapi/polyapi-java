@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConfigVariableDto, ConfigVariableName, DefaultTierValue, PublicVisibilityValue, TrainingDataGeneration } from '@poly/model';
+import { ConfigVariableDto, ConfigVariableName, DefaultTierValue, DefaultTosValue, PublicVisibilityValue, TrainingDataGeneration } from '@poly/model';
 import {
   ConfigVariableStrategy,
   DefaultConfigVariableStrategy,
   TrainingDataGenerationStrategy,
   PublicVisibilityStrategy,
   DefaultTierStrategy,
+  DefaultTosStrategy,
 } from './strategy';
 import { CommonService } from 'common/common.service';
 
@@ -20,6 +21,7 @@ export class ConfigVariableService {
   private readonly trainingDataStrategy: ConfigVariableStrategy<TrainingDataGeneration>;
   private readonly publicVisibilityStrategy: ConfigVariableStrategy<PublicVisibilityValue>;
   private readonly defaultTierVisibilityStrategy: ConfigVariableStrategy<DefaultTierValue>;
+  private readonly defaultTosStrategy: ConfigVariableStrategy<DefaultTosValue>;
 
   constructor(prisma: PrismaService, commonService: CommonService) {
     this.prisma = prisma;
@@ -28,6 +30,7 @@ export class ConfigVariableService {
     this.trainingDataStrategy = new TrainingDataGenerationStrategy(prisma, commonService);
     this.publicVisibilityStrategy = new PublicVisibilityStrategy(prisma, commonService);
     this.defaultTierVisibilityStrategy = new DefaultTierStrategy(prisma, commonService);
+    this.defaultTosStrategy = new DefaultTosStrategy(prisma, commonService);
   }
 
   toDto(data: ConfigVariable): ConfigVariableDto {
@@ -65,6 +68,8 @@ export class ConfigVariableService {
         return this.publicVisibilityStrategy as ConfigVariableStrategy<T>;
       case ConfigVariableName.DefaultTier:
         return this.defaultTierVisibilityStrategy as ConfigVariableStrategy<T>;
+      case ConfigVariableName.DefaultTos:
+        return this.defaultTosStrategy as ConfigVariableStrategy<T>;
       default:
         return this.defaultConfigVariableStrategy as ConfigVariableStrategy<T>;
     }

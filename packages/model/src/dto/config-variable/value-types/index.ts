@@ -16,6 +16,7 @@ export enum ConfigVariableName {
   TrainingDataGeneration = 'TrainingDataGeneration',
   PublicVisibility = 'PublicVisibility',
   DefaultTier = 'DefaultTier',
+  DefaultTos = 'DefaultTos',
 }
 
 export class TrainingDataGeneration {

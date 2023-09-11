@@ -5,7 +5,7 @@ import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
-import { ConfigVariableName, DefaultTierValue, Role, SignUpDto, SignUpVerificationResultDto, TenantAgreementDto, TenantDto, TenantFullDto } from '@poly/model';
+import { ConfigVariableName, DefaultTierValue, DefaultTosValue, Role, SignUpDto, SignUpVerificationResultDto, TenantAgreementDto, TenantDto, TenantFullDto } from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
@@ -351,7 +351,7 @@ export class TenantService implements OnModuleInit {
   }
 
   async signUpVerify(email: string, code: string): Promise<SignUpVerificationResultDto> {
-    const [tenantSignUp, tier] = await Promise.all([
+    const [tenantSignUp, tier, defaultTos] = await Promise.all([
       this.prisma.tenantSignUp.findFirst({
         where: {
           email,
@@ -359,6 +359,7 @@ export class TenantService implements OnModuleInit {
         },
       }),
       this.getDefaultLimitTier(),
+      this.configVariableService.getEffectiveValue<DefaultTosValue>(ConfigVariableName.DefaultTos, null, null),
     ]);
 
     if (!tenantSignUp) {
@@ -400,24 +401,26 @@ export class TenantService implements OnModuleInit {
         throw error;
       }
 
-      const lastTos = await tx.tos.findFirst({
-        orderBy: [
-          {
-            createdAt: 'desc',
-          },
-        ],
-      });
-
-      if (!lastTos) {
-        this.logger.debug('Tos record not found.');
+      if (!defaultTos) {
+        this.logger.debug('Default tos record not configured.');
       } else {
-        await tx.tenantAgreement.create({
-          data: {
-            tosId: lastTos.id,
-            email: tenantSignUp.email,
-            tenantId: tenant.id,
+        const defaultTosRecord = await tx.tos.findFirst({
+          where: {
+            id: defaultTos.id,
           },
         });
+
+        if (!defaultTosRecord) {
+          this.logger.debug('Default tos record not found.');
+        } else {
+          await tx.tenantAgreement.create({
+            data: {
+              tosId: defaultTosRecord.id,
+              email: tenantSignUp.email,
+              tenantId: tenant.id,
+            },
+          });
+        }
       }
 
       await tx.tenantSignUp.delete({

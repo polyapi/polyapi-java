@@ -1,6 +1,8 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CommonService } from 'common/common.service';
 import { PrismaService } from 'prisma/prisma.service';
+import { ConfigVariableName, DefaultTosValue } from '../../packages/model/src/dto';
+import { ConfigVariableService } from 'config-variable/config-variable.service';
 
 @Injectable()
 export class TosService {
@@ -8,6 +10,7 @@ export class TosService {
   constructor(
         private readonly prisma: PrismaService,
         private readonly commonService: CommonService,
+        private readonly configVariableService: ConfigVariableService,
   ) {}
 
   async create(content: string, version: string) {
@@ -25,17 +28,42 @@ export class TosService {
     }
   }
 
-  async findOne(id?: string) {
-    const tos = await this.prisma.tos.findFirst({
-      where: {
-        ...(id ? { id } : {}),
-      },
+  get() {
+    return this.prisma.tos.findMany({
       orderBy: [
         {
           createdAt: 'desc',
         },
       ],
     });
+  }
+
+  async findTosVersion(version: string) {
+    const tos = await this.prisma.tos.findFirst({
+      where: {
+        version,
+      },
+    });
+
+    return tos;
+  }
+
+  async getDefault() {
+    const defaultTosConfigVariable = await this.configVariableService.getEffectiveValue<DefaultTosValue>(ConfigVariableName.DefaultTos, null, null);
+
+    if (!defaultTosConfigVariable) {
+      throw new NotFoundException('No default tos configured.');
+    }
+
+    const tos = await this.prisma.tos.findFirst({
+      where: {
+        id: defaultTosConfigVariable.id,
+      },
+    });
+
+    if (!tos) {
+      throw new NotFoundException('No default tos found.');
+    }
 
     return tos;
   }
