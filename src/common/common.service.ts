@@ -331,7 +331,7 @@ export class CommonService {
     }
   }
 
-  checkIfIsAbleToChangeVisibility(tenant: Tenant, visibility: Visibility | null | undefined) {
+  isAbleToSetTenantPublicVisibility(tenant: Tenant, visibility: Visibility | null | undefined) {
     if (tenant.name === null && visibility === Visibility.Public) {
       throw new BadRequestException(`Cannot set ${Visibility.Public} if tenant does not have a name.`);
     }

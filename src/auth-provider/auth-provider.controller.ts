@@ -139,7 +139,7 @@ export class AuthProviderController {
       throw new NotFoundException();
     }
 
-    this.commonService.checkIfIsAbleToChangeVisibility(req.user.tenant, visibility);
+    this.commonService.isAbleToSetTenantPublicVisibility(req.user.tenant, visibility);
 
     const currentFunctionCount = this.service.getFunctionCount(authProvider.introspectUrl, authProvider.revokeUrl, authProvider.refreshEnabled);
     const updatedFunctionCount = this.service.getFunctionCount(
