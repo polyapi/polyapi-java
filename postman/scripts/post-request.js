@@ -32,7 +32,7 @@ const environmentVariables = pm.environment.toObject();
 
 const rawObject = {
   description: description?.context,
-  requestName: pm.info.requestName || '',
+  requestName: pm.info.requestName,
   ...polyData,
   url,
   body,

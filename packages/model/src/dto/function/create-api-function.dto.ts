@@ -6,6 +6,7 @@ import { ContextIdentifier, NameIdentifier } from './../validators';
 
 export class CreateApiFunctionDto {
   @IsString()
+  @IsOptional()
   requestName: string;
 
   @IsOptional()

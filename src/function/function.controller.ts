@@ -70,7 +70,7 @@ export class FunctionController {
     const {
       url,
       body,
-      requestName,
+      requestName = '',
       name = null,
       context = null,
       description = null,
