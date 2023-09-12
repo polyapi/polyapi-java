@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, Matches } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, Matches } from 'class-validator';
 import { IsOnlyOneOfDefined } from '../validators';
 import { TriggerDestination, TriggerSource } from './trigger.dto';
 
@@ -16,4 +16,8 @@ export class CreateTriggerDto {
   @IsNotEmpty()
   @IsOnlyOneOfDefined(['serverFunctionId'])
   destination: TriggerDestination;
+
+  @IsOptional()
+  @IsBoolean()
+  waitForResponse?: boolean;
 }

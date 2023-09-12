@@ -62,6 +62,7 @@ import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospecti
 import { AuthService } from 'auth/auth.service';
 import crypto from 'crypto';
 import { WithTenant } from 'common/types';
+import { LimitService } from 'limit/limit.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -90,6 +91,7 @@ export class FunctionService implements OnModuleInit {
     private readonly configVariableService: ConfigVariableService,
     private readonly variableService: VariableService,
     private readonly authService: AuthService,
+    private readonly limitService: LimitService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
   }
@@ -947,6 +949,7 @@ export class FunctionService implements OnModuleInit {
           code,
           requirements,
           apiKey,
+          await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
         );
 
         return customFunction;
@@ -962,7 +965,7 @@ export class FunctionService implements OnModuleInit {
     return customFunction;
   }
 
-  async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null) {
+  async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null, enabled?: boolean) {
     const { id, name: currentName, context: currentContext } = customFunction;
 
     if (context != null || name != null) {
@@ -983,6 +986,7 @@ export class FunctionService implements OnModuleInit {
         context: (context == null ? customFunction.context : context).trim(),
         description: description == null ? customFunction.description : description,
         visibility: visibility == null ? customFunction.visibility : visibility,
+        enabled,
       },
     });
   }
@@ -1253,6 +1257,7 @@ export class FunctionService implements OnModuleInit {
         serverFunction.code,
         JSON.parse(serverFunction.requirements || '[]'),
         apiKey,
+        await this.limitService.getTenantServerFunctionLimits(serverFunction.environment.tenantId),
       );
     }
   }
@@ -1874,7 +1879,7 @@ export class FunctionService implements OnModuleInit {
           typeObject: srcValue.typeObject,
         };
       }
-      if (Array.isArray(objValue) && Array.isArray(srcValue) && srcValue.length === 0) {
+      if (Array.isArray(objValue) && Array.isArray(srcValue)) {
         return srcValue;
       }
     });

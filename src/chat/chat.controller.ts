@@ -132,7 +132,7 @@ export class ChatController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Get('/conversations')
   public async conversationsList(@Req() req: AuthRequest, @Query() query) {
-    const conversationIds = await this.service.getConversationIds(query.userId, query.workspaceFolder || '');
+    const conversationIds = await this.service.getConversationIds(query.userId, query.workspaceFolder);
     return { conversationIds };
   }
 

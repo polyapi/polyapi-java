@@ -7,7 +7,6 @@ import { generate } from './commands/generate';
 import { addCustomFunction } from './commands/function';
 import { loadConfig } from './config';
 import { create as createTenant } from './commands/tenant';
-import { INSTANCE_URL_MAP } from '@poly/common/utils';
 
 const checkPolyConfig = () => {
   loadConfig();
@@ -107,10 +106,6 @@ void yargs
       async ({
         instance = 'na1',
       }) => {
-        if (!Object.keys(INSTANCE_URL_MAP).includes(instance)) {
-          yargs.showHelp();
-          return;
-        }
         await createTenant(instance);
       },
     );

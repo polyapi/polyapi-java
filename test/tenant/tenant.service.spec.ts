@@ -27,6 +27,7 @@ describe('TenantService', () => {
   const testTenant: Tenant = {
     id: 'id12345',
     name: 'name12345',
+    email: 'email12345',
     createdAt: new Date(),
     publicVisibilityAllowed: true,
     limitTierId: 'a34b1b9e-0b0a-4b0a-9b0a-0b0a0b0a0b0a',
@@ -103,6 +104,7 @@ describe('TenantService', () => {
       expect(result).toEqual({
         id: testTenant.id,
         name: testTenant.name,
+        email: testTenant.email,
         publicNamespace: 'public',
         publicVisibilityAllowed: testTenant.publicVisibilityAllowed,
         tierId: testTenant.limitTierId,

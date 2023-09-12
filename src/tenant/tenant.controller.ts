@@ -87,7 +87,8 @@ export class TenantController {
   @Post()
   async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
     const {
-      name,
+      name = null,
+      email,
       publicVisibilityAllowed,
       publicNamespace = null,
       tierId = null,
@@ -107,7 +108,7 @@ export class TenantController {
       throw new BadRequestException(`Public namespace '${publicNamespace}' is not available.`);
     }
 
-    return this.tenantService.toDto(await this.tenantService.create(name, publicVisibilityAllowed, publicNamespace, limitTier?.id));
+    return this.tenantService.toDto(await this.tenantService.create(name, email, publicVisibilityAllowed, publicNamespace, limitTier?.id));
   }
 
   @UseGuards(PolyAuthGuard)
@@ -768,7 +769,7 @@ export class TenantController {
   async signUp(
     @Body() data: CreateSignUpDto,
   ) {
-    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, data.tenantName || null));
+    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, (data.tenantName || '').trim() || null));
   }
 
   @ApiConflictResponse({
@@ -926,7 +927,7 @@ export class TenantController {
   }
 
   private async findTos(id: string) {
-    const tosRecord = await this.tosService.findOne(id);
+    const tosRecord = await this.tosService.findTosVersion(id);
 
     if (!tosRecord) {
       throw new NotFoundException('Tos record not found.');

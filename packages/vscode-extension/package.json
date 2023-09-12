@@ -3,19 +3,24 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "PolyAPICorp",
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Programming Languages",
+    "Testing",
+    "Education"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/polyapi/poly-alpha",
-    "directory": "packages/vscode-extension"
-  },
+  "keywords": [
+    "API",
+    "OpenAI",
+    "ChatGPT",
+    "AI Tools",
+    "Assistant"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],

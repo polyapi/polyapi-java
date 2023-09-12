@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Logger, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Logger,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { CreateTierDto, Role, TierDto, UpdateTierDto } from '@poly/model';
@@ -33,6 +44,9 @@ export class TierController {
       functionCallsPerDay,
       chatQuestionsPerDay,
       variableCallsPerDay,
+      serverFunctionLimitCpu,
+      serverFunctionLimitMemory,
+      serverFunctionLimitTime,
     } = data;
 
     this.logger.log('Creating limit tier...');
@@ -47,6 +61,9 @@ export class TierController {
         chatQuestionsPerDay,
         functionCallsPerDay,
         variableCallsPerDay,
+        serverFunctionLimitCpu,
+        serverFunctionLimitMemory,
+        serverFunctionLimitTime,
       ),
     );
   }
@@ -67,9 +84,12 @@ export class TierController {
     const {
       name,
       maxFunctions,
-      chatQuestionsPerDay,
       functionCallsPerDay,
+      chatQuestionsPerDay,
       variableCallsPerDay,
+      serverFunctionLimitCpu,
+      serverFunctionLimitMemory,
+      serverFunctionLimitTime,
     } = data;
     const tier = await this.findLimitTier(id);
 
@@ -79,7 +99,17 @@ export class TierController {
     );
 
     return this.service.toTierDto(
-      await this.service.updateLimitTier(tier, name, maxFunctions, chatQuestionsPerDay, functionCallsPerDay, variableCallsPerDay),
+      await this.service.updateLimitTier(
+        tier,
+        name,
+        maxFunctions,
+        chatQuestionsPerDay,
+        functionCallsPerDay,
+        variableCallsPerDay,
+        serverFunctionLimitCpu,
+        serverFunctionLimitMemory,
+        serverFunctionLimitTime,
+      ),
     );
   }
 

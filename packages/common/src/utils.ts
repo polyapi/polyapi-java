@@ -7,6 +7,11 @@ export const INSTANCE_URL_MAP = {
 };
 
 export const getInstanceUrl = (instance = 'local') => {
+
+  if (typeof INSTANCE_URL_MAP[instance] === 'undefined') {
+    return instance;
+  }
+
   let protocol = instance === 'local' ? 'http://' : 'https://';
   let instanceUrl = INSTANCE_URL_MAP[instance];
 

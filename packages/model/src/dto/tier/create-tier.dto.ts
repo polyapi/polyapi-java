@@ -19,4 +19,16 @@ export class CreateTierDto {
   @IsInt()
   @ValidateIf((o) => o.variableCallsPerDay !== null)
   variableCallsPerDay: number | null;
+
+  @IsInt()
+  @ValidateIf((o) => o.serverFunctionLimitCpu !== null)
+  serverFunctionLimitCpu: number | null;
+
+  @IsInt()
+  @ValidateIf((o) => o.serverFunctionLimitMemory !== null)
+  serverFunctionLimitMemory: number | null;
+
+  @IsInt()
+  @ValidateIf((o) => o.serverFunctionLimitTime !== null)
+  serverFunctionLimitTime: number | null;
 }

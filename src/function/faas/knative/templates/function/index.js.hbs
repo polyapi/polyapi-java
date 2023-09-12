@@ -5,8 +5,6 @@ const handle = async (context, body) => {
   const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
   const args = context.cloudevent ? [body.data] : body.args;
 
-  context.log.info(`Received cloudevent: ${JSON.stringify(context.cloudevent)}`);
-  context.log.info(`Received body: ${JSON.stringify(body)}`);
   if (context.cloudevent) {
     context.log.info(`Received cloudevent: id=${context.cloudevent.id}, time=${context.cloudevent.time}, type=${context.cloudevent.type}, source=${context.cloudevent.source}`);
   }

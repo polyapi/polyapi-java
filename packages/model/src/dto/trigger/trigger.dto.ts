@@ -4,6 +4,7 @@ export class TriggerDto {
   environmentId: string;
   source: TriggerSource;
   destination: TriggerDestination;
+  waitForResponse: boolean;
 }
 
 export class TriggerSource {

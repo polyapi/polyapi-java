@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, Validate } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, Validate } from 'class-validator';
 import { Visibility } from '../../specs';
 import { ContextIdentifier, NameIdentifier } from '../validators';
 
@@ -21,4 +21,8 @@ export class UpdateCustomFunctionDto {
   @IsString()
   @IsEnum(Visibility)
   visibility?: Visibility;
+
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
 }

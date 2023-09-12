@@ -5,7 +5,7 @@ import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
-import { ConfigVariableName, DefaultTierValue, Role, SignUpDto, SignUpVerificationResultDto, TenantAgreementDto, TenantDto, TenantFullDto } from '@poly/model';
+import { ConfigVariableName, DefaultTierValue, DefaultTosValue, Role, SignUpDto, SignUpVerificationResultDto, TenantAgreementDto, TenantDto, TenantFullDto } from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
@@ -21,7 +21,6 @@ type CreateTenantOptions = {
   userName?: string;
   userRole?: Role;
   userApiKey?: string;
-  email?: string;
 }
 
 @Injectable()
@@ -50,7 +49,7 @@ export class TenantService implements OnModuleInit {
   private async checkPolyTenant() {
     const tenant = await this.findByName(this.config.polyTenantName);
     if (!tenant) {
-      await this.create(this.config.polyTenantName, true, null, null, {
+      await this.create(this.config.polyTenantName, null, true, null, null, {
         teamName: this.config.polyAdminsTeamName,
         userName: this.config.polyAdminUserName,
         userRole: Role.SuperAdmin,
@@ -62,6 +61,7 @@ export class TenantService implements OnModuleInit {
   toDto(tenant: Tenant): TenantDto {
     return {
       id: tenant.id,
+      email: tenant.email,
       name: tenant.name,
       publicVisibilityAllowed: tenant.publicVisibilityAllowed,
       publicNamespace: tenant.publicNamespace,
@@ -112,6 +112,7 @@ export class TenantService implements OnModuleInit {
     return {
       id: fullTenant.id,
       name: fullTenant.name,
+      email: fullTenant.email,
       publicVisibilityAllowed: fullTenant.publicVisibilityAllowed,
       publicNamespace: tenant.publicNamespace,
       tierId: fullTenant.limitTierId,
@@ -134,14 +135,29 @@ export class TenantService implements OnModuleInit {
     });
   }
 
-  private async createTenantRecord(tx: PrismaTransaction, name: string | null, publicVisibilityAllowed = false, publicNamespace: string | null = null, limitTierId: string | null = null, options: CreateTenantOptions = {}): Promise<{
+  private async createTenantRecord(
+    tx: PrismaTransaction,
+    name: string | null,
+    email: string | null,
+    publicVisibilityAllowed = false,
+    publicNamespace: string | null = null,
+    limitTierId: string | null = null,
+    options: CreateTenantOptions = {},
+  ): Promise<{
     tenant: Tenant,
     apiKey: ApiKey
   }> {
-    const { environmentName, teamName, userName, userRole, userApiKey, email = null } = options;
+    const {
+      environmentName,
+      teamName,
+      userName,
+      userRole,
+      userApiKey,
+    } = options;
     const tenant = await tx.tenant.create({
       data: {
         name,
+        email,
         publicVisibilityAllowed,
         publicNamespace,
         limitTierId,
@@ -219,9 +235,26 @@ export class TenantService implements OnModuleInit {
     };
   }
 
-  async create(name: string, publicVisibilityAllowed = false, publicNamespace: string | null = null, limitTierId: string | null = null, options: CreateTenantOptions = {}) {
+  async create(
+    name: string | null,
+    email: string | null,
+    publicVisibilityAllowed = false,
+    publicNamespace: string | null = null,
+    limitTierId: string | null = null,
+    options: CreateTenantOptions = {},
+  ) {
     return this.prisma.$transaction(async tx => {
-      return (await this.createTenantRecord(tx, name, publicVisibilityAllowed, publicNamespace, limitTierId, options)).tenant;
+      try {
+        return (await this.createTenantRecord(tx, name, email, publicVisibilityAllowed, publicNamespace, limitTierId, options)).tenant;
+      } catch (error) {
+        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
+          throw new ConflictException('Tenant with this name already exists');
+        }
+        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
+          throw new ConflictException('Tenant with this email already exists');
+        }
+        throw error;
+      }
     });
   }
 
@@ -318,7 +351,7 @@ export class TenantService implements OnModuleInit {
   }
 
   async signUpVerify(email: string, code: string): Promise<SignUpVerificationResultDto> {
-    const [tenantSignUp, tier] = await Promise.all([
+    const [tenantSignUp, tier, defaultTos] = await Promise.all([
       this.prisma.tenantSignUp.findFirst({
         where: {
           email,
@@ -326,6 +359,7 @@ export class TenantService implements OnModuleInit {
         },
       }),
       this.getDefaultLimitTier(),
+      this.configVariableService.getEffectiveValue<DefaultTosValue>(ConfigVariableName.DefaultTos, null, null),
     ]);
 
     if (!tenantSignUp) {
@@ -342,7 +376,14 @@ export class TenantService implements OnModuleInit {
       let tenant: Tenant | null = null;
 
       try {
-        const result = await this.createTenantRecord(tx, tenantSignUp.name, false, tier?.id, null, { email: tenantSignUp.email });
+        const result = await this.createTenantRecord(
+          tx,
+          tenantSignUp.name,
+          tenantSignUp.email,
+          false,
+          null,
+          tier?.id,
+        );
 
         apiKey = result.apiKey;
         tenant = result.tenant;
@@ -351,29 +392,35 @@ export class TenantService implements OnModuleInit {
           throw new ConflictException({
             code: 'TENANT_ALREADY_EXISTS',
           });
+        } else if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
+          throw new ConflictException({
+            code: 'EMAIL_ALREADY_EXISTS',
+          });
         }
 
         throw error;
       }
 
-      const lastTos = await tx.tos.findFirst({
-        orderBy: [
-          {
-            createdAt: 'desc',
-          },
-        ],
-      });
-
-      if (!lastTos) {
-        this.logger.debug('Tos record not found.');
+      if (!defaultTos) {
+        this.logger.debug('Default tos record not configured.');
       } else {
-        await tx.tenantAgreement.create({
-          data: {
-            tosId: lastTos.id,
-            email: tenantSignUp.email,
-            tenantId: tenant.id,
+        const defaultTosRecord = await tx.tos.findFirst({
+          where: {
+            id: defaultTos.id,
           },
         });
+
+        if (!defaultTosRecord) {
+          this.logger.debug('Default tos record not found.');
+        } else {
+          await tx.tenantAgreement.create({
+            data: {
+              tosId: defaultTosRecord.id,
+              email: tenantSignUp.email,
+              tenantId: tenant.id,
+            },
+          });
+        }
       }
 
       await tx.tenantSignUp.delete({

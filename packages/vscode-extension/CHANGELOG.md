@@ -1,3 +1,6 @@
+### 0.3.3
+* Updated meta info.
+
 ### 0.3.2
 * Avoid create config.env file if polyapi's library is not installed.
 * Fix polyapi's library credentials path on Windows.

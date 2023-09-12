@@ -20,4 +20,16 @@ export class UpdateTierDto {
   @IsInt()
   @IsOptional()
   variableCallsPerDay?: number | null;
+
+  @IsInt()
+  @IsOptional()
+  serverFunctionLimitCpu?: number | null;
+
+  @IsInt()
+  @IsOptional()
+  serverFunctionLimitMemory?: number | null;
+
+  @IsInt()
+  @IsOptional()
+  serverFunctionLimitTime?: number | null;
 }
