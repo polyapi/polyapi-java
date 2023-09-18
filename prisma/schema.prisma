@@ -140,6 +140,7 @@ model ApiFunction {
   visibility                   String      @default("ENVIRONMENT")
   graphqlIdentifier            String?     @map("graphql_identifier")
   graphqlIntrospectionResponse String?     @map("introspection_response")
+  enableRedirect               Boolean     @default(false)
 
   @@map("api_function")
 }

@@ -1,6 +1,6 @@
 import { IntrospectionQuery } from 'graphql';
 import { Body, Variables, Header, Auth, Method } from '../..';
-import { IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
 
 import { ContextIdentifier, NameIdentifier } from './../validators';
 
@@ -42,4 +42,8 @@ export class CreateApiFunctionDto {
   @IsOptional()
   @IsObject()
   introspectionResponse: IntrospectionQuery | null;
+
+  @IsOptional()
+  @IsBoolean()
+  enableRedirect: boolean;
 }

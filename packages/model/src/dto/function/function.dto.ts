@@ -27,6 +27,10 @@ export interface FunctionDetailsDto extends FunctionBasicDto {
   arguments: Omit<FunctionArgument, 'location'>[];
 }
 
+export interface ApiFunctionDetailsDto extends FunctionDetailsDto {
+  enabledRedirect: boolean;
+}
+
 export interface FunctionPublicBasicDto extends FunctionBasicDto {
   tenant: string;
   hidden: boolean;
@@ -35,4 +39,8 @@ export interface FunctionPublicBasicDto extends FunctionBasicDto {
 export interface FunctionPublicDetailsDto extends FunctionDetailsDto {
   tenant: string;
   hidden: boolean;
+}
+
+export interface ApiFunctionPublicDetailsDto extends FunctionPublicDetailsDto {
+  enabledRedirect: boolean;
 }

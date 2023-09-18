@@ -20,6 +20,7 @@ import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
+  ApiFunctionDetailsDto,
   ApiFunctionResponseDto,
   CreateApiFunctionDto,
   CreateCustomFunctionDto,
@@ -87,6 +88,7 @@ export class FunctionController {
       templateBody,
       id = null,
       introspectionResponse = null,
+      enableRedirect = false,
     } = data;
     const environmentId = req.user.environment.id;
 
@@ -116,6 +118,7 @@ export class FunctionController {
         templateUrl,
         templateBody,
         introspectionResponse,
+        enableRedirect,
         templateAuth,
         () => this.checkFunctionsLimit(req.user.tenant, 'training function'),
       ),
@@ -146,7 +149,7 @@ export class FunctionController {
 
   @UseGuards(PolyAuthGuard)
   @Get('/api/:id')
-  async getApiFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionDetailsDto> {
+  async getApiFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<ApiFunctionDetailsDto> {
     const apiFunction = await this.service.findApiFunction(id);
     if (!apiFunction) {
       throw new NotFoundException(`Function with ID ${id} not found.`);
@@ -168,6 +171,7 @@ export class FunctionController {
       response,
       payload,
       visibility = null,
+      enableRedirect,
     } = data;
     const apiFunction = await this.service.findApiFunction(id);
     if (!apiFunction) {
@@ -183,7 +187,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, false, Permission.Teach);
 
     return this.service.apiFunctionToDetailsDto(
-      await this.service.updateApiFunction(apiFunction, name, context, description, argumentsMetadata, response, payload, visibility),
+      await this.service.updateApiFunction(apiFunction, name, context, description, argumentsMetadata, response, payload, visibility, enableRedirect),
     );
   }
 

@@ -1,4 +1,4 @@
-import { IsString, Validate, IsEnum, IsOptional } from 'class-validator';
+import { IsString, Validate, IsEnum, IsOptional, IsBoolean } from 'class-validator';
 import { ArgumentsMetadata } from '../../function';
 import { ContextIdentifier, NameIdentifier } from '../validators';
 import { Visibility } from '../../specs';
@@ -22,4 +22,8 @@ export class UpdateApiFunctionDto {
   @IsString()
   @IsEnum(Visibility)
   visibility?: Visibility;
+
+  @IsOptional()
+  @IsBoolean()
+  enableRedirect: boolean | undefined;
 }
