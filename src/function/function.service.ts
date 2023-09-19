@@ -212,12 +212,17 @@ export class FunctionService implements OnModuleInit {
   }
 
   apiFunctionToDetailsDto(apiFunction: ApiFunction): FunctionDetailsDto {
+    const argumentsList = this.getFunctionArguments(apiFunction)
+      .map<Omit<FunctionArgument<Record<string, any>>, 'location'>>(arg => ({
+        ...omit(arg, 'location'),
+        typeSchema: arg.typeSchema && JSON.parse(arg.typeSchema),
+      }));
+
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
-      arguments: this.getFunctionArguments(apiFunction)
-        .map(arg => omit(arg, 'location')),
+      arguments: argumentsList,
       source: {
-        headers: JSON.parse(apiFunction.headers || '{}'),
+        headers: JSON.parse(apiFunction.headers || '[]'),
         url: apiFunction.url,
         method: apiFunction.method,
         body: this.getBodySource(JSON.parse(apiFunction.body || '{}')),
