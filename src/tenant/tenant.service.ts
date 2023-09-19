@@ -261,21 +261,61 @@ export class TenantService implements OnModuleInit {
   async update(
     tenant: Tenant,
     name: string | undefined,
+    email: string | undefined,
     publicVisibilityAllowed: boolean | undefined,
     publicNamespace: string | null | undefined,
     limitTierId: string | null | undefined,
+    userId: string,
   ) {
-    return this.prisma.tenant.update({
-      where: {
-        id: tenant.id,
-      },
-      data: {
-        name,
-        publicVisibilityAllowed,
-        publicNamespace,
-        limitTierId,
-      },
-    });
+    const data = {
+      name,
+      publicVisibilityAllowed,
+      publicNamespace,
+      limitTierId,
+      email: email?.trim(),
+    };
+
+    try {
+      if (data.email) {
+        return await this.prisma.$transaction(async (tx) => {
+          await tx.user.update({
+            where: {
+              id: userId,
+            },
+            data: {
+              email: data.email,
+            },
+          });
+
+          return tx.tenant.update({
+            where: {
+              id: tenant.id,
+            },
+            data,
+          });
+        });
+      } else {
+        return await this.prisma.tenant.update({
+          where: {
+            id: tenant.id,
+          },
+          data,
+        });
+      }
+    } catch (error) {
+      if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_EXISTS',
+        });
+      }
+
+      if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
+        throw new ConflictException({
+          code: 'TENANT_ALREADY_EXISTS',
+        });
+      }
+      throw error;
+    }
   }
 
   async delete(tenantId: string) {
