@@ -22,13 +22,13 @@ import {
   ApiFunctionSpecification,
   ArgumentsMetadata,
   Auth,
-  Body,
+  PostmanBody,
   ConfigVariableName,
   CustomFunctionSpecification,
   FunctionArgument,
   FunctionBasicDto,
   FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
-  GraphQLBody,
+  PostmanGraphQLBody,
   Header,
   Method,
   PostmanVariableEntry,
@@ -41,6 +41,7 @@ import {
   Variables,
   Visibility,
   VisibilityQuery,
+  ApiFunctionBody,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -215,6 +216,12 @@ export class FunctionService implements OnModuleInit {
       ...this.apiFunctionToBasicDto(apiFunction),
       arguments: this.getFunctionArguments(apiFunction)
         .map(arg => omit(arg, 'location')),
+      source: {
+        headers: JSON.parse(apiFunction.headers || '{}'),
+        url: apiFunction.url,
+        method: apiFunction.method,
+        body: this.getBodySource(JSON.parse(apiFunction.body || '{}')),
+      },
     };
   }
 
@@ -240,7 +247,7 @@ export class FunctionService implements OnModuleInit {
     id: string | null,
     environment: Environment,
     url: string,
-    body: Body,
+    body: PostmanBody,
     requestName: string,
     name: string | null,
     context: string | null,
@@ -252,7 +259,7 @@ export class FunctionService implements OnModuleInit {
     templateHeaders: Header[],
     method: Method,
     templateUrl: string,
-    templateBody: Body,
+    templateBody: PostmanBody,
     introspectionResponse: IntrospectionQuery | null,
     templateAuth?: Auth,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
@@ -1311,7 +1318,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  private isGraphQLBody(body: Body): body is GraphQLBody {
+  private isGraphQLBody(body: PostmanBody): body is PostmanGraphQLBody {
     return body.mode === 'graphql';
   }
 
@@ -1330,7 +1337,7 @@ export class FunctionService implements OnModuleInit {
     return values.filter(({ disabled }) => !disabled);
   }
 
-  private getBodyWithContentFiltered(body: Body): Body {
+  private getBodyWithContentFiltered(body: PostmanBody): PostmanBody {
     switch (body.mode) {
       case 'raw':
         if (body.options?.raw?.language === 'json') {
@@ -1578,7 +1585,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private getBodyData(body: Body): any | undefined {
+  private getBodyData(body: PostmanBody): any | undefined {
     switch (body.mode) {
       case 'raw':
         if (!body.raw?.trim()) {
@@ -1605,7 +1612,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private getContentTypeHeaders(body: Body) {
+  private getContentTypeHeaders(body: PostmanBody) {
     switch (body.mode) {
       case 'raw':
         return {
@@ -1990,10 +1997,10 @@ export class FunctionService implements OnModuleInit {
     return stripComments(jsonString);
   }
 
-  private getSanitizedRawBody(apiFunction: ApiFunction, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): Body {
+  private getSanitizedRawBody(apiFunction: ApiFunction, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): PostmanBody {
     const uuidRemovableKeyValue = crypto.randomUUID();
 
-    const body = JSON.parse(apiFunction.body || '{}') as Body;
+    const body = JSON.parse(apiFunction.body || '{}') as PostmanBody;
 
     const parsedArgumentsMetadata = Object.entries(argumentsMetadata).reduce<Record<string, FunctionArgument>>((acum, [key]) => {
       return {
@@ -2138,5 +2145,29 @@ export class FunctionService implements OnModuleInit {
       ...entity,
       hidden: !this.commonService.isPublicVisibilityAllowed(entity, defaultHidden, visibleContexts),
     };
+  }
+
+  private getBodySource(body: ApiFunctionBody) {
+    switch (body.mode) {
+      case 'raw':
+        return {
+          raw: body.raw,
+        };
+
+      case 'formdata':
+        return {
+          formdata: body.formdata,
+        };
+      case 'urlencoded':
+        return {
+          urlencoded: body.urlencoded,
+        };
+      case 'graphql':
+        return {
+          graphql: body.graphql,
+        };
+      case 'empty':
+        return null;
+    }
   }
 }

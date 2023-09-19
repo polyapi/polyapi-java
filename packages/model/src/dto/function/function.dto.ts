@@ -1,4 +1,21 @@
-import { ArgumentType, Visibility } from '../..';
+import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlEncodedBody, Visibility } from '../..';
+
+export type ApiFunctionSource = {
+  url: string;
+  headers: {
+      [key: string]: string
+  }[];
+  method: string;
+  body: {
+      urlencoded: UrlEncodedBody['urlencoded']
+  } | {
+      formdata: FormDataBody['formdata']
+  } | {
+      raw: string
+  } | {
+    graphql: PostmanGraphQLBody['graphql'] 
+  } | null
+}
 
 export interface FunctionArgument {
   key: string;
@@ -25,6 +42,7 @@ export interface FunctionBasicDto {
 
 export interface FunctionDetailsDto extends FunctionBasicDto {
   arguments: Omit<FunctionArgument, 'location'>[];
+  source?: ApiFunctionSource
 }
 
 export interface FunctionPublicBasicDto extends FunctionBasicDto {

@@ -8,7 +8,7 @@ export type PostmanVariableEntry = {
 
 export type Header = PostmanVariableEntry;
 
-export type GraphQLBody = {
+export type PostmanGraphQLBody = {
   mode: 'graphql',
   graphql: {
     query: string;
@@ -16,7 +16,7 @@ export type GraphQLBody = {
   }
 }
 
-export type RawBody = {
+export type RawPostmanBody = {
   mode: 'raw';
   raw: string;
   options?: {
@@ -26,21 +26,29 @@ export type RawBody = {
   }
 };
 
-export type UrlencodedBody = {
+export type PostmanUrlencodedBody = {
   mode: 'urlencoded';
   urlencoded: PostmanVariableEntry[];
 };
 
-export type FormDataBody = {
+export type PostmanFormDataBody = {
   mode: 'formdata';
-  formdata: PostmanVariableEntry[];
+  formdata: (PostmanVariableEntry & { type: string })[];
 };
 
-export type EmptyBody = {
+export type PostmanEmptyBody = {
   mode: 'empty';
 };
 
-export type Body = RawBody | UrlencodedBody | FormDataBody | EmptyBody | GraphQLBody;
+export type PostmanBody = RawPostmanBody | PostmanUrlencodedBody | PostmanFormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
+
+
+export type UrlEncodedBody = PostmanUrlencodedBody & { urlencoded: (Omit<PostmanVariableEntry, 'disabled'>)[]};
+export type FormDataBody = PostmanFormDataBody & { urlencoded: (Omit<PostmanFormDataBody, 'disabled'>)[]};
+
+export type ApiFunctionBody = RawPostmanBody | UrlEncodedBody | FormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
+
+
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
 
 export type ArgumentType = string;
