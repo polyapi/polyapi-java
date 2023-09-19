@@ -1,3 +1,6 @@
+### 0.3.7
+* Fix webhook handle clipboard when copying from poly tree.
+
 ### 0.3.6
 * Keep user's selection while adding chunks of data in answers like open ai.
 
