@@ -218,13 +218,36 @@ export class FunctionService implements OnModuleInit {
         typeSchema: arg.typeSchema && JSON.parse(arg.typeSchema),
       }));
 
+    const parsedBody = JSON.parse(apiFunction.body || '{}');
+
+    const headersList: Record<string, any>[] = [];
+    const contentTypeHeaders = this.getContentTypeHeaders(parsedBody);
+    const authHeaders = this.getAuthorizationHeaders((apiFunction.auth && JSON.parse(apiFunction.auth)) || null);
+
+    for (const [key, value] of Object.entries(authHeaders)) {
+      headersList.push({
+        key,
+        value,
+      });
+    }
+
+    for (const [key, value] of Object.entries(contentTypeHeaders)) {
+      headersList.push({
+        key,
+        value,
+      });
+    }
+
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
       arguments: argumentsList,
       source: {
-        headers: JSON.parse(apiFunction.headers || '[]'),
         url: apiFunction.url,
         method: apiFunction.method,
+        headers: [
+          ...JSON.parse(apiFunction.headers || '[]'),
+          ...headersList,
+        ],
         body: this.getBodySource(JSON.parse(apiFunction.body || '{}')),
       },
     };
@@ -2169,10 +2192,12 @@ export class FunctionService implements OnModuleInit {
         };
       case 'graphql':
         return {
-          graphql: body.graphql,
+          graphql: {
+            query: body.graphql.query,
+          },
         };
-      case 'empty':
-        return null;
     }
+
+    return null;
   }
 }

@@ -13,7 +13,7 @@ export type ApiFunctionSource = {
   } | {
       raw: string
   } | {
-    graphql: PostmanGraphQLBody['graphql'] 
+    graphql: Omit<PostmanGraphQLBody['graphql'], 'variables'>
   } | null
 }
 
