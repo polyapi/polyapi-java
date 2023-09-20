@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   forwardRef,
+  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -1224,7 +1225,7 @@ export class FunctionService implements OnModuleInit {
         return;
       }
 
-      throw new InternalServerErrorException((error.response?.data as any)?.message || error.message);
+      throw new HttpException(error.response?.data || error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

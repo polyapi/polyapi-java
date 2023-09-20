@@ -121,6 +121,7 @@ def get_plugin_chat(
     choice: ChatGptChoice = resp["choices"][0]
     if not choice.get("message"):
         raise NotImplementedError(f"Got weird OpenAI response: {choice}")
+    print(resp['choices'])
     function_call = choice["message"].get("function_call")
     if function_call:
         # lets execute the function_call and return the results

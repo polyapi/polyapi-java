@@ -103,10 +103,10 @@ export class TriggerController {
 
   @Post('/response')
   async postTriggerResponse(@Body() response: TriggerResponseDto) {
-    const { executionId, data } = response;
-    this.logger.debug(`Received trigger response ${executionId} with data ${JSON.stringify(data)}`);
+    const { executionId, data, statusCode } = response;
+    this.logger.debug(`Received trigger response ${executionId} with data ${JSON.stringify(data)} and status code ${statusCode}`);
 
-    await this.triggerService.processTriggerResponse(executionId, data);
+    await this.triggerService.processTriggerResponse(executionId, data, statusCode);
   }
 
   private async findTrigger(authData: AuthData, id: string) {

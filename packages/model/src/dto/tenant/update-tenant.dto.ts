@@ -20,4 +20,8 @@ export class UpdateTenantDto {
 
   @IsOptional()
   tierId?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
 }

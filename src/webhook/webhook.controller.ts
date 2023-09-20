@@ -25,6 +25,7 @@ import { CreateWebhookHandleDto, Permission, Role, UpdateWebhookHandleDto, Webho
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { CommonService } from 'common/common.service';
+import { TriggerResponse } from 'trigger/trigger.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('webhooks')
@@ -187,7 +188,7 @@ export class WebhookController {
     this.sendWebhookResponse(res, webhookHandle, response);
   }
 
-  private sendWebhookResponse(res: Response, webhookHandle: WebhookHandle, webhookResponse: any) {
+  private sendWebhookResponse(res: Response, webhookHandle: WebhookHandle, webhookResponse: TriggerResponse | null) {
     if (webhookHandle.responseHeaders) {
       const headers = JSON.parse(webhookHandle.responseHeaders);
       Object.keys(headers).forEach(key => {
@@ -195,8 +196,8 @@ export class WebhookController {
       });
     }
 
-    res.status(webhookHandle.responseStatus || 200)
-      .send(webhookResponse || (webhookHandle.responsePayload ? JSON.parse(webhookHandle.responsePayload) : undefined));
+    res.status(webhookHandle.responseStatus || webhookResponse?.statusCode || 200)
+      .send(webhookResponse?.data || (webhookHandle.responsePayload ? JSON.parse(webhookHandle.responsePayload) : undefined));
   }
 
   @Delete(':id')

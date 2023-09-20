@@ -52,6 +52,10 @@ const errorHandler = {
 };
 
 const poly = {};
+const polyCustom = {
+  responseStatusCode: 200,
+};
+
 merge(
   poly,
   apiFunctions(clientID),
@@ -63,5 +67,6 @@ merge(
 module.exports = {
   ...poly,
   errorHandler,
-  vari: vari(clientID, getSocket)
+  vari: vari(clientID, getSocket),
+  polyCustom,
 };

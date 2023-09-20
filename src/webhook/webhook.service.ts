@@ -328,7 +328,7 @@ export class WebhookService {
         eventHeaders,
         params,
       ]);
-      if (response !== true) {
+      if (response?.body !== true) {
         throw new ForbiddenException(`Security function ${securityFunction.id} check failed - access denied.`);
       }
     }

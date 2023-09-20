@@ -9,6 +9,11 @@ import { TriggerDestination, TriggerDto, TriggerSource } from '@poly/model';
 import { delay } from '@poly/common/utils';
 import { CommonError, NAME_CONFLICT } from 'common/common-error';
 
+export interface TriggerResponse {
+  data: unknown;
+  statusCode: number;
+}
+
 @Injectable()
 export class TriggerService implements OnModuleInit {
   private readonly logger = new Logger(TriggerService.name);
@@ -75,17 +80,19 @@ export class TriggerService implements OnModuleInit {
     if (triggers.some(trigger => trigger.waitForResponse)) {
       this.logger.debug(`Waiting for trigger response for execution ${executionId}`);
       return await this.waitForTriggerResponse(executionId);
+    } else {
+      return null;
     }
   }
 
-  private async waitForTriggerResponse(executionId: string) {
+  private async waitForTriggerResponse(executionId: string): Promise<TriggerResponse | null> {
     const startTime = Date.now();
     while (startTime + this.config.knativeTriggerResponseTimeoutSeconds * 1000 > Date.now()) {
       const response = await this.cacheManager.get(`execution-response:${executionId}`);
       if (response) {
         this.logger.debug(`Received trigger response for execution ${executionId}`);
         await this.cacheManager.del(`execution-response:${executionId}`);
-        return response;
+        return response as TriggerResponse;
       }
 
       await delay(100);
@@ -98,8 +105,12 @@ export class TriggerService implements OnModuleInit {
     return crypto.randomBytes(16).toString('hex');
   }
 
-  async processTriggerResponse(executionId: string, data: unknown) {
-    await this.cacheManager.set(`execution-response:${executionId}`, data, this.config.knativeTriggerResponseTimeoutSeconds * 1000);
+  async processTriggerResponse(executionId: string, data: unknown, statusCode: number) {
+    const response: TriggerResponse = {
+      data,
+      statusCode,
+    };
+    await this.cacheManager.set(`execution-response:${executionId}`, response, this.config.knativeTriggerResponseTimeoutSeconds * 1000);
   }
 
   private async getTriggersByWebhookHandleId(webhookHandleId: string) {
