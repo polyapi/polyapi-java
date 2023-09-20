@@ -1,9 +1,8 @@
 import { ServerFunctionLimits } from '@poly/model';
 
-export interface FaasFunctionResult {
-  status: 'deployed' | 'deploying';
-  message?: string;
-  waitForDeploy?: Promise<void>;
+export interface ExecuteFunctionResult {
+  body: any;
+  statusCode: number;
 }
 
 export interface FaasService {
@@ -18,7 +17,7 @@ export interface FaasService {
     apiKey: string,
     limits: ServerFunctionLimits
   ) => Promise<void>;
-  executeFunction: (id: string, tenantId: string, environmentId: string, args: any[], headers: Record<string, any>) => Promise<any>;
+  executeFunction: (id: string, tenantId: string, environmentId: string, args: any[], headers: Record<string, any>) => Promise<ExecuteFunctionResult>;
   updateFunction: (
     id: string,
     tenantId: string,

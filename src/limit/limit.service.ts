@@ -100,6 +100,10 @@ export class LimitService {
   }
 
   async checkTenantFunctionsLimit(tenant: Tenant, addedCount = 1): Promise<boolean> {
+    if (!tenant.enabled) {
+      return false;
+    }
+
     const limitTier = tenant.limitTierId
       ? await this.findById(tenant.limitTierId)
       : null;
@@ -160,6 +164,10 @@ export class LimitService {
   }
 
   async checkTenantFunctionCallsLimit(tenant: Tenant): Promise<boolean> {
+    if (!tenant.enabled) {
+      return false;
+    }
+
     const limitTier = tenant.limitTierId
       ? await this.findById(tenant.limitTierId)
       : null;
@@ -186,6 +194,10 @@ export class LimitService {
   }
 
   async checkTenantChatQuestionsLimit(tenant: Tenant): Promise<boolean> {
+    if (!tenant.enabled) {
+      return false;
+    }
+
     const limitTier = tenant.limitTierId
       ? await this.findById(tenant.limitTierId)
       : null;
@@ -212,6 +224,10 @@ export class LimitService {
   }
 
   async checkTenantVariableCallsLimit(tenant: Tenant): Promise<boolean> {
+    if (!tenant.enabled) {
+      return false;
+    }
+
     const limitTier = tenant.limitTierId
       ? await this.findById(tenant.limitTierId)
       : null;

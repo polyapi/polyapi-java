@@ -4,6 +4,12 @@ const { CloudEvent } = require('cloudevents');
 const handle = async (context, body) => {
   const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
   const args = context.cloudevent ? (Array.isArray(body.data) ? body.data : [body.data]) : body.args;
+  const polyCustomPreset = {
+    ...poly.polyCustom
+  };
+  const polyCustom = poly.polyCustom;
+
+  polyCustom.userSessionId = POLY_USER_SESSION_ID;
 
   if (context.cloudevent) {
     context.log.info(`Received cloudevent: id=${context.cloudevent.id}, time=${context.cloudevent.time}, type=${context.cloudevent.type}, source=${context.cloudevent.source}`);
@@ -13,6 +19,10 @@ const handle = async (context, body) => {
 
   try {
     const result = await {{name}}(...args);
+    const statusCode = polyCustom.responseStatusCode || 200;
+
+    // revert polyCustom to preset values
+    poly.polyCustom = polyCustomPreset;
 
     if (context.cloudevent) {
       const executionId = context.cloudevent.executionid;
@@ -23,7 +33,8 @@ const handle = async (context, body) => {
           type: 'trigger.response',
           data: {
             data: result,
-            executionId: executionId
+            statusCode,
+            executionId,
           }
         });
       } else {
@@ -33,7 +44,8 @@ const handle = async (context, body) => {
       }
     } else {
       return {
-        body: result
+        body: result,
+        statusCode,
       };
     }
   } catch (e) {

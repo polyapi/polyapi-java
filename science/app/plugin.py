@@ -87,7 +87,7 @@ def get_plugin_chat(
                     "message": "Not authorized. User id and conversation user id mismatch."
                 },
             )
-        elif conversation.applicationId != db_api_key.applicationId:
+        elif conversation.applicationId and conversation.applicationId != db_api_key.applicationId:
             abort(
                 401,
                 {
@@ -95,7 +95,7 @@ def get_plugin_chat(
                 },
             )
 
-        prev_msgs = get_recent_messages(conversation_id, MessageType.plugin.value, get_plugin_conversation_lookback())
+        prev_msgs = get_recent_messages(conversation_id, None, get_plugin_conversation_lookback())
     else:
         conversation = db.conversation.create(
             data={
@@ -108,40 +108,44 @@ def get_plugin_chat(
 
     openapi = _get_openapi_spec(plugin_id)
     functions = openapi_to_openai_functions(openapi)
+
     messages = [
         MessageDict(role="user", content=message, type=MessageType.plugin.value)
     ]
-
     resp = openai.ChatCompletion.create(
         model=CHAT_GPT_MODEL,
         messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),
         functions=functions,
         temperature=0.2,
     )
-    choice: ChatGptChoice = resp["choices"][0]
-    if not choice.get("message"):
-        raise NotImplementedError(f"Got weird OpenAI response: {choice}")
-    function_call = choice["message"].get("function_call")
-    if function_call:
-        # lets execute the function_call and return the results
-        function_call = dict(function_call)
-        function_call_msg = choice["message"]
-        function_msg = execute_function(api_key, openapi, function_call)
-        messages.extend([function_call_msg, function_msg])
-        resp2 = openai.ChatCompletion.create(
-            model=CHAT_GPT_MODEL,
-            messages=strip_type_and_info(messages),
-            functions=functions,
-            temperature=0.2,
-        )
-        answer_msg: MessageDict = resp2["choices"][0]["message"]
-        answer_msg["type"] = MessageType.plugin.value
-        messages.append(answer_msg)  # type: ignore
-    else:
-        # no function call, just return OpenAI's answer
-        answer_msg: MessageDict = choice["message"]  # type: ignore
-        answer_msg["type"] = MessageType.plugin.value
-        messages.append(answer_msg)
+
+    for _ in range(4):
+        # resp is the variable that should change every iteration of this loop
+        choice: ChatGptChoice = resp["choices"][0]
+        if not choice.get("message"):
+            raise NotImplementedError(f"Got weird OpenAI response: {choice}")
+
+        function_call = choice["message"].get("function_call")
+        if function_call:
+            # lets execute the function_call and return the results
+            function_call = dict(function_call)
+            function_call_msg = choice["message"]
+            function_msg = execute_function(api_key, openapi, function_call)
+            messages.extend([function_call_msg, function_msg])
+            resp2 = openai.ChatCompletion.create(
+                model=CHAT_GPT_MODEL,
+                messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),
+                functions=functions,
+                temperature=0.2,
+            )
+            # lets line up response for possible function_call execution
+            resp = resp2
+        else:
+            # no function call so stop processing and return OpenAI's answer
+            answer_msg: MessageDict = choice["message"]  # type: ignore
+            answer_msg["type"] = MessageType.plugin.value
+            messages.append(answer_msg)
+            break
 
     store_messages(conversation_id, messages)
     return messages
@@ -155,8 +159,10 @@ def _get_name_path_map(openapi: Dict) -> Dict:
 
 
 def execute_function(api_key: str, openapi: Dict, function_call: Dict) -> MessageDict:
+    func_name = function_call["name"]
+    assert func_name
     name_path_map = _get_name_path_map(openapi)
-    path = name_path_map[function_call["name"]]
+    path = name_path_map[func_name]
     # TODO figure out how to switch domains
     # domain = "https://megatronical.pagekite.me"
     domain = os.environ.get("HOST_URL", "https://na1.polyapi.io")
@@ -164,4 +170,4 @@ def execute_function(api_key: str, openapi: Dict, function_call: Dict) -> Messag
     resp = requests.post(
         domain + path, data=json.loads(function_call["arguments"]), headers=headers
     )
-    return MessageDict(role="function", name=function_call["name"], content=resp.text)
+    return MessageDict(role="function", name=func_name, content=resp.text)

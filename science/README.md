@@ -5,6 +5,23 @@ This Python library contains the code for:
 1. Hosting the Python Demo Server - the middleman between the client and OpenAI
 2. Training new models on OpenAI
 
+## Tests
+
+WARNING running the tests will modify your local db
+
+TODO at some point separate the local test db and the test db
+
+To run tests, run this:
+
+```
+docker start postgres 2>/dev/null || docker run -e POSTGRES_USER=polyapi -e POSTGRES_PASSWORD=secret --name postgres -p 5432:5432 -d postgres
+DATABASE_URL=postgres://polyapi:secret@localhost/polyapilocal python -m unittest discover
+```
+
+All tests are in the `/tests` directory.
+
+Follow the normal rules of naming for the [Python Unit testing framework](https://docs.python.org/3/library/unittest.html).
+
 ## Server
 
 ### Prerequisites
@@ -50,22 +67,3 @@ POST http://localhost:5000/function-completion/
 ```
 
 The server will build a query based on your question, send it to OpenAI, and return the response.
-
-
-## Tests
-
-WARNING running the tests will modify your local db
-
-TODO at some point separate the local test db and the test db
-
-To run tests, run this:
-
-```
-cd science
-prisma generate --generator py --schema ../prisma/schema.prisma  # only needed before first test run
-python -m unittest discover
-```
-
-All tests are in the `/tests` directory.
-
-Follow the normal rules of naming for the [Python Unit testing framework](https://docs.python.org/3/library/unittest.html).

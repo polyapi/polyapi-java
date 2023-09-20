@@ -41,11 +41,15 @@ def get_chat_conversation_lookback() -> int:
 
 
 def get_recent_messages(
-    conversation_id: str, message_type: int, lookback=3
+    conversation_id: str, message_type: Optional[int], lookback=3
 ) -> List[ConversationMessage]:
     db = get_client()
+    where = {"conversationId": conversation_id}
+    if message_type:
+        where["type"] = message_type
+
     messages = db.conversationmessage.find_many(
-        where={"conversationId": conversation_id, "type": message_type},
+        where=where,
         order={"createdAt": "desc"},
         # lookback represents pairs of messages (user+assistant) so we multiply by 2
         take=lookback * 2,

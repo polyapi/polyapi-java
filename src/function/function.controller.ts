@@ -13,7 +13,7 @@ import {
   Patch,
   Post,
   Query,
-  Req,
+  Req, Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
@@ -43,6 +43,7 @@ import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
 import { API_TAG_INTERNAL } from 'common/constants';
+import { Response } from 'express';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -435,6 +436,7 @@ export class FunctionController {
   @Post('/server/:id/execute')
   async executeServerFunction(
     @Req() req: AuthRequest,
+    @Res() res: Response,
     @Param('id') id: string,
     @Body() data: ExecuteCustomFunctionDto,
     @Headers() headers: Record<string, any>,
@@ -458,7 +460,8 @@ export class FunctionController {
 
     await this.statisticsService.trackFunctionCall(req.user, customFunction.id, 'server');
 
-    return await this.service.executeServerFunction(customFunction, data, headers, clientId);
+    const { body, statusCode = 200 } = await this.service.executeServerFunction(customFunction, data, headers, clientId) || {};
+    return res.status(statusCode).send(body);
   }
 
   @ApiOperation({ tags: [API_TAG_INTERNAL] })

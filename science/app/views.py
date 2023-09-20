@@ -4,7 +4,7 @@ from typing import Any, Dict, Generator, Optional, Union
 from flask import Blueprint, Response, request, jsonify
 from openai.error import OpenAIError, RateLimitError
 from app.completion import general_question, get_completion_answer
-from app.constants import MessageType
+from app.constants import MessageType, PerfLogType
 from app.conversation import get_chat_conversation_lookback, get_recent_messages
 from app.description import (
     get_function_description,
@@ -26,6 +26,7 @@ from app.utils import (
     verify_required_fields,
 )
 from app.router import split_route_and_question
+from app.perf import PerfLogger
 
 bp = Blueprint("views", __name__)
 
@@ -38,6 +39,7 @@ def home():
 
 @bp.route("/function-completion", methods=["GET"])  # type: ignore
 def function_completion() -> Response:
+    perf = PerfLogger()
     data: Dict = request.args.to_dict()
 
     # default to question, fallback to question_uuid
@@ -88,16 +90,12 @@ def function_completion() -> Response:
         resp = get_completion_answer(
             user_id, conversation.id, environment_id, question, prev_msgs
         )
-        # TODO fixme?
-        # stats.update(completion_stats)
     elif route == "general":
         resp = general_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
     elif route == "help":
         resp = help_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
     elif route == "documentation":
         resp = documentation_question(user_id, conversation.id, question, prev_msgs)
-        # TODO fixme?
-        # stats.update(doc_stats)
     else:
         resp = "unexpected category: {route}"
 
@@ -140,15 +138,48 @@ def function_completion() -> Response:
                     )
                     yield "event:close\ndata:\n\n"
 
+    perf.set_data(
+        userId=user_id,
+        snippet=question,
+        input_length=len(question),
+        output_length=0,  # can't really calculate the output length easily, just let it go
+        type=_get_perf_log_type(route),
+    )
+    perf.stop_and_save()
     return Response(generate(), mimetype="text/event-stream")
+
+
+def _get_perf_log_type(route: str) -> int:
+    if route == "function":
+        return PerfLogType.science_chat_code.value
+    elif route == "general":
+        return PerfLogType.science_chat_general.value
+    elif route == "help":
+        return PerfLogType.science_chat_help.value
+    elif route == "documentation":
+        return PerfLogType.science_chat_documentation.value
+    else:
+        # HACK just call it code, we are probably going to error anyway
+        return PerfLogType.science_chat_code.value
 
 
 @bp.route("/function-description", methods=["POST"])
 def function_description() -> Response:
+    perf = PerfLogger()
+
     data: DescInputDto = request.get_json(force=True)
     desc = get_function_description(data)
-    log(desc)
-    return jsonify(desc)
+    resp = jsonify(desc)
+
+    perf.set_data(
+        snippet=data['url'],
+        input_length=len(request.data),
+        output_length=int(resp.headers['Content-Length']),
+        type=PerfLogType.science_generate_description.value,
+        # TODO pass in userId so we can track that?
+    )
+    perf.stop_and_save()
+    return resp
 
 
 @bp.route("/webhook-description", methods=["POST"])
@@ -165,12 +196,26 @@ def variable_description() -> Response:
 
 @bp.route("/plugin-chat", methods=["POST"])
 def plugin_chat() -> Response:
+    perf = PerfLogger()
+
     data = request.get_json(force=True)
+
     verify_required_fields(data, ["apiKey", "pluginId", "conversationId", "message"])
-    resp = get_plugin_chat(
+    messages = get_plugin_chat(
         data["apiKey"], data["pluginId"], data["conversationId"], data["message"]
     )
-    return jsonify(resp)
+
+    resp = jsonify(messages)
+    perf.set_data(
+        apiKey=data['apiKey'],
+        snippet=data['message'],
+        input_length=len(data['message']),
+        output_length=int(resp.headers['Content-Length']),
+        type=PerfLogType.science_api_execute.value,
+    )
+    perf.stop_and_save()
+
+    return resp
 
 
 @bp.route("/docs/update-vector", methods=["POST"])

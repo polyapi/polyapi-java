@@ -9,7 +9,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { AxiosError } from 'axios';
 import { ConfigService } from 'config/config.service';
-import { FaasService } from '../faas.service';
+import { ExecuteFunctionResult, FaasService } from '../faas.service';
 import { CustomObjectsApi } from '@kubernetes/client-node';
 import { makeCustomObjectsApiClient } from 'kubernetes/client';
 import { ServerFunctionLimits } from '@poly/model';
@@ -124,7 +124,7 @@ export class KNativeFaasService implements FaasService {
     args: any[],
     headers = {},
     maxRetryCount = 3,
-  ): Promise<any> {
+  ): Promise<ExecuteFunctionResult> {
     const functionUrl = await this.getFunctionUrl(id);
 
     if (!functionUrl) {
@@ -138,9 +138,21 @@ export class KNativeFaasService implements FaasService {
     return await lastValueFrom(
       this.http
         .post(`${functionUrl}`, { args }, { headers: this.filterPassThroughHeaders(headers) })
-        .pipe(map((response) => response.data))
+        .pipe(map((response) => (
+          {
+            body: response.data,
+            statusCode: response.status,
+          }
+        )))
         .pipe(
           catchError(async (error: AxiosError) => {
+            if (error.response?.status !== 500) {
+              return {
+                body: error.response?.data,
+                statusCode: error.response?.status || 500,
+              };
+            }
+
             this.logger.error(
               `Error while performing HTTP request for server function (id: ${id}): ${
                 (error.response?.data as any)?.message || error

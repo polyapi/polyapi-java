@@ -32,6 +32,7 @@ describe('TenantService', () => {
     publicVisibilityAllowed: true,
     limitTierId: 'a34b1b9e-0b0a-4b0a-9b0a-0b0a0b0a0b0a',
     publicNamespace: 'public',
+    enabled: true,
   };
 
   let service: TenantService;
@@ -108,6 +109,7 @@ describe('TenantService', () => {
         publicNamespace: 'public',
         publicVisibilityAllowed: testTenant.publicVisibilityAllowed,
         tierId: testTenant.limitTierId,
+        enabled: testTenant.enabled,
       });
     });
   });
