@@ -3,7 +3,8 @@ import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlEncodedBody, Visibil
 export type ApiFunctionSource = {
   url: string;
   headers: {
-      [key: string]: string
+      key: string;
+      value: string;
   }[];
   method: string;
   body: {

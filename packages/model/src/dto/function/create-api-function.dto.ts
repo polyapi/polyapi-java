@@ -1,5 +1,5 @@
 import { IntrospectionQuery } from 'graphql';
-import { PostmanBody, Variables, Header, Auth, Method } from '../..';
+import { PostmanBody, Variables, PostmanHeader, Auth, Method } from '../..';
 import { IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
 
 import { ContextIdentifier, NameIdentifier } from './../validators';
@@ -28,7 +28,7 @@ export class CreateApiFunctionDto {
   response: any;
   variables?: Variables;
   statusCode: number;
-  templateHeaders: Header[];
+  templateHeaders: PostmanHeader[];
   templateAuth?: Auth;
   method: Method;
   @IsNotEmpty()

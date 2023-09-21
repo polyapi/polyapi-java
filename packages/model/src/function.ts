@@ -6,7 +6,7 @@ export type PostmanVariableEntry = {
   disabled?: boolean;
 };
 
-export type Header = PostmanVariableEntry;
+export type PostmanHeader = PostmanVariableEntry;
 
 export type PostmanGraphQLBody = {
   mode: 'graphql',
@@ -45,6 +45,7 @@ export type PostmanBody = RawPostmanBody | PostmanUrlencodedBody | PostmanFormDa
 
 export type UrlEncodedBody = PostmanUrlencodedBody & { urlencoded: (Omit<PostmanVariableEntry, 'disabled'>)[]};
 export type FormDataBody = PostmanFormDataBody & { urlencoded: (Omit<PostmanFormDataBody, 'disabled'>)[]};
+export type Header = Omit<PostmanHeader, 'disabled'>;
 
 export type ApiFunctionBody = RawPostmanBody | UrlEncodedBody | FormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
 

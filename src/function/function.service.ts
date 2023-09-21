@@ -30,7 +30,7 @@ import {
   FunctionBasicDto,
   FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
   PostmanGraphQLBody,
-  Header,
+  PostmanHeader,
   Method,
   PostmanVariableEntry,
   PropertySpecification,
@@ -43,6 +43,7 @@ import {
   Visibility,
   VisibilityQuery,
   ApiFunctionBody,
+  Header,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -221,23 +222,25 @@ export class FunctionService implements OnModuleInit {
 
     const parsedBody = JSON.parse(apiFunction.body || '{}');
 
-    const headersList: Record<string, any>[] = [];
-    const contentTypeHeaders = this.getContentTypeHeaders(parsedBody);
+    const headers: Header[] = JSON.parse(apiFunction.headers || '[]') as Header[];
+
+    // const bodyContentType = this.getContentTypeHeaders(parsedBody);
     const authHeaders = this.getAuthorizationHeaders((apiFunction.auth && JSON.parse(apiFunction.auth)) || null);
 
     for (const [key, value] of Object.entries(authHeaders)) {
-      headersList.push({
+      headers.push({
         key,
         value,
       });
     }
 
-    for (const [key, value] of Object.entries(contentTypeHeaders)) {
-      headersList.push({
-        key,
-        value,
+    /*
+    if (typeof bodyContentType['Content-Type'] !== 'undefined' && !headers.find(header => header.key === 'Content-Type')) {
+      headers.push({
+        key: 'Content-Type',
+        value: bodyContentType['Content-Type'],
       });
-    }
+    } */
 
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
@@ -245,11 +248,8 @@ export class FunctionService implements OnModuleInit {
       source: {
         url: apiFunction.url,
         method: apiFunction.method,
-        headers: [
-          ...JSON.parse(apiFunction.headers || '[]'),
-          ...headersList,
-        ],
-        body: this.getBodySource(JSON.parse(apiFunction.body || '{}')),
+        headers,
+        body: this.getBodySource(parsedBody),
       },
     };
   }
@@ -285,7 +285,7 @@ export class FunctionService implements OnModuleInit {
     response: any,
     variables: Variables,
     statusCode: number,
-    templateHeaders: Header[],
+    templateHeaders: PostmanHeader[],
     method: Method,
     templateUrl: string,
     templateBody: PostmanBody,
@@ -1391,7 +1391,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private getFilteredHeaders(headers: Header[]): Header[] {
+  private getFilteredHeaders(headers: PostmanHeader[]): PostmanHeader[] {
     return this.filterDisabledValues(headers)
       .filter(({ key }) => !!key?.trim());
   }
