@@ -44,6 +44,11 @@ import {
   VisibilityQuery,
   ApiFunctionBody,
   Header,
+  UpdateSourceFunctionDto,
+  UpdateSourceEntry,
+  FormDataEntry,
+  Entry,
+  RawPostmanBody,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -57,7 +62,7 @@ import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
-import { cloneDeep, isPlainObject, mergeWith, omit, uniqBy } from 'lodash';
+import { cloneDeep, isPlainObject, mergeWith, omit, uniqBy, mapValues } from 'lodash';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { VariableService } from 'variable/variable.service';
 import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
@@ -66,6 +71,7 @@ import { AuthService } from 'auth/auth.service';
 import crypto from 'crypto';
 import { WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
+import { fakeArgType } from '@poly/common/utils';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -546,6 +552,7 @@ export class FunctionService implements OnModuleInit {
     response: any | undefined,
     payload: string | undefined,
     visibility: Visibility | null,
+    source: UpdateSourceFunctionDto | undefined,
   ) {
     if (name != null || context != null) {
       name = name ? await this.resolveFunctionName(apiFunction.environmentId, name, apiFunction.context, true) : null;
@@ -557,23 +564,6 @@ export class FunctionService implements OnModuleInit {
       ) {
         throw new ConflictException(`Function with name ${name} and context ${context} already exists.`);
       }
-    }
-
-    if (argumentsMetadata != null) {
-      await this.checkArgumentsMetadata(apiFunction, argumentsMetadata);
-      argumentsMetadata = await this.resolveArgumentsTypeSchema(apiFunction, argumentsMetadata);
-    }
-
-    argumentsMetadata = this.mergeArgumentsMetadata(apiFunction.argumentsMetadata, argumentsMetadata);
-
-    const duplicatedArgumentName = this.findDuplicatedArgumentName(
-      this.getFunctionArguments({
-        ...apiFunction,
-        argumentsMetadata: JSON.stringify(argumentsMetadata),
-      }),
-    );
-    if (duplicatedArgumentName) {
-      throw new ConflictException(`Function has duplicated arguments: ${duplicatedArgumentName}`);
     }
 
     this.logger.debug(
@@ -588,6 +578,63 @@ export class FunctionService implements OnModuleInit {
       responseType = await this.getResponseType(response, payload ?? apiFunction.payload);
     }
 
+    const newSourceData = this.processNewSourceData(apiFunction, source);
+
+    const patchSourceData = {
+      ...(newSourceData?.body ? { body: newSourceData.body } : null),
+      ...(newSourceData?.headers ? { headers: newSourceData.headers } : null),
+      ...(newSourceData?.url ? { url: newSourceData.url } : null),
+      ...(newSourceData?.method ? { method: newSourceData.method } : null),
+    };
+
+    const patchedApiFunction = {
+      ...apiFunction,
+      ...patchSourceData,
+    };
+
+    if (argumentsMetadata != null) {
+      await this.checkArgumentsMetadata(patchedApiFunction, argumentsMetadata);
+
+      argumentsMetadata = await this.resolveArgumentsTypeSchema(patchedApiFunction, argumentsMetadata);
+    }
+
+    argumentsMetadata = this.mergeArgumentsMetadata(apiFunction.argumentsMetadata, argumentsMetadata);
+
+    const duplicatedArgumentName = this.findDuplicatedArgumentName(
+      this.getFunctionArguments(patchedApiFunction),
+    );
+
+    if (duplicatedArgumentName) {
+      throw new ConflictException(`Function has duplicated arguments: ${duplicatedArgumentName}`);
+    }
+
+    if (patchSourceData.body || patchSourceData.url || patchSourceData.headers) {
+      // Delete unused arguments metadata if user has patched source data (could've remove some parts of body).
+      const functionArguments = this.getFunctionArguments(patchedApiFunction);
+
+      if (argumentsMetadata !== null) {
+        for (const [argumentName] of Object.entries(argumentsMetadata)) {
+          if (!functionArguments.find(functionArgument => functionArgument.key === argumentName)) {
+            delete argumentsMetadata[argumentName];
+          }
+        }
+      }
+    }
+
+    if (source?.body?.mode === 'raw') {
+      const fakedData = mapValues(argumentsMetadata || {}, fakeArgType);
+
+      try {
+        this.getSanitizedRawBody(source.body, argumentsMetadata || {}, fakedData);
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          throw new BadRequestException('Invalid raw json.');
+        }
+
+        throw error;
+      }
+    }
+
     return this.prisma.apiFunction.update({
       where: {
         id: apiFunction.id,
@@ -600,8 +647,128 @@ export class FunctionService implements OnModuleInit {
         responseType,
         payload,
         visibility: visibility == null ? apiFunction.visibility : visibility,
+        ...patchSourceData,
       },
     });
+  }
+
+  private processNewSourceData(apiFunction: ApiFunction, source: UpdateSourceFunctionDto | undefined): {
+    headers?: string;
+    url?: string;
+    body?: string;
+    method?: string;
+  } | null {
+    if (!source) {
+      return null;
+    }
+
+    const sourceData: {
+      headers?: string;
+      url?: string;
+      body?: string;
+      method?: string;
+    } = {
+      headers: undefined,
+      url: source.url,
+      body: undefined,
+      method: source.method,
+    };
+
+    const entryRecordToList = (entryRecord: Record<string, string | null>): Entry[] => {
+      return Object.entries(entryRecord).reduce<UpdateSourceEntry[]>((acum, [key, value]) => {
+        return [...acum, { key, value }];
+      }, []).filter((entry): entry is Entry => entry.value !== null);
+    };
+
+    const mergeEntries = (currentEntries: Entry[], entryRecord: Record<string, string | null>): typeof currentEntries => {
+      let clonedEntries = [...currentEntries];
+
+      for (const [key, value] of Object.entries(entryRecord)) {
+        // Remove entry
+        if (value === null) {
+          clonedEntries = clonedEntries.filter(entry => entry.key !== key);
+          continue;
+        }
+
+        const foundEntry = clonedEntries.find(entry => entry.key === key);
+
+        // Override entry
+        if (foundEntry) {
+          clonedEntries = clonedEntries.map((entry) => {
+            if (entry.key === key) {
+              return {
+                ...entry,
+                value,
+              };
+            }
+
+            return entry;
+          });
+          continue;
+        }
+
+        // Add new entry
+        clonedEntries.push({
+          key,
+          value,
+        });
+      }
+
+      return clonedEntries;
+    };
+
+    if (typeof source.headers !== 'undefined') {
+      const currentHeaders = JSON.parse(apiFunction.headers || '[]') as Header[];
+
+      sourceData.headers = JSON.stringify(mergeEntries(currentHeaders, source.headers));
+    }
+
+    if (typeof source.body !== 'undefined') {
+      let currentBody = JSON.parse(apiFunction.body || '{}') as ApiFunctionBody;
+
+      if (source.body.mode === 'empty') {
+        currentBody = {};
+      } else if (source.body.mode === 'raw') {
+        currentBody = {
+          mode: 'raw',
+          raw: source.body.raw,
+        };
+        // process and Validate raw.
+      } else {
+        if (source.body.mode === 'urlencoded') {
+          if (currentBody.mode !== 'urlencoded') {
+            currentBody = {
+              mode: source.body.mode,
+              urlencoded: entryRecordToList(source.body.urlencoded),
+            };
+          } else {
+            currentBody = {
+              mode: source.body.mode,
+              urlencoded: mergeEntries(currentBody.urlencoded, source.body.urlencoded),
+            };
+          }
+        }
+
+        if (source.body.mode === 'formdata') {
+          if (currentBody.mode !== 'formdata') {
+            currentBody = {
+              mode: source.body.mode,
+              formdata: entryRecordToList(source.body.formdata).map<FormDataEntry>(entry => ({ ...entry, type: 'string' })),
+            };
+          } else {
+            currentBody = {
+              mode: source.body.mode,
+              formdata: mergeEntries(currentBody.formdata, source.body.formdata)
+                .map<FormDataEntry>(entry => ({ ...entry, type: 'string' })),
+            };
+          }
+        }
+      }
+
+      sourceData.body = JSON.stringify(currentBody);
+    }
+
+    return sourceData;
   }
 
   async executeApiFunction(
@@ -616,7 +783,16 @@ export class FunctionService implements OnModuleInit {
     const url = mustache.render(apiFunction.url, argumentValueMap);
     const method = apiFunction.method;
     const auth = apiFunction.auth ? JSON.parse(mustache.render(apiFunction.auth, argumentValueMap)) : null;
-    const body = this.getSanitizedRawBody(apiFunction, JSON.parse(apiFunction.argumentsMetadata || '{}'), argumentValueMap);
+    const parsedBody = JSON.parse(apiFunction.body || '{}') as PostmanBody;
+
+    let body: PostmanBody | null = null;
+
+    if (parsedBody.mode !== 'raw') {
+      body = JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap)) as PostmanBody;
+    } else {
+      body = this.getSanitizedRawBody(parsedBody, JSON.parse(apiFunction.argumentsMetadata || '{}'), argumentValueMap);
+    }
+
     const params = {
       ...this.getAuthorizationQueryParams(auth),
     };
@@ -2026,10 +2202,8 @@ export class FunctionService implements OnModuleInit {
     return stripComments(jsonString);
   }
 
-  private getSanitizedRawBody(apiFunction: ApiFunction, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): PostmanBody {
+  private getSanitizedRawBody(body: RawPostmanBody, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): RawPostmanBody {
     const uuidRemovableKeyValue = crypto.randomUUID();
-
-    const body = JSON.parse(apiFunction.body || '{}') as PostmanBody;
 
     const parsedArgumentsMetadata = Object.entries(argumentsMetadata).reduce<Record<string, FunctionArgument>>((acum, [key]) => {
       return {
@@ -2040,7 +2214,7 @@ export class FunctionService implements OnModuleInit {
 
     const clonedArgumentValueMap = cloneDeep(argumentValueMap);
 
-    const sanitizeSringArgumentValue = (name: string, quoted: boolean) => {
+    const sanitizeStringArgumentValue = (name: string, quoted: boolean) => {
       const escapeRegularArgumentString = () => {
         // Escape string values, we should  only escape double quotes to avoid breaking json syntax on mustache template.
         const escapedString = (clonedArgumentValueMap[name] || uuidRemovableKeyValue).replace(/"/g, '\\"');
@@ -2101,59 +2275,55 @@ export class FunctionService implements OnModuleInit {
       });
     };
 
-    if (body.mode === 'raw') {
-      const unquotedArgsRegexp = /(?<!\\")\{\{.+?\}\}(?!\\")/ig;
-      const quotedArgsRegexp = /(?<=\\")\{\{.+?\}\}(?=\\")/ig;
-      const bodyString = apiFunction.body || '';
+    const unquotedArgsRegexp = /(?<!\\")\{\{.+?\}\}(?!\\")/ig;
+    const quotedArgsRegexp = /(?<=\\")\{\{.+?\}\}(?=\\")/ig;
+    const bodyString = body.raw || '';
 
-      const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];
-      const quotedArgsMatchResult = bodyString.match(quotedArgsRegexp) || [];
-      this.logger.debug(`Api function body: ${JSON.stringify(body)}`);
-      this.logger.debug(`Arguments metadata for sanitization: ${JSON.stringify(argumentsMetadata)}`);
-      this.logger.debug(`Cloned arguments metadata for sanitization: ${JSON.stringify(parsedArgumentsMetadata)}`);
-      this.logger.debug(`Arguments value map for sanitization: ${JSON.stringify(argumentValueMap)}`);
-      this.logger.debug(`Sanitizing unquoted arguments: ${JSON.stringify(unquotedArgsMatchResult)}`);
-      this.logger.debug(`Sanitizing quoted arguments: ${JSON.stringify(quotedArgsMatchResult)}`);
+    const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];
+    const quotedArgsMatchResult = bodyString.match(quotedArgsRegexp) || [];
+    this.logger.debug(`Api function body: ${JSON.stringify(body)}`);
+    this.logger.debug(`Arguments metadata for sanitization: ${JSON.stringify(argumentsMetadata)}`);
+    this.logger.debug(`Cloned arguments metadata for sanitization: ${JSON.stringify(parsedArgumentsMetadata)}`);
+    this.logger.debug(`Arguments value map for sanitization: ${JSON.stringify(argumentValueMap)}`);
+    this.logger.debug(`Sanitizing unquoted arguments: ${JSON.stringify(unquotedArgsMatchResult)}`);
+    this.logger.debug(`Sanitizing quoted arguments: ${JSON.stringify(quotedArgsMatchResult)}`);
 
-      for (const unquotedArg of unquotedArgsMatchResult) {
-        pushFoundArg(unquotedArg, false);
-      }
-
-      for (const quotedArg of quotedArgsMatchResult) {
-        pushFoundArg(quotedArg, true);
-      }
-
-      for (const arg of foundArgs) {
-        if (parsedArgumentsMetadata[arg.name]?.type === 'string') {
-          sanitizeSringArgumentValue(arg.name, arg.quoted);
-        } else {
-          sanitizeNonStringOptionalArgument(arg.name, arg.quoted);
-        }
-      }
-
-      const renderedContent = mustache.render(body.raw || '{}', clonedArgumentValueMap, {}, {
-        escape(text) {
-          return text;
-        },
-      });
-
-      this.logger.debug(`Rendered content after sanitization: ${renderedContent}`);
-
-      const parsedObjectFromRenderedContent = JSON.parse(renderedContent);
-
-      for (const [key, value] of Object.entries(parsedObjectFromRenderedContent)) {
-        if (value === uuidRemovableKeyValue) {
-          delete parsedObjectFromRenderedContent[key];
-        }
-      }
-
-      return {
-        ...body,
-        raw: JSON.stringify(parsedObjectFromRenderedContent),
-      };
+    for (const unquotedArg of unquotedArgsMatchResult) {
+      pushFoundArg(unquotedArg, false);
     }
 
-    return JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap));
+    for (const quotedArg of quotedArgsMatchResult) {
+      pushFoundArg(quotedArg, true);
+    }
+
+    for (const arg of foundArgs) {
+      if (parsedArgumentsMetadata[arg.name]?.type === 'string') {
+        sanitizeStringArgumentValue(arg.name, arg.quoted);
+      } else {
+        sanitizeNonStringOptionalArgument(arg.name, arg.quoted);
+      }
+    }
+
+    const renderedContent = mustache.render(body.raw || '{}', clonedArgumentValueMap, {}, {
+      escape(text) {
+        return text;
+      },
+    });
+
+    this.logger.debug(`Rendered content after sanitization: ${renderedContent}`);
+
+    const parsedObjectFromRenderedContent = JSON.parse(renderedContent);
+
+    for (const [key, value] of Object.entries(parsedObjectFromRenderedContent)) {
+      if (value === uuidRemovableKeyValue) {
+        delete parsedObjectFromRenderedContent[key];
+      }
+    }
+
+    return {
+      ...body,
+      raw: JSON.stringify(parsedObjectFromRenderedContent),
+    };
   }
 
   private async resolveVisibility<T extends { environment: Environment & { tenant: Tenant }, context: string | null }>(
@@ -2199,6 +2369,8 @@ export class FunctionService implements OnModuleInit {
         };
     }
 
-    return null;
+    return {
+      mode: ('empty' as const),
+    };
   }
 }

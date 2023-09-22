@@ -111,7 +111,7 @@ export const resolveGraphqlArgumentType = (typeNode: TypeNode, introspectionJson
   type: string,
   typeSchema?: Record<string, any>
 } => {
-  const introspectionJsonSchemaCopy = cloneDeep(introspectionJsonSchema);
+  const introspectionJsonSchemaCopy = cloneDeep(introspectionJsonSchema) as any;
 
   const $schema = introspectionJsonSchemaCopy.$schema;
 

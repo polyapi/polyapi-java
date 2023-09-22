@@ -22,3 +22,5 @@ export const validateObjectValue = (validationClass: new (...args: any[]) => any
     throw new BadRequestException(flattenErrors);
   }
 };
+
+export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];

@@ -37,18 +37,27 @@ export type PostmanFormDataBody = {
 };
 
 export type PostmanEmptyBody = {
-  mode: 'empty';
+  mode?: 'empty';
 };
 
 export type PostmanBody = RawPostmanBody | PostmanUrlencodedBody | PostmanFormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
 
+export type Entry = Omit<PostmanVariableEntry, 'disabled'>;
+export type FormDataEntry = Entry & { type: string };
 
-export type UrlEncodedBody = PostmanUrlencodedBody & { urlencoded: (Omit<PostmanVariableEntry, 'disabled'>)[]};
-export type FormDataBody = PostmanFormDataBody & { urlencoded: (Omit<PostmanFormDataBody, 'disabled'>)[]};
+export type UrlEncodedBody = {
+  mode: PostmanUrlencodedBody['mode'],
+  urlencoded: Entry[]
+};
+
+export type FormDataBody = {
+  mode: PostmanFormDataBody['mode'];
+  formdata: FormDataEntry[]
+};
+
 export type Header = Omit<PostmanHeader, 'disabled'>;
 
 export type ApiFunctionBody = RawPostmanBody | UrlEncodedBody | FormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
-
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
 

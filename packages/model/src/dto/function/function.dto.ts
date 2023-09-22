@@ -8,6 +8,8 @@ export type ApiFunctionSource = {
   }[];
   method: string;
   body: {
+    mode: 'empty';
+  } | {
       urlencoded: UrlEncodedBody['urlencoded']
   } | {
       formdata: FormDataBody['formdata']
@@ -15,7 +17,7 @@ export type ApiFunctionSource = {
       raw: string
   } | {
     graphql: Omit<PostmanGraphQLBody['graphql'], 'variables'>
-  } | null
+  }
 }
 
 export interface FunctionArgument<T extends string | Record<string, any> = string> {

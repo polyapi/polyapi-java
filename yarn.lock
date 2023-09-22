@@ -1185,6 +1185,11 @@
   resolved "https://registry.npmjs.org/@types/jsonpath/-/jsonpath-0.2.0.tgz"
   integrity sha512-v7qlPA0VpKUlEdhghbDqRoKMxFB3h3Ch688TApBJ6v+XLDdvWCGLJIYiPKGZnS6MAOie+IorCfNYVHOPIHSWwQ==
 
+"@types/lodash@^4.14.198":
+  version "4.14.198"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.198.tgz#4d27465257011aedc741a809f1269941fa2c5d4c"
+  integrity sha512-trNJ/vtMZYMLhfN45uLq4ShQSw0/S7xCTLLVM+WM1rmFpba/VS42jVUgaO3w/NOLiWR/09lnYk0yMaA/atdIsg==
+
 "@types/mailchimp__mailchimp_transactional@^1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@types/mailchimp__mailchimp_transactional/-/mailchimp__mailchimp_transactional-1.0.5.tgz#96a36ab079fc197d8097badf377c0af4f80830e8"

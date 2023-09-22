@@ -1,4 +1,4 @@
-import type { PropertySpecification, PropertyType } from '@poly/model';
+import type { ArgumentsMetadata, PropertySpecification, PropertyType } from '@poly/model';
 
 export const INSTANCE_URL_MAP = {
   develop: 'develop-k8s.polyapi.io',
@@ -88,3 +88,22 @@ export const getOneDayLaterDate = () => {
 };
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const fakeArgType = (arg: ArgumentsMetadata[string]) => {
+  switch (arg.type) {
+    case 'string':
+      return 'string';
+    case 'number':
+      return 0;
+    case 'boolean':
+      return true;
+    case 'object':
+      /*
+        We can also check and handle typeSchema here
+        I didn't needed but feel free to add it if you want to.
+      */
+      return JSON.stringify({});
+    default:
+      return 'string';
+  }
+};

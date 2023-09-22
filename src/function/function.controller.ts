@@ -169,7 +169,9 @@ export class FunctionController {
       response,
       payload,
       visibility = null,
+      source,
     } = data;
+
     const apiFunction = await this.service.findApiFunction(id);
     if (!apiFunction) {
       throw new NotFoundException('Function not found');
@@ -184,7 +186,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user, false, Permission.Teach);
 
     return this.service.apiFunctionToDetailsDto(
-      await this.service.updateApiFunction(apiFunction, name, context, description, argumentsMetadata, response, payload, visibility),
+      await this.service.updateApiFunction(apiFunction, name, context, description, argumentsMetadata, response, payload, visibility, source),
     );
   }
 
