@@ -71,7 +71,6 @@ import { AuthService } from 'auth/auth.service';
 import crypto from 'crypto';
 import { WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
-import { fakeArgType } from '@poly/common/utils';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
 
@@ -239,14 +238,6 @@ export class FunctionService implements OnModuleInit {
         value,
       });
     }
-
-    /*
-    if (typeof bodyContentType['Content-Type'] !== 'undefined' && !headers.find(header => header.key === 'Content-Type')) {
-      headers.push({
-        key: 'Content-Type',
-        value: bodyContentType['Content-Type'],
-      });
-    } */
 
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
@@ -622,7 +613,20 @@ export class FunctionService implements OnModuleInit {
     }
 
     if (source?.body?.mode === 'raw') {
-      const fakedData = mapValues(argumentsMetadata || {}, fakeArgType);
+      const fakedData = mapValues(argumentsMetadata || {}, (arg) => {
+        switch (arg.type) {
+          case 'string':
+            return 'string';
+          case 'number':
+            return 0;
+          case 'boolean':
+            return true;
+          case 'object':
+            return JSON.stringify({});
+          default:
+            return 'string';
+        }
+      });
 
       try {
         this.getSanitizedRawBody(source.body, argumentsMetadata || {}, fakedData);
