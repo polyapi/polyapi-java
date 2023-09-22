@@ -1,4 +1,4 @@
-import type { ArgumentsMetadata, PropertySpecification, PropertyType } from '@poly/model';
+import type { PropertySpecification, PropertyType } from '@poly/model';
 
 export const INSTANCE_URL_MAP = {
   develop: 'develop-k8s.polyapi.io',
