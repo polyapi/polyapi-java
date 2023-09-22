@@ -239,6 +239,8 @@ export class VariableService {
       await this.secretService.set(environmentId, variable.id, value);
 
       return variable;
+    }, {
+      timeout: 10_000,
     });
   }
 
@@ -323,6 +325,8 @@ export class VariableService {
       }
 
       return updatedVariable;
+    }, {
+      timeout: 10_000,
     });
   }
 
@@ -364,6 +368,8 @@ export class VariableService {
         secret: variable.secret,
         path: `${variable.context ? `${variable.context}.` : ''}${variable.name}`,
       });
+    }, {
+      timeout: 10_000,
     });
   }
 

@@ -1179,13 +1179,24 @@ export class FunctionService implements OnModuleInit {
     return customFunction;
   }
 
-  async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null, enabled?: boolean) {
+  async updateCustomFunction(
+    customFunction: CustomFunction,
+    name: string | null,
+    context: string | null,
+    description: string | null,
+    visibility: Visibility | null,
+    argumentsMetadata?: ArgumentsMetadata,
+    enabled?: boolean,
+  ) {
     const { id, name: currentName, context: currentContext } = customFunction;
 
     if (context != null || name != null) {
       if (!(await this.checkContextAndNameDuplicates(customFunction.environmentId, context || currentContext, name || currentName, [id]))) {
         throw new ConflictException(`Function with name ${name} and context ${context} already exists.`);
       }
+    }
+    if (argumentsMetadata) {
+      argumentsMetadata = this.mergeCustomFunctionArgumentsMetadata(customFunction.arguments, argumentsMetadata);
     }
 
     this.logger.debug(
@@ -1201,6 +1212,7 @@ export class FunctionService implements OnModuleInit {
         description: description == null ? customFunction.description : description,
         visibility: visibility == null ? customFunction.visibility : visibility,
         enabled,
+        arguments: argumentsMetadata ? JSON.stringify(argumentsMetadata) : undefined,
       },
     });
   }
@@ -2372,5 +2384,16 @@ export class FunctionService implements OnModuleInit {
     return {
       mode: ('empty' as const),
     };
+  }
+
+  private mergeCustomFunctionArgumentsMetadata(argumentsMetadataString: string, updatedArgumentsMetadata: ArgumentsMetadata) {
+    const argumentsMetadata = JSON.parse(argumentsMetadataString || '[]');
+
+    return argumentsMetadata.reduce((acum, argument) => {
+      return acum.concat({
+        ...argument,
+        ...updatedArgumentsMetadata[argument.key],
+      });
+    }, []);
   }
 }

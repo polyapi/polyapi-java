@@ -257,6 +257,8 @@ export class TenantService implements OnModuleInit {
         }
         throw error;
       }
+    }, {
+      timeout: 10_000,
     });
   }
 
@@ -480,6 +482,8 @@ export class TenantService implements OnModuleInit {
         apiBaseUrl: this.config.hostUrl,
         tenantId: tenant.id,
       };
+    }, {
+      timeout: 10_000,
     });
   }
 
@@ -613,6 +617,8 @@ export class TenantService implements OnModuleInit {
         }
         throw error;
       }
+    }, {
+      timeout: 10_000,
     });
 
     if (!result) {
@@ -654,6 +660,8 @@ export class TenantService implements OnModuleInit {
         }
         throw error;
       }
+    }, {
+      timeout: 10_000,
     });
 
     if (!result) {

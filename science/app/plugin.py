@@ -168,6 +168,6 @@ def execute_function(api_key: str, openapi: Dict, function_call: Dict) -> Messag
     domain = os.environ.get("HOST_URL", "https://na1.polyapi.io")
     headers = {"Authorization": f"Bearer {api_key}"}
     resp = requests.post(
-        domain + path, data=json.loads(function_call["arguments"]), headers=headers
+        domain + path, json=json.loads(function_call["arguments"]), headers=headers
     )
     return MessageDict(role="function", name=func_name, content=resp.text)

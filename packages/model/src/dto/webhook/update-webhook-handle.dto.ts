@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsIn, IsNumber, IsObject, IsOptional, IsString, Max, Min, Validate } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsIn, IsNumber, IsObject, IsOptional, IsString, Max, Min, Validate } from 'class-validator';
 import { Visibility } from '../../specs';
 import { ContextIdentifier, NameIdentifier } from '../validators';
 
@@ -47,4 +47,8 @@ export class UpdateWebhookHandleDto {
   @IsString({ each: true })
   @IsArray()
   securityFunctionIds?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
 }

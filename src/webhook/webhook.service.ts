@@ -288,7 +288,7 @@ export class WebhookService {
           return webhookHandle;
         },
         {
-          timeout: 30000,
+          timeout: 30_000,
         },
       );
     }
@@ -348,6 +348,7 @@ export class WebhookService {
       subpath: webhookHandle.subpath,
       method: webhookHandle.method,
       securityFunctionIds: webhookHandle.securityFunctionIds ? JSON.parse(webhookHandle.securityFunctionIds) : [],
+      enabled: !webhookHandle.enabled ? false : undefined,
     };
   }
 
@@ -372,6 +373,7 @@ export class WebhookService {
     subpath: string | null | undefined,
     method: string | null | undefined,
     securityFunctionIds: string[] | undefined,
+    enabled: boolean | undefined,
   ) {
     name = this.normalizeName(name, webhookHandle);
     context = this.normalizeContext(context, webhookHandle);
@@ -403,6 +405,7 @@ export class WebhookService {
         subpath,
         method,
         securityFunctionIds: securityFunctionIds ? JSON.stringify(securityFunctionIds) : undefined,
+        enabled,
       },
     });
   }

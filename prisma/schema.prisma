@@ -204,6 +204,7 @@ model WebhookHandle {
   subpath             String?     @map("subpath")
   method              String?
   securityFunctionIds String?     @map("security_function_ids")
+  enabled             Boolean     @default(true)
   environment         Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("webhook_handle")

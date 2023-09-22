@@ -134,6 +134,7 @@ export class WebhookController {
       subpath,
       method,
       securityFunctionIds,
+      enabled,
     } = updateWebhookHandleDto;
 
     this.commonService.checkVisibilityAllowed(req.user.tenant, visibility);
@@ -142,6 +143,11 @@ export class WebhookController {
 
     if ((method && !subpath && !webhookHandle.subpath) || (subpath === null && method !== null && webhookHandle.method)) {
       throw new BadRequestException('subpath is required if method is set');
+    }
+    if (enabled !== undefined) {
+      if (req.user.user?.role !== Role.SuperAdmin) {
+        throw new BadRequestException('You do not have permission to enable/disable webhooks.');
+      }
     }
 
     await this.authService.checkEnvironmentEntityAccess(webhookHandle, req.user, false, Permission.Teach);
@@ -159,6 +165,7 @@ export class WebhookController {
         subpath,
         method,
         securityFunctionIds,
+        enabled,
       ),
     );
   }
@@ -168,6 +175,9 @@ export class WebhookController {
     const webhookHandle = await this.findWebhookHandle(id);
     if (webhookHandle.subpath) {
       throw new NotFoundException();
+    }
+    if (!webhookHandle.enabled) {
+      this.throwWebhookDisabledException();
     }
 
     const response = await this.webhookService.triggerWebhookHandle(webhookHandle, payload, headers);
@@ -180,6 +190,9 @@ export class WebhookController {
     const webhookHandle = await this.findWebhookHandle(id);
     if ((!webhookHandle.method && req.method !== 'POST') || (webhookHandle.method && webhookHandle.method !== req.method)) {
       throw new NotFoundException();
+    }
+    if (!webhookHandle.enabled) {
+      this.throwWebhookDisabledException();
     }
 
     const subpath = req.url.split('/').slice(3).join('/');
@@ -252,5 +265,9 @@ export class WebhookController {
     }
 
     return webhookHandle;
+  }
+
+  private throwWebhookDisabledException() {
+    throw new BadRequestException('Webhook is disabled by System Administrator and cannot be used.');
   }
 }

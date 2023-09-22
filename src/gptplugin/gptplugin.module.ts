@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import cors from 'cors';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { PrismaModule } from 'prisma/prisma.module';
 import { GptPluginService } from 'gptplugin/gptplugin.service';
@@ -23,4 +24,9 @@ import { LimitModule } from 'limit/limit.module';
   providers: [GptPluginService, ChatService],
   controllers: [GptPluginController],
 })
-export class GptPluginModule {}
+export class GptPluginModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(cors())
+      .forRoutes({ path: 'api/conversations/*', method: RequestMethod.ALL });
+  }
+}
