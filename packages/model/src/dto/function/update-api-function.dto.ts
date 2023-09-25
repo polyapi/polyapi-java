@@ -6,9 +6,9 @@ import { Visibility } from '../../specs';
 
 import {
   UpdateSourceFunctionDto
-} from './internal-types/update-source';
+} from './types/update-source';
 
-export * from './internal-types/update-source';
+export * from './types/update-source';
 
 export class UpdateApiFunctionDto {
   @IsOptional()
