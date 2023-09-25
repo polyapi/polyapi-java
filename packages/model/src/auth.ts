@@ -1,4 +1,4 @@
-export type Auth = BasicAuth | BearerAuth | ApiKeyAuth;
+export type Auth = BasicAuth | BearerAuth | ApiKeyAuth | NoAuth;
 
 export class BasicAuth {
   type: 'basic';
@@ -40,4 +40,9 @@ export class ApiKeyAuth {
       value: string;
     }
   ];
+}
+
+export class NoAuth {
+  type: 'noauth';
+  noauth: [];
 }

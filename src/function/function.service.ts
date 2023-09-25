@@ -607,14 +607,22 @@ export class FunctionService implements OnModuleInit {
     }
 
     if (patchSourceData.body || patchSourceData.url || patchSourceData.headers || patchSourceData.auth) {
-      // Delete unused arguments metadata if user has patched source data (could've remove some parts of body).
       const functionArguments = this.getFunctionArguments(patchedApiFunction);
 
-      if (argumentsMetadata !== null) {
-        for (const [argumentName] of Object.entries(argumentsMetadata)) {
-          if (!functionArguments.find(functionArgument => functionArgument.key === argumentName)) {
-            delete argumentsMetadata[argumentName];
-          }
+      // Delete unused arguments metadata if user has patched source data (could've remove some parts of body).
+      for (const [argumentName] of Object.entries((argumentsMetadata as ArgumentsMetadata))) {
+        if (!functionArguments.find(functionArgument => functionArgument.key === argumentName)) {
+          delete (argumentsMetadata as ArgumentsMetadata)[argumentName];
+        }
+      }
+
+      // Add new arguments if user did not provide them through "arguments key".
+      for (const funcArg of functionArguments) {
+        if (typeof argumentsMetadata[funcArg.name] === 'undefined') {
+          argumentsMetadata[funcArg.name] = {
+            name: funcArg.name,
+            type: funcArg.type,
+          };
         }
       }
     }
@@ -787,6 +795,11 @@ export class FunctionService implements OnModuleInit {
         sourceData.auth = JSON.stringify({
           type: 'bearer',
           bearer: [{ key: 'token', type: 'any', value: source.auth.bearer }],
+        });
+      } else if (source.auth.type === 'noauth') {
+        sourceData.auth = JSON.stringify({
+          type: source.auth.type,
+          noauth: [],
         });
       } else {
         sourceData.auth = JSON.stringify(source.auth);
@@ -2122,7 +2135,7 @@ export class FunctionService implements OnModuleInit {
   }
 
   private mergeArgumentsMetadata(argumentsMetadata: string | null, updatedArgumentsMetadata: ArgumentsMetadata | null) {
-    return mergeWith(JSON.parse(argumentsMetadata || '{}'), updatedArgumentsMetadata || {}, (objValue, srcValue) => {
+    return mergeWith(JSON.parse(argumentsMetadata || '{}') as ArgumentsMetadata, updatedArgumentsMetadata || {}, (objValue, srcValue) => {
       if (objValue?.typeObject && srcValue?.typeObject) {
         return {
           ...objValue,

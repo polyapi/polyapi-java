@@ -63,8 +63,8 @@ class FormDataBody extends Body {
   
 export class UpdateAuth {
     @IsString()
-    @IsIn(['basic', 'bearer', 'apikey'])
-    type: 'basic' | 'bearer' | 'apikey'
+    @IsIn(['basic', 'bearer', 'apikey', 'noauth'])
+    type: 'basic' | 'bearer' | 'apikey' | 'noauth'
   }
 
 class BasicAuthEntries {
@@ -110,6 +110,11 @@ class BearerAuth extends UpdateAuth {
     bearer: string;
 }
 
+class NoAuth extends UpdateAuth {
+  @IsString()
+  type: 'noauth';
+}
+
 export class UpdateSourceFunctionDto {
     @IsOptional()
     @IsString()
@@ -145,7 +150,7 @@ export class UpdateSourceFunctionDto {
             }]
         }
     })
-    auth?: BasicAuth | BearerAuth | ApiKeyAuth;
+    auth?: BasicAuth | BearerAuth | ApiKeyAuth | NoAuth;
     
     @IsObject()
     @IsOptional()
@@ -167,6 +172,9 @@ export class UpdateSourceFunctionDto {
           }, {
             value: EmptyBody,
             name: 'empty',
+          }, {
+            value: NoAuth,
+            name: 'noauth',
           },
         ],
       },
