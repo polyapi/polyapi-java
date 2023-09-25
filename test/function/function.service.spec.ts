@@ -689,7 +689,6 @@ describe('FunctionService', () => {
         maxRedirects: 0,
         method,
         url,
-        maxRedirects: 0,
       });
       expect(result).toEqual({
         data: testResponseBody,
@@ -724,7 +723,6 @@ describe('FunctionService', () => {
         method: 'GET',
         maxRedirects: 0,
         url: 'https://jsonplaceholder.typicode.com/posts/test1',
-        maxRedirects: 0,
       });
       expect(result).toEqual({
         data: testResponseBody,

@@ -19,6 +19,7 @@ import { stripComments } from 'jsonc-parser';
 import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
+  ApiFunctionDetailsDto,
   ApiFunctionPublicDetailsDto,
   ApiFunctionResponseDto,
   ApiFunctionSpecification,
@@ -212,7 +213,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  apiFunctionToDetailsDto(apiFunction: ApiFunction): FunctionDetailsDto {
+  apiFunctionToDetailsDto(apiFunction: ApiFunction): ApiFunctionDetailsDto {
     const argumentsList = this.getFunctionArguments(apiFunction)
       .map<Omit<FunctionArgument<Record<string, any>>, 'location'>>(arg => ({
         ...omit(arg, 'location'),
