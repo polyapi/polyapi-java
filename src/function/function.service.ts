@@ -1367,23 +1367,19 @@ export class FunctionService implements OnModuleInit {
       function ${functionName}(): void {};
     `;
 
-    try {
-      const customFunction = await this.createOrUpdateCustomFunction(
-        user.environment,
-        '',
-        functionName,
-        '',
-        code,
-        true,
-        user.key,
-        () => Promise.resolve(),
-        true,
-      );
+    const customFunction = await this.createOrUpdateCustomFunction(
+      user.environment,
+      '',
+      functionName,
+      '',
+      code,
+      true,
+      user.key,
+      () => Promise.resolve(),
+      true,
+    );
 
-      return this.customFunctionToDetailsDto(customFunction);
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
+    return this.customFunctionToDetailsDto(customFunction);
   }
 
   private filterDisabledValues<T extends PostmanVariableEntry>(values: T[]) {
