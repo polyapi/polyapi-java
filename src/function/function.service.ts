@@ -48,7 +48,7 @@ import {
   UpdateSourceNullableEntry,
   FormDataEntry,
   Entry,
-  RawPostmanBody,
+  PostmanRawBody,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -2252,7 +2252,7 @@ export class FunctionService implements OnModuleInit {
     return stripComments(jsonString);
   }
 
-  private getSanitizedRawBody(body: RawPostmanBody, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): RawPostmanBody {
+  private getSanitizedRawBody(body: PostmanRawBody, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): PostmanRawBody {
     const uuidRemovableKeyValue = crypto.randomUUID();
 
     const parsedArgumentsMetadata = Object.entries(argumentsMetadata).reduce<Record<string, FunctionArgument>>((acum, [key]) => {

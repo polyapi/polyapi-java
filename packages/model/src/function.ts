@@ -16,7 +16,7 @@ export type PostmanGraphQLBody = {
   }
 }
 
-export type RawPostmanBody = {
+export type PostmanRawBody = {
   mode: 'raw';
   raw: string;
   options?: {
@@ -40,7 +40,7 @@ export type PostmanEmptyBody = {
   mode?: 'empty';
 };
 
-export type PostmanBody = RawPostmanBody | PostmanUrlencodedBody | PostmanFormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
+export type PostmanBody = PostmanRawBody | PostmanUrlencodedBody | PostmanFormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
 
 export type Entry = Omit<PostmanVariableEntry, 'disabled'>;
 export type FormDataEntry = Entry & { type: string };
@@ -57,7 +57,7 @@ export type FormDataBody = {
 
 export type Header = Omit<PostmanHeader, 'disabled'>;
 
-export type ApiFunctionBody = RawPostmanBody | UrlEncodedBody | FormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
+export type ApiFunctionBody = PostmanRawBody | UrlEncodedBody | FormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
 
