@@ -1,4 +1,4 @@
-import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlEncodedBody, Visibility } from '../..';
+import { ArgumentType, Auth, FormDataBody, PostmanGraphQLBody, UrlEncodedBody, Visibility } from '../..';
 
 export type ApiFunctionSource = {
   url: string;
@@ -17,7 +17,8 @@ export type ApiFunctionSource = {
       raw: string
   } | {
     graphql: Omit<PostmanGraphQLBody['graphql'], 'variables'>
-  }
+  };
+  auth: Auth;
 }
 
 export interface FunctionArgument<T extends string | Record<string, any> = string> {

@@ -45,7 +45,7 @@ import {
   ApiFunctionBody,
   Header,
   UpdateSourceFunctionDto,
-  UpdateSourceEntry,
+  UpdateSourceNullableEntry,
   FormDataEntry,
   Entry,
   RawPostmanBody,
@@ -229,6 +229,8 @@ export class FunctionService implements OnModuleInit {
 
     const headers: Header[] = JSON.parse(apiFunction.headers || '[]') as Header[];
 
+    const parsedAuth = JSON.parse(apiFunction.auth || '{}');
+
     // const bodyContentType = this.getContentTypeHeaders(parsedBody);
     const authHeaders = this.getAuthorizationHeaders((apiFunction.auth && JSON.parse(apiFunction.auth)) || null);
 
@@ -247,6 +249,7 @@ export class FunctionService implements OnModuleInit {
         method: apiFunction.method,
         headers,
         body: this.getBodySource(parsedBody),
+        auth: parsedAuth,
       },
     };
   }
@@ -576,6 +579,7 @@ export class FunctionService implements OnModuleInit {
       ...(newSourceData?.headers ? { headers: newSourceData.headers } : null),
       ...(newSourceData?.url ? { url: newSourceData.url } : null),
       ...(newSourceData?.method ? { method: newSourceData.method } : null),
+      ...(newSourceData?.auth ? { auth: newSourceData.auth } : null),
     };
 
     const patchedApiFunction = {
@@ -661,6 +665,7 @@ export class FunctionService implements OnModuleInit {
     url?: string;
     body?: string;
     method?: string;
+    auth?: string;
   } | null {
     if (!source) {
       return null;
@@ -671,15 +676,17 @@ export class FunctionService implements OnModuleInit {
       url?: string;
       body?: string;
       method?: string;
+      auth?: string;
     } = {
       headers: undefined,
       url: source.url,
       body: undefined,
       method: source.method,
+      auth: undefined,
     };
 
     const entryRecordToList = (entryRecord: Record<string, string | null>): Entry[] => {
-      return Object.entries(entryRecord).reduce<UpdateSourceEntry[]>((acum, [key, value]) => {
+      return Object.entries(entryRecord).reduce<UpdateSourceNullableEntry[]>((acum, [key, value]) => {
         return [...acum, { key, value }];
       }, []).filter((entry): entry is Entry => entry.value !== null);
     };
@@ -770,6 +777,17 @@ export class FunctionService implements OnModuleInit {
       }
 
       sourceData.body = JSON.stringify(currentBody);
+    }
+
+    if (typeof source.auth !== 'undefined') {
+      if (source.auth.type === 'bearer') {
+        sourceData.auth = JSON.stringify({
+          type: 'bearer',
+          bearer: [{ key: 'token', type: 'any', value: source.auth.bearer }],
+        });
+      } else {
+        sourceData.auth = JSON.stringify(source.auth);
+      }
     }
 
     return sourceData;

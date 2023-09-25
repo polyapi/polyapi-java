@@ -32,6 +32,7 @@ import {
   Role,
   UpdateApiFunctionDto,
   UpdateCustomFunctionDto,
+  UpdateSourceFunctionDto,
 } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
@@ -180,6 +181,8 @@ export class FunctionController {
     if (payload !== undefined && response === undefined) {
       throw new BadRequestException('`payload` cannot be updated without `response`');
     }
+
+    this.checkSourceUpdateAuth(source);
 
     this.commonService.checkVisibilityAllowed(req.user.tenant, visibility);
 
@@ -495,6 +498,24 @@ export class FunctionController {
         if (argumentProperty !== 'description') {
           throw new BadRequestException(`Only description can be updated for argument ${key}`);
         }
+      }
+    }
+  }
+
+  private checkSourceUpdateAuth(source?: UpdateSourceFunctionDto): void {
+    if (!source) {
+      return;
+    }
+
+    if (source?.auth?.type === 'apiKey') {
+      const inKey = source.auth.apiKey.find((entry) => entry.key === 'in');
+
+      if (!inKey) {
+        throw new BadRequestException('You must provide a key "in" in your apiKey auth type.');
+      }
+
+      if (!['header', 'query'].includes(inKey.value)) {
+        throw new BadRequestException('"in" key value should be "query" | "header".');
       }
     }
   }
