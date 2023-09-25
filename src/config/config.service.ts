@@ -202,4 +202,8 @@ export class ConfigService {
   get sendSignUpVerificationCodeTemplateName(): string {
     return this.get('SIGN_UP_VERIFICATION_CODE_TEMPLATE_NAME', 'sign-up-verification-code');
   }
+
+  get prebuiltBaseImageName(): string {
+    return this.get('PREBUILT_BASE_IMAGE_NAME', 'prebuiltBaseImage');
+  }
 }

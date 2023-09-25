@@ -62,7 +62,7 @@ import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
 import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospectionQuery, resolveGraphqlArgumentType } from './graphql/utils';
 import { AuthService } from 'auth/auth.service';
 import crypto from 'crypto';
-import { WithTenant } from 'common/types';
+import { AuthData, WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
@@ -775,6 +775,13 @@ export class FunctionService implements OnModuleInit {
           {
             OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
+          {
+            name: {
+              not: {
+                equals: this.config.prebuiltBaseImageName,
+              },
+            },
+          },
         ],
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -840,6 +847,7 @@ export class FunctionService implements OnModuleInit {
     serverFunction: boolean,
     apiKey: string,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
+    createFromScratch = false,
   ): Promise<CustomFunction> {
     const {
       code,
@@ -958,6 +966,7 @@ export class FunctionService implements OnModuleInit {
           requirements,
           apiKey,
           await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
+          createFromScratch,
         );
 
         return customFunction;
@@ -1125,6 +1134,13 @@ export class FunctionService implements OnModuleInit {
           },
           {
             OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
+          },
+          {
+            name: {
+              not: {
+                equals: this.config.prebuiltBaseImageName,
+              },
+            },
           },
         ],
         serverSide: true,
@@ -1342,6 +1358,32 @@ export class FunctionService implements OnModuleInit {
         environmentId,
       },
     });
+  }
+
+  async createOrUpdatePrebuiltBaseImage(user: AuthData) {
+    const functionName = this.config.prebuiltBaseImageName;
+
+    const code = `
+      function ${functionName}(): void {};
+    `;
+
+    try {
+      const customFunction = await this.createOrUpdateCustomFunction(
+        user.environment,
+        '',
+        functionName,
+        '',
+        code,
+        true,
+        user.key,
+        () => Promise.resolve(),
+        true,
+      );
+
+      return this.customFunctionToDetailsDto(customFunction);
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
   }
 
   private filterDisabledValues<T extends PostmanVariableEntry>(values: T[]) {

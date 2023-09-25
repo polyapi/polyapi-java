@@ -330,6 +330,12 @@ export class FunctionController {
       .map((serverFunction) => this.service.customFunctionToBasicDto(serverFunction));
   }
 
+  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
+  @Post('/server/prebuilt-base-image')
+  async createOrUpdatePrebuiltBaseImage(@Req() req: AuthRequest) {
+    return this.service.createOrUpdatePrebuiltBaseImage(req.user);
+  }
+
   @UseGuards(PolyAuthGuard)
   @Post('/server')
   async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateCustomFunctionDto): Promise<FunctionDetailsDto> {

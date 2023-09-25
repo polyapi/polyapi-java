@@ -15,7 +15,8 @@ export interface FaasService {
     code: string,
     requirements: string[],
     apiKey: string,
-    limits: ServerFunctionLimits
+    limits: ServerFunctionLimits,
+    createFromScratch?: boolean
   ) => Promise<void>;
   executeFunction: (id: string, tenantId: string, environmentId: string, args: any[], headers: Record<string, any>) => Promise<ExecuteFunctionResult>;
   updateFunction: (
