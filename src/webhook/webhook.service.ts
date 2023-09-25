@@ -288,7 +288,7 @@ export class WebhookService {
           return webhookHandle;
         },
         {
-          timeout: 30000,
+          timeout: 30_000,
         },
       );
     }
@@ -328,7 +328,7 @@ export class WebhookService {
         eventHeaders,
         params,
       ]);
-      if (response !== true) {
+      if (response?.body !== true) {
         throw new ForbiddenException(`Security function ${securityFunction.id} check failed - access denied.`);
       }
     }
@@ -348,6 +348,7 @@ export class WebhookService {
       subpath: webhookHandle.subpath,
       method: webhookHandle.method,
       securityFunctionIds: webhookHandle.securityFunctionIds ? JSON.parse(webhookHandle.securityFunctionIds) : [],
+      enabled: !webhookHandle.enabled ? false : undefined,
     };
   }
 
@@ -366,12 +367,14 @@ export class WebhookService {
     name: string | null,
     description: string | null,
     visibility: Visibility | null,
+    eventPayload: any | undefined,
     responsePayload: any | null | undefined,
     responseHeaders: any | null | undefined,
     responseStatus: number | null | undefined,
     subpath: string | null | undefined,
     method: string | null | undefined,
     securityFunctionIds: string[] | undefined,
+    enabled: boolean | undefined,
   ) {
     name = this.normalizeName(name, webhookHandle);
     context = this.normalizeContext(context, webhookHandle);
@@ -397,12 +400,14 @@ export class WebhookService {
         name,
         description,
         visibility,
+        eventPayload: eventPayload ? JSON.stringify(eventPayload) : undefined,
         responsePayload,
         responseHeaders,
         responseStatus,
         subpath,
         method,
         securityFunctionIds: securityFunctionIds ? JSON.stringify(securityFunctionIds) : undefined,
+        enabled,
       },
     });
   }

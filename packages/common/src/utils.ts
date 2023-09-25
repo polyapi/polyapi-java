@@ -7,7 +7,6 @@ export const INSTANCE_URL_MAP = {
 };
 
 export const getInstanceUrl = (instance = 'local') => {
-
   if (typeof INSTANCE_URL_MAP[instance] === 'undefined') {
     return instance;
   }

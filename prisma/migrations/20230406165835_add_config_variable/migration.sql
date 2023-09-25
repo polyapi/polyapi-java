@@ -1,7 +1,0 @@
--- CreateTable
-CREATE TABLE "config_variable" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT NOT NULL,
-    "value" TEXT NOT NULL
-);

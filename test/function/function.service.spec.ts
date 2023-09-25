@@ -686,8 +686,10 @@ describe('FunctionService', () => {
           header1: 'headerValue1',
         },
         params: {},
+        maxRedirects: 0,
         method,
         url,
+        maxRedirects: 0,
       });
       expect(result).toEqual({
         data: testResponseBody,
@@ -720,7 +722,9 @@ describe('FunctionService', () => {
         headers: { header1: 'test3' },
         params: {},
         method: 'GET',
+        maxRedirects: 0,
         url: 'https://jsonplaceholder.typicode.com/posts/test1',
+        maxRedirects: 0,
       });
       expect(result).toEqual({
         data: testResponseBody,

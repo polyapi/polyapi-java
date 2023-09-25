@@ -1,6 +1,7 @@
 import { IsBoolean, IsEnum, IsOptional, IsString, Validate } from 'class-validator';
 import { Visibility } from '../../specs';
 import { ContextIdentifier, NameIdentifier } from '../validators';
+import { ArgumentsMetadata } from '../../function';
 
 export class UpdateCustomFunctionDto {
   @IsOptional()
@@ -25,4 +26,7 @@ export class UpdateCustomFunctionDto {
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
+
+  @IsOptional()
+  arguments?: ArgumentsMetadata;
 }

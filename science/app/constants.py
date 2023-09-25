@@ -21,6 +21,16 @@ class MessageType(IntEnum):
     plugin = 4  # plugin api messages
 
 
+@unique
+class PerfLogType(IntEnum):
+    science_generate_description = 1
+    science_api_execute = 2
+    science_chat_code = 3
+    science_chat_general = 4
+    science_chat_help = 5
+    science_chat_documentation = 6
+
+
 CHAT_GPT_MODEL = "gpt-4-0613"
 
 # standard question template where the FE knows how to extract the stuff in the quotes

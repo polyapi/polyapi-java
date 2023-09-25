@@ -25,6 +25,7 @@ import { CreateWebhookHandleDto, Permission, Role, UpdateWebhookHandleDto, Webho
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { CommonService } from 'common/common.service';
+import { TriggerResponse } from 'trigger/trigger.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('webhooks')
@@ -127,12 +128,14 @@ export class WebhookController {
       name = null,
       description = null,
       visibility = null,
+      eventPayload,
       responsePayload,
       responseHeaders,
       responseStatus,
       subpath,
       method,
       securityFunctionIds,
+      enabled,
     } = updateWebhookHandleDto;
 
     this.commonService.checkVisibilityAllowed(req.user.tenant, visibility);
@@ -141,6 +144,11 @@ export class WebhookController {
 
     if ((method && !subpath && !webhookHandle.subpath) || (subpath === null && method !== null && webhookHandle.method)) {
       throw new BadRequestException('subpath is required if method is set');
+    }
+    if (enabled !== undefined) {
+      if (req.user.user?.role !== Role.SuperAdmin) {
+        throw new BadRequestException('You do not have permission to enable/disable webhooks.');
+      }
     }
 
     await this.authService.checkEnvironmentEntityAccess(webhookHandle, req.user, false, Permission.Teach);
@@ -152,12 +160,14 @@ export class WebhookController {
         name,
         description,
         visibility,
+        eventPayload,
         responsePayload,
         responseHeaders,
         responseStatus,
         subpath,
         method,
         securityFunctionIds,
+        enabled,
       ),
     );
   }
@@ -167,6 +177,9 @@ export class WebhookController {
     const webhookHandle = await this.findWebhookHandle(id);
     if (webhookHandle.subpath) {
       throw new NotFoundException();
+    }
+    if (!webhookHandle.enabled) {
+      this.throwWebhookDisabledException();
     }
 
     const response = await this.webhookService.triggerWebhookHandle(webhookHandle, payload, headers);
@@ -180,6 +193,9 @@ export class WebhookController {
     if ((!webhookHandle.method && req.method !== 'POST') || (webhookHandle.method && webhookHandle.method !== req.method)) {
       throw new NotFoundException();
     }
+    if (!webhookHandle.enabled) {
+      this.throwWebhookDisabledException();
+    }
 
     const subpath = req.url.split('/').slice(3).join('/');
     const response = await this.webhookService.triggerWebhookHandle(webhookHandle, payload, headers, subpath);
@@ -187,7 +203,7 @@ export class WebhookController {
     this.sendWebhookResponse(res, webhookHandle, response);
   }
 
-  private sendWebhookResponse(res: Response, webhookHandle: WebhookHandle, webhookResponse: any) {
+  private sendWebhookResponse(res: Response, webhookHandle: WebhookHandle, webhookResponse: TriggerResponse | null) {
     if (webhookHandle.responseHeaders) {
       const headers = JSON.parse(webhookHandle.responseHeaders);
       Object.keys(headers).forEach(key => {
@@ -195,8 +211,8 @@ export class WebhookController {
       });
     }
 
-    res.status(webhookHandle.responseStatus || 200)
-      .send(webhookResponse || (webhookHandle.responsePayload ? JSON.parse(webhookHandle.responsePayload) : undefined));
+    res.status(webhookHandle.responseStatus || webhookResponse?.statusCode || 200)
+      .send(webhookResponse?.data || (webhookHandle.responsePayload ? JSON.parse(webhookHandle.responsePayload) : undefined));
   }
 
   @Delete(':id')
@@ -251,5 +267,9 @@ export class WebhookController {
     }
 
     return webhookHandle;
+  }
+
+  private throwWebhookDisabledException() {
+    throw new BadRequestException('Webhook is disabled by System Administrator and cannot be used.');
   }
 }

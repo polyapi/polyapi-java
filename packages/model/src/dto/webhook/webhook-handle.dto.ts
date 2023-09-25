@@ -13,6 +13,7 @@ export interface WebhookHandleDto {
   subpath: string | null;
   method: string | null;
   securityFunctionIds: string[];
+  enabled?: boolean;
 }
 
 export interface WebhookHandlePublicDto extends WebhookHandleDto {

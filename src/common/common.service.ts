@@ -288,7 +288,7 @@ export class CommonService {
 
   isPrismaUniqueConstraintFailedError(error: unknown, field?: string) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return error.code === 'P2002' && Array.isArray(error.meta?.target) && field && (error.meta?.target || '').includes(field);
+      return error.code === 'P2002' && Array.isArray(error.meta?.target) && !!field && (error.meta?.target || '').includes(field);
     }
     return false;
   }

@@ -21,4 +21,8 @@ export class CreateTenantDto {
   @IsOptional()
   @IsNotEmpty()
   tierId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
 }

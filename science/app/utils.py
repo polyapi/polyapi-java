@@ -159,6 +159,8 @@ def store_message(
         "content": _get_content(data),
         "type": data.get("type", MessageType.gpt.value),
     }
+    if data.get('name'):
+        create_input['name'] = data['name']
 
     rv = db.conversationmessage.create(data=create_input)  # type: ignore
     return rv
@@ -430,7 +432,10 @@ def msgs_to_msg_dicts(msgs: Optional[List[ConversationMessage]]) -> List[Message
         rv = []
         for msg in msgs:
             if isinstance(msg, ConversationMessage):
-                rv.append(MessageDict(role=msg.role, content=msg.content))
+                md = MessageDict(role=msg.role, content=msg.content)
+                if msg.name:
+                    md['name'] = msg.name
+                rv.append(md)
             else:  # MessageDict
                 rv.append(msg)
         return rv

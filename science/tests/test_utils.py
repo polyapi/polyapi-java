@@ -310,6 +310,22 @@ GAPIKey: string,  // your api key
         )
         self.assertEqual(msg.content, "profound question")
 
+    def test_store_message_name(self):
+        user = test_user_get_or_create()
+        conversation = create_new_conversation(user.id)
+
+        msg = store_message(
+            conversation.id,
+            {
+                "role": "function",
+                "name": "foobar",
+                "content": "profound question",
+            },
+        )
+        self.assertEqual(msg.role, "function")
+        self.assertEqual(msg.name, "foobar")
+        self.assertEqual(msg.content, "profound question")
+
     def test_get_public_id_none(self):
         result = get_public_id("foobar")
         self.assertIsNone(result)

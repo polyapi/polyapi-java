@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   forwardRef,
+  HttpException,
   HttpStatus,
   Inject,
   Injectable,
@@ -18,7 +19,6 @@ import { stripComments } from 'jsonc-parser';
 import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
-  ApiFunctionDetailsDto,
   ApiFunctionPublicDetailsDto,
   ApiFunctionResponseDto,
   ApiFunctionSpecification,
@@ -212,11 +212,16 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  apiFunctionToDetailsDto(apiFunction: ApiFunction): ApiFunctionDetailsDto {
+  apiFunctionToDetailsDto(apiFunction: ApiFunction): FunctionDetailsDto {
+    const argumentsList = this.getFunctionArguments(apiFunction)
+      .map<Omit<FunctionArgument<Record<string, any>>, 'location'>>(arg => ({
+        ...omit(arg, 'location'),
+        typeSchema: arg.typeSchema && JSON.parse(arg.typeSchema),
+      }));
+
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
-      arguments: this.getFunctionArguments(apiFunction)
-        .map(arg => omit(arg, 'location')),
+      arguments: argumentsList,
       enabledRedirect: apiFunction.enableRedirect,
     };
   }
@@ -261,7 +266,7 @@ export class FunctionService implements OnModuleInit {
     templateAuth?: Auth,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
   ): Promise<ApiFunction> {
-    if (!(statusCode >= HttpStatus.OK && statusCode < HttpStatus.AMBIGUOUS)) {
+    if (!(statusCode >= HttpStatus.OK && statusCode < HttpStatus.BAD_REQUEST)) {
       throw new BadRequestException(
         `Api response status code should be between ${HttpStatus.OK} and ${HttpStatus.AMBIGUOUS}.`,
       );
@@ -974,13 +979,24 @@ export class FunctionService implements OnModuleInit {
     return customFunction;
   }
 
-  async updateCustomFunction(customFunction: CustomFunction, name: string | null, context: string | null, description: string | null, visibility: Visibility | null, enabled?: boolean) {
+  async updateCustomFunction(
+    customFunction: CustomFunction,
+    name: string | null,
+    context: string | null,
+    description: string | null,
+    visibility: Visibility | null,
+    argumentsMetadata?: ArgumentsMetadata,
+    enabled?: boolean,
+  ) {
     const { id, name: currentName, context: currentContext } = customFunction;
 
     if (context != null || name != null) {
       if (!(await this.checkContextAndNameDuplicates(customFunction.environmentId, context || currentContext, name || currentName, [id]))) {
         throw new ConflictException(`Function with name ${name} and context ${context} already exists.`);
       }
+    }
+    if (argumentsMetadata) {
+      argumentsMetadata = this.mergeCustomFunctionArgumentsMetadata(customFunction.arguments, argumentsMetadata);
     }
 
     this.logger.debug(
@@ -996,6 +1012,7 @@ export class FunctionService implements OnModuleInit {
         description: description == null ? customFunction.description : description,
         visibility: visibility == null ? customFunction.visibility : visibility,
         enabled,
+        arguments: argumentsMetadata ? JSON.stringify(argumentsMetadata) : undefined,
       },
     });
   }
@@ -1226,7 +1243,7 @@ export class FunctionService implements OnModuleInit {
         return;
       }
 
-      throw new InternalServerErrorException((error.response?.data as any)?.message || error.message);
+      throw new HttpException(error.response?.data || error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -2145,5 +2162,16 @@ export class FunctionService implements OnModuleInit {
       ...entity,
       hidden: !this.commonService.isPublicVisibilityAllowed(entity, defaultHidden, visibleContexts),
     };
+  }
+
+  private mergeCustomFunctionArgumentsMetadata(argumentsMetadataString: string, updatedArgumentsMetadata: ArgumentsMetadata) {
+    const argumentsMetadata = JSON.parse(argumentsMetadataString || '[]');
+
+    return argumentsMetadata.reduce((acum, argument) => {
+      return acum.concat({
+        ...argument,
+        ...updatedArgumentsMetadata[argument.key],
+      });
+    }, []);
   }
 }

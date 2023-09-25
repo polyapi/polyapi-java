@@ -55,6 +55,8 @@ export class MigrationService implements OnModuleInit {
         this.logger.debug(`Finished migration ${file} successfully`);
         found = true;
       }
+    }, {
+      timeout: 60_000,
     });
 
     if (!found) {

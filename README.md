@@ -19,36 +19,32 @@ $ cp .env.template .env
 $ ./after_pull.sh
 ```
 
-## Running Hashicorp Vault Locally
-
-Run `vault server -dev -dev-root-token-id root`
-
-To setup initially, see here: https://github.com/polyapi/poly-alpha/issues/516#issuecomment-1607810143
-
-
-## Running the Node Server
-
-This will run the Node server on port 8000:
+## Run Dev Start Script
 
 ```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+$ ./dev_start.sh
 ```
 
-## Running the Science Server
+This script will start:
 
-Head to the [Science Server README](https://github.com/polyapi/poly-alpha/blob/develop/science/README.md) for instructions on how to start your science server!
+* Redis
+* Postgres
+* Vault
+* Node Server on 8000
+* Flask Server on 5000
 
-## Endpoints
+## Get your API Key
 
-`POST /functions/api` - creates Poly API function\
-`PUT /webhook/:functionAlias` - creates a webhook handle to be used in an API with `functionAlias` as name of the
-listener function\
-`PUT /webhook/:context/:functionAlias` - creates a webhook handle to be used in an API with `context.functionAlias` as
-name of the listener function\
+If this is the first time you are running the server, you probably need your api key! To get it, do this:
+
+```bash
+source .env && psql $DATABASE_URL -c 'select key from api_key;'
+```
+
+## Test the API Key
+
+To test the API key, copy the api key from the step above and use it to hit the whoami endpoint:
+
+```bash
+curl -H "Authorization: Bearer <API_KEY>" localhost:8000/whoami
+```

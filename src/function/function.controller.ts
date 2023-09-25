@@ -13,7 +13,7 @@ import {
   Patch,
   Post,
   Query,
-  Req,
+  Req, Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
@@ -22,6 +22,7 @@ import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
   ApiFunctionDetailsDto,
   ApiFunctionResponseDto,
+  ArgumentsMetadata,
   CreateApiFunctionDto,
   CreateCustomFunctionDto,
   ExecuteApiFunctionDto,
@@ -44,6 +45,7 @@ import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
 import { API_TAG_INTERNAL } from 'common/constants';
+import { Response } from 'express';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -402,6 +404,7 @@ export class FunctionController {
       description = null,
       visibility = null,
       enabled,
+      arguments: argumentsMetadata,
     } = data;
     const serverFunction = await this.service.findServerFunction(id);
     if (!serverFunction) {
@@ -415,10 +418,13 @@ export class FunctionController {
         throw new BadRequestException('You do not have permission to enable/disable functions.');
       }
     }
+    if (argumentsMetadata !== undefined) {
+      this.checkServerFunctionUpdateArguments(argumentsMetadata);
+    }
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, false, Permission.CustomDev);
 
     return this.service.customFunctionToDetailsDto(
-      await this.service.updateCustomFunction(serverFunction, name, context, description, visibility, enabled),
+      await this.service.updateCustomFunction(serverFunction, name, context, description, visibility, argumentsMetadata, enabled),
     );
   }
 
@@ -439,6 +445,7 @@ export class FunctionController {
   @Post('/server/:id/execute')
   async executeServerFunction(
     @Req() req: AuthRequest,
+    @Res() res: Response,
     @Param('id') id: string,
     @Body() data: ExecuteCustomFunctionDto,
     @Headers() headers: Record<string, any>,
@@ -462,7 +469,8 @@ export class FunctionController {
 
     await this.statisticsService.trackFunctionCall(req.user, customFunction.id, 'server');
 
-    return await this.service.executeServerFunction(customFunction, data, headers, clientId);
+    const { body, statusCode = 200 } = await this.service.executeServerFunction(customFunction, data, headers, clientId) || {};
+    return res.status(statusCode).send(body);
   }
 
   @ApiOperation({ tags: [API_TAG_INTERNAL] })
@@ -480,6 +488,17 @@ export class FunctionController {
     if (!await this.limitService.checkTenantFunctionsLimit(tenant)) {
       this.logger.debug(`Tenant ${tenant.id} reached its limit of functions while ${debugMessage}.`);
       throw new HttpException(FUNCTIONS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
+    }
+  }
+
+  private checkServerFunctionUpdateArguments(argumentsMetadata: ArgumentsMetadata) {
+    for (const key in argumentsMetadata) {
+      const argument = argumentsMetadata[key];
+      for (const argumentProperty in argument) {
+        if (argumentProperty !== 'description') {
+          throw new BadRequestException(`Only description can be updated for argument ${key}`);
+        }
+      }
     }
   }
 }

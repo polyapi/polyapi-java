@@ -144,7 +144,6 @@ export class ChatController {
   }
 
   @ApiOperation({ tags: [API_TAG_INTERNAL] })
-  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Header('content-type', 'text/plain')
   @Get('/conversations/:conversationId')
   public async conversationsDetail(
@@ -152,7 +151,7 @@ export class ChatController {
     @Query('userId') userId: string,
     @Param('conversationId') conversationId: string,
   ) {
-    return this.service.getConversationDetail(userId, conversationId);
+    return this.service.getConversationDetail(req.user, userId, conversationId);
   }
 
   @UseGuards(new PolyAuthGuard())

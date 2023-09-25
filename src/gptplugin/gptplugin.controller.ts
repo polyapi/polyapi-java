@@ -61,10 +61,10 @@ export class GptPluginController {
     return 'deleted';
   }
 
-  @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))
+  @UseGuards(PolyAuthGuard)
   @Get('api/conversations/:id')
   public async apiConversationGet(@Req() req: AuthRequest, @Param('id') conversationId: string): Promise<unknown> {
-    return this.chatService.getConversationDetail('', conversationId);
+    return this.chatService.getConversationDetail(req.user, '', conversationId);
   }
 
   @UseGuards(PolyAuthGuard, ChatQuestionsLimitGuard)
@@ -83,7 +83,7 @@ export class GptPluginController {
     return resp;
   }
 
-  @UseGuards(new PolyAuthGuard([Role.Admin, Role.SuperAdmin]))
+  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Delete('api/conversations/:id')
   public async apiConversationDelete(@Req() req: AuthRequest, @Param('id') conversationId: string): Promise<unknown> {
     return this.chatService.deleteConversation(conversationId);
