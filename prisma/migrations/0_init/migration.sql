@@ -1,12 +1,13 @@
 -- CreateTable
 CREATE TABLE "tenant" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT,
-    "public_visibility_allowed" BOOLEAN DEFAULT false,
+    "email" TEXT,
+    "public_visibility_allowed" BOOLEAN NOT NULL DEFAULT false,
     "public_namespace" TEXT,
     "limit_tier_id" TEXT,
-    "email" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "idx_25978_sqlite_autoindex_tenant_1" PRIMARY KEY ("id")
 );
@@ -14,11 +15,11 @@ CREATE TABLE "tenant" (
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT,
-    "tenant_id" TEXT,
-    "role" TEXT DEFAULT 'USER',
-    "vip" BOOLEAN DEFAULT false,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'USER',
+    "vip" BOOLEAN NOT NULL DEFAULT false,
     "email" TEXT,
 
     CONSTRAINT "idx_25843_sqlite_autoindex_user_1" PRIMARY KEY ("id")
@@ -27,9 +28,9 @@ CREATE TABLE "users" (
 -- CreateTable
 CREATE TABLE "team" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT,
-    "tenant_id" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
 
     CONSTRAINT "idx_25858_sqlite_autoindex_team_1" PRIMARY KEY ("id")
 );
@@ -37,9 +38,9 @@ CREATE TABLE "team" (
 -- CreateTable
 CREATE TABLE "team_member" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "team_id" TEXT,
-    "user_id" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "team_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
 
     CONSTRAINT "idx_25883_sqlite_autoindex_team_member_1" PRIMARY KEY ("id")
 );
@@ -47,10 +48,10 @@ CREATE TABLE "team_member" (
 -- CreateTable
 CREATE TABLE "environment" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT,
-    "tenant_id" TEXT,
-    "subdomain" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "subdomain" TEXT NOT NULL,
 
     CONSTRAINT "idx_25933_sqlite_autoindex_environment_1" PRIMARY KEY ("id")
 );
@@ -58,10 +59,10 @@ CREATE TABLE "environment" (
 -- CreateTable
 CREATE TABLE "application" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "tenant_id" TEXT,
-    "name" TEXT,
-    "description" TEXT DEFAULT '',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "tenant_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
 
     CONSTRAINT "idx_25864_sqlite_autoindex_application_1" PRIMARY KEY ("id")
 );
@@ -69,11 +70,11 @@ CREATE TABLE "application" (
 -- CreateTable
 CREATE TABLE "api_key" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT,
-    "environment_id" TEXT,
-    "key" TEXT,
-    "permissions" TEXT DEFAULT '{}',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT NOT NULL,
+    "environment_id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "permissions" TEXT NOT NULL DEFAULT '{}',
     "application_id" TEXT,
     "user_id" TEXT,
 
@@ -83,21 +84,21 @@ CREATE TABLE "api_key" (
 -- CreateTable
 CREATE TABLE "api_function" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "environment_id" TEXT,
-    "name" TEXT,
-    "context" TEXT,
-    "description" TEXT DEFAULT '',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "environment_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "context" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
     "payload" TEXT,
-    "method" TEXT,
-    "url" TEXT,
+    "method" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
     "headers" TEXT,
     "body" TEXT,
     "auth" TEXT,
     "response_type" TEXT,
     "arguments_metadata" TEXT,
-    "trained" BOOLEAN DEFAULT false,
-    "visibility" TEXT DEFAULT 'ENVIRONMENT',
+    "trained" BOOLEAN NOT NULL DEFAULT false,
+    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
     "graphql_identifier" TEXT,
     "introspection_response" TEXT,
 
@@ -107,21 +108,21 @@ CREATE TABLE "api_function" (
 -- CreateTable
 CREATE TABLE "custom_function" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "environment_id" TEXT,
-    "name" TEXT,
-    "context" TEXT,
-    "description" TEXT DEFAULT '',
-    "code" TEXT,
-    "arguments" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "environment_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "context" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
+    "code" TEXT NOT NULL,
+    "arguments" TEXT NOT NULL,
     "return_type" TEXT,
-    "synchronous" BOOLEAN DEFAULT true,
+    "synchronous" BOOLEAN NOT NULL DEFAULT true,
     "requirements" TEXT,
-    "trained" BOOLEAN DEFAULT false,
-    "server_side" BOOLEAN DEFAULT false,
+    "trained" BOOLEAN NOT NULL DEFAULT false,
+    "server_side" BOOLEAN NOT NULL DEFAULT false,
     "api_key" TEXT,
-    "visibility" TEXT DEFAULT 'ENVIRONMENT',
-    "enabled" BOOLEAN DEFAULT true,
+    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "idx_26019_sqlite_autoindex_custom_function_1" PRIMARY KEY ("id")
 );
@@ -129,18 +130,18 @@ CREATE TABLE "custom_function" (
 -- CreateTable
 CREATE TABLE "auth_provider" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "environment_id" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "environment_id" TEXT NOT NULL,
     "name" TEXT,
-    "context" TEXT,
-    "authorize_url" TEXT,
-    "token_url" TEXT,
+    "context" TEXT NOT NULL,
+    "authorize_url" TEXT NOT NULL,
+    "token_url" TEXT NOT NULL,
     "revoke_url" TEXT,
     "introspect_url" TEXT,
-    "audience_required" BOOLEAN DEFAULT false,
-    "refresh_enabled" BOOLEAN DEFAULT false,
-    "trained" BOOLEAN DEFAULT false,
-    "visibility" TEXT DEFAULT 'ENVIRONMENT',
+    "audience_required" BOOLEAN NOT NULL DEFAULT false,
+    "refresh_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "trained" BOOLEAN NOT NULL DEFAULT false,
+    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
 
     CONSTRAINT "idx_25898_sqlite_autoindex_auth_provider_1" PRIMARY KEY ("id")
 );
@@ -148,19 +149,20 @@ CREATE TABLE "auth_provider" (
 -- CreateTable
 CREATE TABLE "webhook_handle" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "environment_id" TEXT,
-    "context" TEXT,
-    "name" TEXT,
-    "event_payload" TEXT,
-    "description" TEXT DEFAULT '',
-    "visibility" TEXT DEFAULT 'ENVIRONMENT',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "environment_id" TEXT NOT NULL,
+    "context" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "event_payload" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
+    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
     "response_headers" TEXT,
     "response_payload" TEXT,
     "response_status" INTEGER,
     "subpath" TEXT,
     "method" TEXT,
     "security_function_ids" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "idx_25908_sqlite_autoindex_webhook_handle_1" PRIMARY KEY ("id")
 );
@@ -168,10 +170,10 @@ CREATE TABLE "webhook_handle" (
 -- CreateTable
 CREATE TABLE "conversation" (
     "id" TEXT NOT NULL,
-    "createdat" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    "createdat" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userid" TEXT,
     "applicationid" TEXT,
-    "workspacefolder" TEXT DEFAULT '',
+    "workspacefolder" TEXT NOT NULL DEFAULT '',
 
     CONSTRAINT "idx_26012_sqlite_autoindex_conversation_1" PRIMARY KEY ("id")
 );
@@ -179,12 +181,12 @@ CREATE TABLE "conversation" (
 -- CreateTable
 CREATE TABLE "conversation_message" (
     "id" TEXT NOT NULL,
-    "createdat" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT DEFAULT '',
-    "role" TEXT,
-    "type" INTEGER DEFAULT 1,
-    "content" TEXT,
-    "conversation_id" TEXT,
+    "createdat" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT NOT NULL DEFAULT '',
+    "role" TEXT NOT NULL,
+    "type" INTEGER NOT NULL DEFAULT 1,
+    "content" TEXT NOT NULL,
+    "conversation_id" TEXT NOT NULL,
 
     CONSTRAINT "idx_26004_sqlite_autoindex_conversation_message_1" PRIMARY KEY ("id")
 );
@@ -192,9 +194,9 @@ CREATE TABLE "conversation_message" (
 -- CreateTable
 CREATE TABLE "system_prompt" (
     "id" TEXT NOT NULL,
-    "createdat" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "environment_id" TEXT,
-    "content" TEXT,
+    "createdat" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "environment_id" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
 
     CONSTRAINT "idx_25877_sqlite_autoindex_system_prompt_1" PRIMARY KEY ("id")
 );
@@ -202,13 +204,13 @@ CREATE TABLE "system_prompt" (
 -- CreateTable
 CREATE TABLE "auth_token" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "auth_provider_id" TEXT,
-    "client_id" TEXT,
-    "client_secret" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "auth_provider_id" TEXT NOT NULL,
+    "client_id" TEXT NOT NULL,
+    "client_secret" TEXT NOT NULL,
     "callback_url" TEXT,
     "audience" TEXT,
-    "scopes" TEXT,
+    "scopes" TEXT NOT NULL,
     "state" TEXT,
     "access_token" TEXT,
     "refresh_token" TEXT,
@@ -221,9 +223,9 @@ CREATE TABLE "auth_token" (
 -- CreateTable
 CREATE TABLE "config_variable" (
     "id" SERIAL NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "name" TEXT,
-    "value" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "name" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
     "tenant_id" TEXT,
     "environment_id" TEXT,
 
@@ -233,17 +235,17 @@ CREATE TABLE "config_variable" (
 -- CreateTable
 CREATE TABLE "gpt_plugin" (
     "id" SERIAL NOT NULL,
-    "slug" TEXT,
-    "name" TEXT,
-    "contactemail" TEXT DEFAULT 'info@polyapi.io',
-    "legalurl" TEXT DEFAULT 'https://polyapi.io/legal',
-    "description_for_marketplace" TEXT DEFAULT '',
-    "description_for_model" TEXT DEFAULT '',
-    "icon_url" TEXT,
-    "functionids" TEXT,
-    "environment_id" TEXT,
-    "auth_type" TEXT DEFAULT 'user_http',
-    "authtoken" TEXT DEFAULT '',
+    "slug" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "contactemail" TEXT NOT NULL DEFAULT 'info@polyapi.io',
+    "legalurl" TEXT NOT NULL DEFAULT 'https://polyapi.io/legal',
+    "description_for_marketplace" TEXT NOT NULL DEFAULT '',
+    "description_for_model" TEXT NOT NULL DEFAULT '',
+    "icon_url" TEXT NOT NULL,
+    "functionids" TEXT NOT NULL,
+    "environment_id" TEXT NOT NULL,
+    "auth_type" TEXT NOT NULL DEFAULT 'user_http',
+    "authtoken" TEXT NOT NULL DEFAULT '',
 
     CONSTRAINT "idx_25946_gpt_plugin_pkey" PRIMARY KEY ("id")
 );
@@ -251,13 +253,13 @@ CREATE TABLE "gpt_plugin" (
 -- CreateTable
 CREATE TABLE "variable" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "environment_id" TEXT,
-    "name" TEXT,
-    "context" TEXT,
-    "description" TEXT DEFAULT '',
-    "visibility" TEXT DEFAULT 'ENVIRONMENT',
-    "secret" BOOLEAN DEFAULT false,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "environment_id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "context" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
+    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
+    "secret" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "idx_25916_sqlite_autoindex_variable_1" PRIMARY KEY ("id")
 );
@@ -265,8 +267,8 @@ CREATE TABLE "variable" (
 -- CreateTable
 CREATE TABLE "migration" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "file_name" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "file_name" TEXT NOT NULL,
 
     CONSTRAINT "idx_25939_sqlite_autoindex_migration_1" PRIMARY KEY ("id")
 );
@@ -274,9 +276,9 @@ CREATE TABLE "migration" (
 -- CreateTable
 CREATE TABLE "docsection" (
     "id" TEXT NOT NULL,
-    "title" TEXT DEFAULT '',
-    "text" TEXT DEFAULT '',
-    "vector" TEXT DEFAULT '',
+    "title" TEXT NOT NULL DEFAULT '',
+    "text" TEXT NOT NULL DEFAULT '',
+    "vector" TEXT NOT NULL DEFAULT '',
 
     CONSTRAINT "idx_25958_sqlite_autoindex_docsection_1" PRIMARY KEY ("id")
 );
@@ -284,7 +286,7 @@ CREATE TABLE "docsection" (
 -- CreateTable
 CREATE TABLE "limit_tier" (
     "id" TEXT NOT NULL,
-    "name" TEXT DEFAULT '',
+    "name" TEXT NOT NULL DEFAULT '',
     "max_functions" INTEGER,
     "chat_questions_per_day" INTEGER,
     "function_calls_per_day" INTEGER,
@@ -299,11 +301,11 @@ CREATE TABLE "limit_tier" (
 -- CreateTable
 CREATE TABLE "statistics" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "type" TEXT,
-    "api_key" TEXT,
-    "tenant_id" TEXT,
-    "environment_id" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "type" TEXT NOT NULL,
+    "api_key" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "environment_id" TEXT NOT NULL,
     "user_id" TEXT,
     "application_id" TEXT,
     "data" TEXT,
@@ -314,11 +316,11 @@ CREATE TABLE "statistics" (
 -- CreateTable
 CREATE TABLE "tenant_sign_up" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "email" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "email" TEXT NOT NULL,
     "name" TEXT,
-    "verification_code" TEXT,
-    "expires_at" TIMESTAMPTZ(6),
+    "verification_code" TEXT NOT NULL,
+    "expires_at" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "idx_25985_sqlite_autoindex_tenant_sign_up_1" PRIMARY KEY ("id")
 );
@@ -326,9 +328,9 @@ CREATE TABLE "tenant_sign_up" (
 -- CreateTable
 CREATE TABLE "tos" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "content" TEXT,
-    "version" TEXT,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "content" TEXT NOT NULL,
+    "version" TEXT NOT NULL,
 
     CONSTRAINT "idx_25991_sqlite_autoindex_tos_1" PRIMARY KEY ("id")
 );
@@ -336,14 +338,31 @@ CREATE TABLE "tos" (
 -- CreateTable
 CREATE TABLE "tenant_agreement" (
     "id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "notes" TEXT,
-    "agreed_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "tenant_id" TEXT,
-    "tos_id" TEXT,
-    "email" TEXT,
+    "agreed_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "tenant_id" TEXT NOT NULL,
+    "tos_id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
 
     CONSTRAINT "idx_25997_sqlite_autoindex_tenant_agreement_1" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "perf_log" (
+    "id" TEXT NOT NULL,
+    "start" TIMESTAMP(3) NOT NULL,
+    "duration" DOUBLE PRECISION NOT NULL,
+    "snippet" TEXT NOT NULL,
+    "input_length" INTEGER NOT NULL,
+    "output_length" INTEGER NOT NULL,
+    "type" INTEGER NOT NULL,
+    "data" TEXT NOT NULL DEFAULT '',
+    "load" INTEGER NOT NULL DEFAULT 0,
+    "application_id" TEXT,
+    "user_id" TEXT,
+
+    CONSTRAINT "perf_log_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -419,10 +438,10 @@ ALTER TABLE "auth_provider" ADD CONSTRAINT "auth_provider_environment_id_fkey" F
 ALTER TABLE "webhook_handle" ADD CONSTRAINT "webhook_handle_environment_id_fkey" FOREIGN KEY ("environment_id") REFERENCES "environment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "conversation" ADD CONSTRAINT "conversation_applicationid_fkey" FOREIGN KEY ("applicationid") REFERENCES "application"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "conversation" ADD CONSTRAINT "conversation_userid_fkey" FOREIGN KEY ("userid") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "conversation" ADD CONSTRAINT "conversation_userid_fkey" FOREIGN KEY ("userid") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "conversation" ADD CONSTRAINT "conversation_applicationid_fkey" FOREIGN KEY ("applicationid") REFERENCES "application"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "conversation_message" ADD CONSTRAINT "conversation_message_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "conversation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -450,4 +469,10 @@ ALTER TABLE "tenant_agreement" ADD CONSTRAINT "tenant_agreement_tenant_id_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "tenant_agreement" ADD CONSTRAINT "tenant_agreement_tos_id_fkey" FOREIGN KEY ("tos_id") REFERENCES "tos"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "perf_log" ADD CONSTRAINT "perf_log_application_id_fkey" FOREIGN KEY ("application_id") REFERENCES "application"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "perf_log" ADD CONSTRAINT "perf_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
