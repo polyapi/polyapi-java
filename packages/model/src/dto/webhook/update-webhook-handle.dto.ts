@@ -21,6 +21,10 @@ export class UpdateWebhookHandleDto {
   @IsEnum(Visibility)
   visibility?: Visibility;
 
+  @IsObject()
+  @IsOptional()
+  eventPayload?: any;
+
   @IsOptional()
   @IsObject()
   responsePayload?: any;

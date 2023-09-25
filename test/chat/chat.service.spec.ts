@@ -3,7 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from 'chat/chat.service';
 import { aiServiceMock, cacheManagerMock } from '../mocks';
 import { AiService } from 'ai/ai.service';
-import { CACHE_MANAGER } from '@nestjs/common';
+import { BadRequestException, CACHE_MANAGER } from '@nestjs/common';
+import { Role } from '@poly/model';
+import { AuthData } from 'common/types';
 
 describe('ChatService', () => {
   const prisma = new PrismaService();
@@ -30,9 +32,83 @@ describe('ChatService', () => {
 
   describe('conversations', () => {
     it('should tell the user when no conversation found', async () => {
-      const user = await prisma.user.findFirstOrThrow();
-      const detail = await service.getConversationDetail(user.id, 'foobar');
+      const user = await prisma.user.findFirstOrThrow({ where: { role: Role.SuperAdmin } });
+
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        user,
+      };
+
+      const detail = await service.getConversationDetail(auth, '', 'foobar27313');
       expect(detail).toBe('Conversation not found.');
+    });
+
+    it('should allow the SuperAdmin to get conversations', async () => {
+      const user = await prisma.user.findFirstOrThrow({ where: { role: Role.SuperAdmin } });
+      const conversation = await prisma.conversation.create({ data: { userId: user.id } });
+      await prisma.conversationMessage.create({
+        data: { conversationId: conversation.id, role: 'user', content: 'I am super' },
+      });
+
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        user,
+      };
+
+      const detail = await service.getConversationDetail(auth, '', conversation.id);
+      expect(detail).toBe('USER\n\nI am super');
+    });
+
+    it('should NOT allow the Admin to get conversations cross-tenant', async () => {
+      const user = await prisma.user.findFirstOrThrow({ where: { role: Role.Admin } });
+
+      // now create a user from another tenant and create a convo for another tenant
+      const otherTenant = await prisma.tenant.findFirstOrThrow({ where: { id: { not: user.tenantId } } });
+      const otherUser = await prisma.user.create({ data: { name: 'TestUser', tenantId: otherTenant.id } });
+
+      const conversation = await prisma.conversation.create({ data: { userId: otherUser.id } });
+
+      await prisma.conversationMessage.create({
+        data: { conversationId: conversation.id, role: 'user', content: 'I am super' },
+      });
+
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        user,
+      };
+
+      const t = async () => {
+        await service.getConversationDetail(auth, '', conversation.id);
+      };
+      await expect(t()).rejects.toThrow(BadRequestException);
+    });
+
+    it('should NOT allow the User to get conversations of another user, even if they are in the same tenant', async () => {
+      const user = await prisma.user.findFirstOrThrow({ where: { role: Role.User } });
+      const otherUser = await prisma.user.create({ data: { name: 'TestUser', tenantId: user.tenantId } });
+      const conversation = await prisma.conversation.create({ data: { userId: otherUser.id } });
+
+      await prisma.conversationMessage.create({
+        data: { conversationId: conversation.id, role: 'user', content: 'I am super' },
+      });
+
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        user,
+      };
+
+      const t = async () => {
+        await service.getConversationDetail(auth, '', conversation.id);
+      };
+      await expect(t()).rejects.toThrow(BadRequestException);
     });
 
     it('should get the list of conversation ids', async () => {
