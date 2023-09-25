@@ -596,7 +596,10 @@ export class FunctionService implements OnModuleInit {
     argumentsMetadata = this.mergeArgumentsMetadata(apiFunction.argumentsMetadata, argumentsMetadata);
 
     const duplicatedArgumentName = this.findDuplicatedArgumentName(
-      this.getFunctionArguments(patchedApiFunction),
+      this.getFunctionArguments({
+        ...patchedApiFunction,
+        argumentsMetadata: JSON.stringify(argumentsMetadata),
+      }),
     );
 
     if (duplicatedArgumentName) {
