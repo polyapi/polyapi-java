@@ -606,7 +606,7 @@ export class FunctionService implements OnModuleInit {
       throw new ConflictException(`Function has duplicated arguments: ${duplicatedArgumentName}`);
     }
 
-    if (patchSourceData.body || patchSourceData.url || patchSourceData.headers) {
+    if (patchSourceData.body || patchSourceData.url || patchSourceData.headers || patchSourceData.auth) {
       // Delete unused arguments metadata if user has patched source data (could've remove some parts of body).
       const functionArguments = this.getFunctionArguments(patchedApiFunction);
 
