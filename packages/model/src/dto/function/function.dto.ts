@@ -1,4 +1,6 @@
-import { ArgumentType, Auth, FormDataBody, PostmanGraphQLBody, UrlEncodedBody, Visibility } from '../..';
+import { Auth  } from '../../auth'
+import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlEncodedBody } from '../../function'
+import { Visibility } from '../../specs'
 
 export type ApiFunctionSource = {
   url: string;

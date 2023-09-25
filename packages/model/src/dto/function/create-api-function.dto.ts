@@ -1,5 +1,6 @@
 import { IntrospectionQuery } from 'graphql';
-import { PostmanBody, Variables, PostmanHeader, Auth, Method } from '../..';
+import { PostmanBody, Variables, PostmanHeader, Method } from '../../function';
+import { Auth } from '../../auth';
 import { IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
 
 import { ContextIdentifier, NameIdentifier } from './../validators';
