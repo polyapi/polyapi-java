@@ -29,32 +29,34 @@ model Tenant {
   limitTier               LimitTier?        @relation(fields: [limitTierId], references: [id])
   agreements              TenantAgreement[]
   users                   User[]
+  enabled                 Boolean           @default(true)
 
   @@map("tenant")
 }
 
 model User {
-  id        String    @id(map: "idx_25843_sqlite_autoindex_user_1") @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id        String     @id(map: "idx_25843_sqlite_autoindex_user_1") @default(uuid())
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   name      String
-  tenantId  String   @map("tenant_id")
-  role      String   @default("USER")
-  vip       Boolean  @default(false)
-  email     String?   @unique(map: "idx_25843_user_email_key")
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "user_tenant_id_fkey")
+  tenantId  String     @map("tenant_id")
+  role      String     @default("USER")
+  vip       Boolean    @default(false)
+  email     String?    @unique(map: "idx_25843_user_email_key")
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "user_tenant_id_fkey")
   conversations        Conversation[]
   apiKeys              ApiKey[]
   teamMembers          TeamMember[]
+  perfLogs             PerfLog[]
 
   @@map("users")
 }
 
 model Team {
   id          String       @id(map: "idx_25858_sqlite_autoindex_team_1") @default(uuid())
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   name        String
-  tenantId    String      @map("tenant_id")
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId    String       @map("tenant_id")
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   teamMembers TeamMember[]
 
   @@map("team")
@@ -63,26 +65,26 @@ model Team {
 model TeamMember {
   id        String    @id(map: "idx_25883_sqlite_autoindex_team_member_1") @default(uuid())
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  teamId    String   @map("team_id")
-  userId    String   @map("user_id")
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String    @map("team_id")
+  userId    String    @map("user_id")
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("team_member")
 }
 
 model Environment {
   id              String           @id(map: "idx_25933_sqlite_autoindex_environment_1") @default(uuid())
-  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   name            String
-  tenantId        String         @map("tenant_id")
-  subdomain       String          @unique(map: "idx_25933_environment_subdomain_key")
+  tenantId        String           @map("tenant_id")
+  subdomain       String           @unique(map: "idx_25933_environment_subdomain_key")
   apiFunctions    ApiFunction[]
   apiKeys         ApiKey[]
   authProviders   AuthProvider[]
   configVariables ConfigVariable[]
   customFunctions CustomFunction[]
-  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
   gptPlugins      GptPlugin[]
   systemPrompts   SystemPrompt[]
   variables       Variable[]
@@ -93,28 +95,29 @@ model Environment {
 
 model Application {
   id          String    @id(map: "idx_25864_sqlite_autoindex_application_1") @default(uuid())
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  tenantId    String   @map("tenant_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenantId    String    @map("tenant_id")
   name        String
-  description String   @default("")
+  description String    @default("")
   apiKeys     ApiKey[]
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  perfLogs    PerfLog[]
 
   @@map("application")
 }
 
 model ApiKey {
   id            String       @id(map: "idx_25851_sqlite_autoindex_api_key_1") @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   name          String
-  environmentId String      @map("environment_id")
-  key           String      @unique(map: "idx_25851_api_key_key_key")
-  permissions   String      @default("{}")
+  environmentId String       @map("environment_id")
+  key           String       @unique(map: "idx_25851_api_key_key_key")
+  permissions   String       @default("{}")
   applicationId String?      @map("application_id")
   userId        String?      @map("user_id")
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environment   Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("api_key")
@@ -122,11 +125,11 @@ model ApiKey {
 
 model ApiFunction {
   id                           String       @id(map: "idx_25889_sqlite_autoindex_api_function_1") @default(uuid())
-  createdAt                    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  environmentId                String      @map("environment_id")
+  createdAt                    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  environmentId                String       @map("environment_id")
   name                         String
   context                      String
-  description                  String      @default("")
+  description                  String       @default("")
   payload                      String?
   method                       String
   url                          String
@@ -135,33 +138,33 @@ model ApiFunction {
   auth                         String?
   responseType                 String?      @map("response_type")
   argumentsMetadata            String?      @map("arguments_metadata")
-  trained                      Boolean     @default(false)
-  visibility                   String      @default("ENVIRONMENT")
+  trained                      Boolean      @default(false)
+  visibility                   String       @default("ENVIRONMENT")
   graphqlIdentifier            String?      @map("graphql_identifier")
   graphqlIntrospectionResponse String?      @map("introspection_response")
-  environment                  Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environment                  Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("api_function")
 }
 
 model CustomFunction {
   id            String       @id(map: "idx_26019_sqlite_autoindex_custom_function_1") @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  environmentId String      @map("environment_id")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  environmentId String       @map("environment_id")
   name          String
   context       String
-  description   String      @default("")
+  description   String       @default("")
   code          String
   arguments     String
   returnType    String?      @map("return_type")
-  synchronous   Boolean     @default(true)
+  synchronous   Boolean      @default(true)
   requirements  String?      @map("requirements")
-  trained       Boolean     @default(false)
-  serverSide    Boolean     @default(false) @map("server_side")
-  visibility    String     @default("ENVIRONMENT")
+  trained       Boolean      @default(false)
+  serverSide    Boolean      @default(false) @map("server_side")
   apiKey        String?      @map("api_key")
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
-  enabled       Boolean     @default(true)
+  visibility    String       @default("ENVIRONMENT")
+  enabled       Boolean      @default(true)
+  environment   Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("custom_function")
 }
@@ -195,25 +198,25 @@ model WebhookHandle {
   eventPayload        String      @map("event_payload")
   description         String      @default("")
   visibility          String      @default("ENVIRONMENT")
-  responsePayload     String?     @map("response_payload")
   responseHeaders     String?     @map("response_headers")
+  responsePayload     String?     @map("response_payload")
   responseStatus      Int?        @map("response_status")
   subpath             String?     @map("subpath")
   method              String?
-  environment         Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   securityFunctionIds String?     @map("security_function_ids")
-
+  enabled             Boolean     @default(true)
+  environment         Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   @@map("webhook_handle")
 }
 
 model Conversation {
-  id              String              @id(map: "idx_26012_sqlite_autoindex_conversation_1") @default(uuid())
-  createdAt       DateTime            @default(now()) @db.Timestamptz(6) @map("createdat")
-  user            User?               @relation(fields: [userId], references: [id])
-  userId          String?             @map("userid")
-  application     Application?        @relation(fields: [applicationId], references: [id])
-  applicationId   String?             @map("applicationid")
-  workspaceFolder String              @default("") @map("workspacefolder")
+  id              String               @id(map: "idx_26012_sqlite_autoindex_conversation_1") @default(uuid())
+  createdAt       DateTime             @default(now()) @db.Timestamptz(6) @map("createdat")
+  user            User?                @relation(fields: [userId], references: [id])
+  userId          String?              @map("userid")
+  application     Application?         @relation(fields: [applicationId], references: [id])
+  applicationId   String?              @map("applicationid")
+  workspaceFolder String               @default("") @map("workspacefolder")
   messages        ConversationMessage[]
 
 
@@ -235,7 +238,7 @@ model ConversationMessage {
 
 model SystemPrompt {
   id            String      @id(map: "idx_25877_sqlite_autoindex_system_prompt_1") @default(uuid())
-  createdAt     DateTime    @default(now()) @db.Timestamptz(6) @map("createdat")
+  createdAt     DateTime    @default(now()) @map("createdat") @db.Timestamptz(6)
   environmentId String      @map("environment_id")
   content       String
   environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
@@ -245,10 +248,10 @@ model SystemPrompt {
 
 model AuthToken {
   id             String        @id(map: "idx_25871_sqlite_autoindex_auth_token_1") @default(uuid())
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  authProviderId String       @map("auth_provider_id")
-  clientId       String       @map("client_id")
-  clientSecret   String       @map("client_secret")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  authProviderId String        @map("auth_provider_id")
+  clientId       String        @map("client_id")
+  clientSecret   String        @map("client_secret")
   callbackUrl    String?       @map("callback_url")
   audience       String?
   scopes         String
@@ -257,14 +260,14 @@ model AuthToken {
   refreshToken   String?       @map("refresh_token")
   eventsClientId String?       @map("events_client_id")
   userId         String?       @map("user_id")
-  authProvider   AuthProvider @relation(fields: [authProviderId], references: [id], onDelete: Cascade)
+  authProvider   AuthProvider  @relation(fields: [authProviderId], references: [id], onDelete: Cascade)
 
   @@map("auth_token")
 }
 
 model ConfigVariable {
   id            Int          @id(map: "idx_25926_config_variable_pkey") @default(autoincrement())
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   name          String
   value         String
   tenantId      String?      @map("tenant_id")
@@ -296,31 +299,31 @@ model GptPlugin {
 
 model Variable {
   id            String       @id(map: "idx_25916_sqlite_autoindex_variable_1") @default(uuid())
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  environmentId String      @map("environment_id")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  environmentId String       @map("environment_id")
   name          String
   context       String
-  description   String      @default("")
-  visibility    String      @default("ENVIRONMENT")
-  secret        Boolean     @default(false)
-  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  description   String       @default("")
+  visibility    String       @default("ENVIRONMENT")
+  secret        Boolean      @default(false)
+  environment   Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@map("variable")
 }
 
 model Migration {
   id        String    @id(map: "idx_25939_sqlite_autoindex_migration_1") @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  fileName  String   @map("file_name")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  fileName  String    @map("file_name")
 
   @@map("migration")
 }
 
 model DocSection {
   id     String  @id(map: "idx_25958_sqlite_autoindex_docsection_1") @default(uuid())
-  title  String @default("")
-  text   String @default("")
-  vector String @default("")
+  title  String  @default("")
+  text   String  @default("")
+  vector String  @default("")
 
   @@map("docsection")
 }
@@ -342,11 +345,11 @@ model LimitTier {
 
 model Statistics {
   id            String    @id(map: "idx_25966_sqlite_autoindex_statistics_1") @default(uuid())
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   type          String
-  apiKey        String   @map("api_key")
-  tenantId      String   @map("tenant_id")
-  environmentId String   @map("environment_id")
+  apiKey        String    @map("api_key")
+  tenantId      String    @map("tenant_id")
+  environmentId String    @map("environment_id")
   userId        String?   @map("user_id")
   applicationId String?   @map("application_id")
   data          String?
@@ -356,20 +359,20 @@ model Statistics {
 
 model TenantSignUp {
   id               String    @id(map: "idx_25985_sqlite_autoindex_tenant_sign_up_1") @default(uuid())
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  email            String   @unique(map: "idx_25985_tenant_sign_up_email_key")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  email            String    @unique(map: "idx_25985_tenant_sign_up_email_key")
   name             String?
-  verificationCode String   @unique(map: "idx_25985_tenant_sign_up_verification_code_key") @map("verification_code")
-  expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
+  verificationCode String    @unique(map: "idx_25985_tenant_sign_up_verification_code_key") @map("verification_code")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
 
   @@map("tenant_sign_up")
 }
 
 model Tos {
   id         String            @id(map: "idx_25991_sqlite_autoindex_tos_1") @default(uuid())
-  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   content    String
-  version    String           @unique(map: "idx_25991_tos_version_key")
+  version    String            @unique(map: "idx_25991_tos_version_key")
   agreements TenantAgreement[]
 
   @@map("tos")
@@ -377,14 +380,34 @@ model Tos {
 
 model TenantAgreement {
   id        String    @id(map: "idx_25997_sqlite_autoindex_tenant_agreement_1") @default(uuid())
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   notes     String?
-  agreedAt  DateTime @default(now()) @map("agreed_at") @db.Timestamptz(6)
-  tenantId  String   @map("tenant_id")
-  tosId     String   @map("tos_id")
+  agreedAt  DateTime  @default(now()) @map("agreed_at") @db.Timestamptz(6)
+  tenantId  String    @map("tenant_id")
+  tosId     String    @map("tos_id")
   email     String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tos       Tos      @relation(fields: [tosId], references: [id], onDelete: Cascade)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tos       Tos       @relation(fields: [tosId], references: [id], onDelete: Cascade)
 
   @@map("tenant_agreement")
+}
+
+
+model PerfLog {
+  // log performance of specific requests (and other things) in our app
+  id            String @id @default(uuid())
+  start         DateTime
+  duration      Float  // in seconds
+  snippet       String   // human readable snippet about this logline
+  input_length  Int  // how long was the input in characters?
+  output_length Int   // how long was output in characters?
+  type          Int   // see PerfLogType
+  data          String @default("")  // more granular JSON data like how did each stage perform?
+  load          Int @default(0)  // what is the load on the system? always 0 for now
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String?      @map("application_id")
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?      @map("user_id")
+
+  @@map("perf_log")
 }
