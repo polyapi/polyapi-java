@@ -7,6 +7,7 @@ CREATE TABLE "tenant" (
     "public_visibility_allowed" BOOLEAN NOT NULL DEFAULT false,
     "public_namespace" TEXT,
     "limit_tier_id" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "idx_25978_sqlite_autoindex_tenant_1" PRIMARY KEY ("id")
 );
@@ -119,8 +120,8 @@ CREATE TABLE "custom_function" (
     "requirements" TEXT,
     "trained" BOOLEAN NOT NULL DEFAULT false,
     "server_side" BOOLEAN NOT NULL DEFAULT false,
-    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
     "api_key" TEXT,
+    "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
     "enabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "idx_26019_sqlite_autoindex_custom_function_1" PRIMARY KEY ("id")
@@ -155,12 +156,13 @@ CREATE TABLE "webhook_handle" (
     "event_payload" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
     "visibility" TEXT NOT NULL DEFAULT 'ENVIRONMENT',
-    "response_payload" TEXT,
     "response_headers" TEXT,
+    "response_payload" TEXT,
     "response_status" INTEGER,
     "subpath" TEXT,
     "method" TEXT,
     "security_function_ids" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "idx_25908_sqlite_autoindex_webhook_handle_1" PRIMARY KEY ("id")
 );
@@ -346,6 +348,23 @@ CREATE TABLE "tenant_agreement" (
     CONSTRAINT "idx_25997_sqlite_autoindex_tenant_agreement_1" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "perf_log" (
+    "id" TEXT NOT NULL,
+    "start" TIMESTAMP(3) NOT NULL,
+    "duration" DOUBLE PRECISION NOT NULL,
+    "snippet" TEXT NOT NULL,
+    "input_length" INTEGER NOT NULL,
+    "output_length" INTEGER NOT NULL,
+    "type" INTEGER NOT NULL,
+    "data" TEXT NOT NULL DEFAULT '',
+    "load" INTEGER NOT NULL DEFAULT 0,
+    "application_id" TEXT,
+    "user_id" TEXT,
+
+    CONSTRAINT "perf_log_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "idx_25978_tenant_name_key" ON "tenant"("name");
 
@@ -450,4 +469,10 @@ ALTER TABLE "tenant_agreement" ADD CONSTRAINT "tenant_agreement_tenant_id_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "tenant_agreement" ADD CONSTRAINT "tenant_agreement_tos_id_fkey" FOREIGN KEY ("tos_id") REFERENCES "tos"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "perf_log" ADD CONSTRAINT "perf_log_application_id_fkey" FOREIGN KEY ("application_id") REFERENCES "application"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "perf_log" ADD CONSTRAINT "perf_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
