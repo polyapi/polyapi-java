@@ -507,11 +507,21 @@ export class FunctionController {
       return;
     }
 
-    if (source?.auth?.type === 'apiKey') {
-      const inKey = source.auth.apiKey.find((entry) => entry.key === 'in');
+    if (source?.auth?.type === 'apikey') {
+      const inKey = source.auth.apikey.find((entry) => entry.key === 'in');
+      const keyName = source.auth.apikey.find((entry) => entry.key === 'key');
+      const keyValue = source.auth.apikey.find((entry) => entry.key === 'value');
 
       if (!inKey) {
         throw new BadRequestException('You must provide a key "in" in your apiKey auth type.');
+      }
+
+      if (!keyName) {
+        throw new BadRequestException('You must provide a key "key" in your apiKey auth type.');
+      }
+
+      if (!keyValue) {
+        throw new BadRequestException('You must provide a key "value" in your apiKey auth type.');
       }
 
       if (!['header', 'query'].includes(inKey.value)) {

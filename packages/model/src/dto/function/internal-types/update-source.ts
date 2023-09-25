@@ -63,8 +63,8 @@ class FormDataBody extends Body {
   
 export class UpdateAuth {
     @IsString()
-    @IsIn(['basic', 'bearer', 'apiKey'])
-    type: 'basic' | 'bearer' | 'apiKey'
+    @IsIn(['basic', 'bearer', 'apikey'])
+    type: 'basic' | 'bearer' | 'apikey'
   }
 
 class BasicAuthEntries {
@@ -92,14 +92,14 @@ class BasicAuth extends UpdateAuth {
 
 class ApiKeyAuth extends UpdateAuth{
     @IsString()
-    type: 'apiKey';
+    type: 'apikey';
 
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => UpdateSourceEntry)
     @ArrayUnique(o => o.key)
-    @ArrayMinSize(2)
-    apiKey: UpdateSourceEntry[]
+    @ArrayMinSize(3)
+    apikey: UpdateSourceEntry[]
   }
 
 class BearerAuth extends UpdateAuth {
@@ -141,7 +141,7 @@ export class UpdateSourceFunctionDto {
                 name: 'bearer'
             }, {
                 value: ApiKeyAuth,
-                name: 'apiKey'
+                name: 'apikey'
             }]
         }
     })
