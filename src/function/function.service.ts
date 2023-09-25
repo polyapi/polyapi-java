@@ -755,7 +755,6 @@ export class FunctionService implements OnModuleInit {
           mode: 'raw',
           raw: source.body.raw,
         };
-        // process and Validate raw.
       } else {
         if (source.body.mode === 'urlencoded') {
           if (currentBody.mode !== 'urlencoded') {
