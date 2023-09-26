@@ -39,6 +39,7 @@ export class UpdateApiFunctionDto {
   @ValidateNested()
   @Type(() => UpdateSourceFunctionDto)
   source?: UpdateSourceFunctionDto;
+
   @IsOptional()
   @IsBoolean()
   enableRedirect: boolean | undefined;
