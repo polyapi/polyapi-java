@@ -30,4 +30,6 @@ export interface FaasService {
     limits: ServerFunctionLimits
   ) => Promise<void>;
   deleteFunction: (id: string, tenantId: string, environmentId: string) => Promise<void>;
+
+  getFunctionName(id: string): string;
 }

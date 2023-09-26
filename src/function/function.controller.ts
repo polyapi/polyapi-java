@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Headers,
   HttpException,
   HttpStatus,
@@ -332,6 +333,7 @@ export class FunctionController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/prebuilt-base-image')
+  @Header('Content-Type', 'text/plain')
   async createOrUpdatePrebuiltBaseImage(@Req() req: AuthRequest) {
     return this.service.createOrUpdatePrebuiltBaseImage(req.user);
   }

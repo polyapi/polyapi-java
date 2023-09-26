@@ -223,7 +223,7 @@ export class KNativeFaasService implements FaasService {
     return `${relative ? '' : `${this.config.faasFunctionsBasePath}/`}${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
   }
 
-  private getFunctionName(id: string) {
+  public getFunctionName(id: string) {
     return `function-${id}`;
   }
 

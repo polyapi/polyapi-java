@@ -1379,7 +1379,7 @@ export class FunctionService implements OnModuleInit {
       true,
     );
 
-    return this.customFunctionToDetailsDto(customFunction);
+    return this.faasService.getFunctionName(customFunction.id);
   }
 
   private filterDisabledValues<T extends PostmanVariableEntry>(values: T[]) {
