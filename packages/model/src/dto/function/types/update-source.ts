@@ -1,11 +1,11 @@
 import { IsString, IsIn, ValidateIf, IsOptional, ValidateNested, IsArray, ArrayMaxSize, arrayMinSize, ArrayMinSize, ArrayUnique, IsObject, ArrayContains } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Record } from '../../validators';
-import { HTTP_METHODS  } from '../../utils'
+import { HTTP_METHODS } from '../../utils';
 import { ApiModelProperty } from '@nestjs/swagger/dist/decorators/api-model-property.decorator';
-import { ApiExtraModels, ApiProperty, getSchemaPath,  } from '@nestjs/swagger'
+import { ApiExtraModels, ApiProperty, getSchemaPath } from '@nestjs/swagger';
 
-class UpdateSourceEntry { 
+class UpdateSourceEntry {
     @ApiModelProperty()
     @IsString()
     key: string;
@@ -18,93 +18,92 @@ class UpdateSourceEntry {
 export class UpdateSourceNullableEntry {
     @IsString()
     key: string;
-  
+
     @ValidateIf((object, value) => value !== null)
     @IsString()
     value: string | null;
-  }
-  
+}
+
 class Body {
     @ApiModelProperty({
-      name: "mode"
+      name: 'mode',
     })
     @IsString()
     @IsIn(['urlencoded', 'formdata', 'raw', 'empty'])
     mode: 'urlencoded' | 'formdata' | 'raw' | 'empty';
-  }
-  
+}
+
 class EmptyBody extends Body {
     @ApiModelProperty({
-      enum: ["empty"]
+      enum: ['empty'],
     })
     @IsString()
     mode: 'empty';
-  }
-  
+}
+
 class RawBody extends Body {
     @IsString()
     @ApiModelProperty({
-      enum: ["raw"]
+      enum: ['raw'],
     })
     mode: 'raw';
-  
+
     @IsString()
     @ApiModelProperty()
     raw: string;
-  }
-  
+}
+
 class UrlEncodedBody extends Body {
     @IsString()
     @ApiModelProperty({
-      enum: ["urlencoded"]
+      enum: ['urlencoded'],
     })
     mode: 'urlencoded';
 
     @ApiProperty({
-      type: "object",
+      type: 'object',
       additionalProperties: {
-        type: "string",
-        nullable: true
-      }
+        type: 'string',
+        nullable: true,
+      },
     })
     @Record({
       nullable: true,
       type: 'string',
     })
     urlencoded: Record<string, string | null>;
-  }
-  
+}
+
 class FormDataBody extends Body {
     @IsString()
     @ApiModelProperty({
-      enum: ["formdata"]
+      enum: ['formdata'],
     })
     mode: 'formdata';
-    
+
     @ApiProperty({
-      type: "object",
+      type: 'object',
       additionalProperties: {
-        type: "string",
-        nullable: true
-      }
+        type: 'string',
+        nullable: true,
+      },
     })
     @Record({
       nullable: true,
       type: 'string',
     })
     formdata: Record<string, string | null>;
-  }
-  
+}
+
 export class UpdateAuth {
     @IsString()
     @IsIn(['basic', 'bearer', 'apikey', 'noauth'])
-    type: 'basic' | 'bearer' | 'apikey' | 'noauth'
-  }
+    type: 'basic' | 'bearer' | 'apikey' | 'noauth';
+}
 
 class BasicAuthEntries {
-    
     @ApiModelProperty({
-      enum: ["username", "password"]
+      enum: ['username', 'password'],
     })
     @IsString()
     @IsIn(['username', 'password'])
@@ -117,19 +116,19 @@ class BasicAuthEntries {
 
 class BasicAuth extends UpdateAuth {
     @ApiModelProperty({
-      enum: ["basic"]
+      enum: ['basic'],
     })
     @IsString()
     type: 'basic';
 
     @ApiProperty({
-      type: "array",
+      type: 'array',
       items: {
-        $ref: getSchemaPath(BasicAuthEntries)
+        $ref: getSchemaPath(BasicAuthEntries),
       },
       uniqueItems: true,
       minimum: 2,
-      maximum: 2
+      maximum: 2,
     })
     @IsArray()
     @ValidateNested({ each: true })
@@ -137,20 +136,20 @@ class BasicAuth extends UpdateAuth {
     @ArrayMinSize(2)
     @Type(() => BasicAuthEntries)
     @ArrayUnique(o => o.key)
-    basic: BasicAuthEntries[]
+    basic: BasicAuthEntries[];
 }
 
-class ApiKeyAuth extends UpdateAuth{
+class ApiKeyAuth extends UpdateAuth {
     @ApiModelProperty({
-      enum: ["apikey"]
+      enum: ['apikey'],
     })
     @IsString()
     type: 'apikey';
-    
+
     @ApiProperty({
-      type: "array",
+      type: 'array',
       items: {
-        $ref: getSchemaPath(UpdateSourceEntry)
+        $ref: getSchemaPath(UpdateSourceEntry),
       },
       uniqueItems: true,
       minimum: 3,
@@ -160,16 +159,16 @@ class ApiKeyAuth extends UpdateAuth{
     @Type(() => UpdateSourceEntry)
     @ArrayUnique(o => o.key)
     @ArrayMinSize(3)
-    apikey: UpdateSourceEntry[]
-  }
+    apikey: UpdateSourceEntry[];
+}
 
 class BearerAuth extends UpdateAuth {
     @ApiModelProperty({
-      enum: ["bearer"]
+      enum: ['bearer'],
     })
     @IsString()
-    type: 'bearer'
-    
+    type: 'bearer';
+
     @ApiModelProperty()
     @IsString()
     bearer: string;
@@ -177,44 +176,44 @@ class BearerAuth extends UpdateAuth {
 
 class NoAuth extends UpdateAuth {
   @ApiModelProperty({
-    enum: ["noauth"]
+    enum: ['noauth'],
   })
   @IsString()
   type: 'noauth';
 }
 
-@ApiExtraModels(UrlEncodedBody, FormDataBody, RawBody, EmptyBody, BasicAuth,  BearerAuth,  ApiKeyAuth,  NoAuth, BasicAuthEntries, UpdateSourceEntry)
+@ApiExtraModels(UrlEncodedBody, FormDataBody, RawBody, EmptyBody, BasicAuth, BearerAuth, ApiKeyAuth, NoAuth, BasicAuthEntries, UpdateSourceEntry)
 export class UpdateSourceFunctionDto {
     @ApiModelProperty({
       name: 'url',
-      required: false
+      required: false,
     })
     @IsOptional()
     @IsString()
     url?: string;
-    
+
     @ApiModelProperty({
       name: 'method',
       enum: HTTP_METHODS,
-      required: false
+      required: false,
     })
     @IsOptional()
     @IsIn(HTTP_METHODS)
     method?: string;
-    
+
     @ApiModelProperty({
       name: 'headers',
-      description: "Set headers values through strings. Provide `null` to remove a header.",
-      type: "object",
+      description: 'Set headers values through strings. Provide `null` to remove a header.',
+      type: 'object',
       additionalProperties: {
-        type: "string",
-        nullable: true
+        type: 'string',
+        nullable: true,
       },
       example: {
-        "X-My-Custom-Header": null,
-        "X-Page": "{{page}}"
+        'X-My-Custom-Header': null,
+        'X-Page': '{{page}}',
       },
-      required: false
+      required: false,
     })
     @IsOptional()
     @Record({
@@ -222,60 +221,66 @@ export class UpdateSourceFunctionDto {
       type: 'string',
     })
     headers?: Record<string, string | null>;
-    
+
     @ApiModelProperty({
-      name: "auth",
+      name: 'auth',
       required: false,
-      oneOf: [{
-        $ref: getSchemaPath(BasicAuth)
-      }, {
-        $ref: getSchemaPath(BearerAuth)
-      },
-      {
-        $ref: getSchemaPath(ApiKeyAuth)
-      },
-      {
-        $ref: getSchemaPath(NoAuth)
-      }],
+      oneOf: [
+        {
+          $ref: getSchemaPath(BasicAuth),
+        }, {
+          $ref: getSchemaPath(BearerAuth),
+        },
+        {
+          $ref: getSchemaPath(ApiKeyAuth),
+        },
+        {
+          $ref: getSchemaPath(NoAuth),
+        },
+      ],
     })
     @IsObject()
     @IsOptional()
     @ValidateNested()
     @Type(() => UpdateAuth, {
-        keepDiscriminatorProperty: true,
-        discriminator: {
-            property: 'type',
-            subTypes: [{
-                value: BasicAuth,
-                name: 'basic'
-            },{
-                value: BearerAuth,
-                name: 'bearer'
-            }, {
-                value: ApiKeyAuth,
-                name: 'apikey'
-            }, {
-              value: NoAuth,
-              name: 'noauth'
-            }]
-        }
+      keepDiscriminatorProperty: true,
+      discriminator: {
+        property: 'type',
+        subTypes: [
+          {
+            value: BasicAuth,
+            name: 'basic',
+          }, {
+            value: BearerAuth,
+            name: 'bearer',
+          }, {
+            value: ApiKeyAuth,
+            name: 'apikey',
+          }, {
+            value: NoAuth,
+            name: 'noauth',
+          },
+        ],
+      },
     })
     auth?: BasicAuth | BearerAuth | ApiKeyAuth | NoAuth;
-    
+
     @ApiModelProperty({
-      name: "body",
+      name: 'body',
       required: false,
-      oneOf: [{
-        $ref: getSchemaPath(UrlEncodedBody)
-      }, {
-        $ref: getSchemaPath(FormDataBody)
-      },
-      {
-        $ref: getSchemaPath(RawBody)
-      },
-      {
-        $ref: getSchemaPath(EmptyBody)
-      }],
+      oneOf: [
+        {
+          $ref: getSchemaPath(UrlEncodedBody),
+        }, {
+          $ref: getSchemaPath(FormDataBody),
+        },
+        {
+          $ref: getSchemaPath(RawBody),
+        },
+        {
+          $ref: getSchemaPath(EmptyBody),
+        },
+      ],
     })
     @IsObject()
     @IsOptional()
@@ -305,4 +310,4 @@ export class UpdateSourceFunctionDto {
       },
     })
     body?: UrlEncodedBody | FormDataBody | RawBody | EmptyBody;
-  }
+}

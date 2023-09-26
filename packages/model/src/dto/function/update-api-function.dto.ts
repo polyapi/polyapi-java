@@ -5,7 +5,7 @@ import { ContextIdentifier, NameIdentifier } from '../validators';
 import { Visibility } from '../../specs';
 
 import {
-  UpdateSourceFunctionDto
+  UpdateSourceFunctionDto,
 } from './types/update-source';
 import { ApiModelProperty } from '@nestjs/swagger/dist/decorators/api-model-property.decorator';
 
@@ -32,7 +32,7 @@ export class UpdateApiFunctionDto {
   visibility?: Visibility;
 
   @ApiModelProperty({
-    type: () => UpdateSourceFunctionDto
+    type: () => UpdateSourceFunctionDto,
   })
   @IsOptional()
   @IsObject()

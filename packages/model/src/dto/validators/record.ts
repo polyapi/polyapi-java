@@ -10,11 +10,10 @@ export type RecordValidationOpts = {
 
 @ValidatorConstraint({
   name: 'Record',
-  async: false
+  async: false,
 })
 class RecordConstraint implements ValidatorConstraintInterface {
   validate(value: any, validationArguments: ValidationArguments) {
-
     const [opts] = (validationArguments.constraints) as RecordValidationOpts[];
 
     if (!isPlainObject(value)) {
@@ -33,16 +32,17 @@ class RecordConstraint implements ValidatorConstraintInterface {
       return false;
     });
   }
+
   defaultMessage(validationArguments?: ValidationArguments): string {
+    const [
+      {
+        type,
+      },
+    ] = validationArguments?.constraints as RecordValidationOpts[];
 
-    const [{
-      type
-    }] = validationArguments?.constraints as RecordValidationOpts[];
-
-      return `$property must be a Record whose values should be of type ${type}`;
+    return `$property must be a Record whose values should be of type ${type}`;
   }
 }
-
 
 /**
  * Intended to validate Records on JSON structures, for that reason you only have to provide value type and not index type
@@ -59,7 +59,7 @@ export const Record = (opts: RecordValidationOpts = {
       propertyName,
       options: validationOptions,
       constraints: [opts],
-      validator: RecordConstraint
+      validator: RecordConstraint,
     });
   };
 };
