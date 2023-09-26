@@ -143,6 +143,7 @@ model ApiFunction {
   graphqlIdentifier            String?      @map("graphql_identifier")
   graphqlIntrospectionResponse String?      @map("introspection_response")
   environment                  Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  enableRedirect               Boolean      @default(false) @map("enable_redirect")
 
   @@map("api_function")
 }

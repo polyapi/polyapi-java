@@ -40,25 +40,28 @@ def func_path(func: SpecificationDto) -> str:
 def _process_schema_property(property: Dict) -> str:
     property_type = property.get("type", "")
     if property_type == "string":
-        return "string"
+        rv = "string,"
     elif property_type == "number":
-        return "number"
+        rv = "number,"
     elif property_type == "integer":
-        return "integer"
+        rv = "integer,"
     elif property_type == "boolean":
-        return "boolean"
+        rv = "boolean,"
     elif property_type == "null":
-        return "null"
+        rv = "null,"
     elif property_type == "array":
         child = _process_schema_property(property['items'])
-        return f"[{child}]"
+        rv = f"[{child}],"
     elif property_type == "object":
         sub_props = []
         for key, val in property["properties"].items():
             sub_props.append(f"{key}: {_process_schema_property(val)}")
-        return "{\n%s\n}" % ",\n".join(sub_props)
+        rv = "{\n%s\n}," % "\n".join(sub_props)
     else:
-        return ""
+        rv = ""
+    if property.get("description"):
+        rv += f"  // {property['description']}\n"
+    return rv
 
 
 def _process_property_spec(arg: PropertySpecification) -> str:
@@ -83,6 +86,7 @@ def _process_property_spec(arg: PropertySpecification) -> str:
         elif arg_type.get("schema"):
             schema = jsonref.loads(json.dumps(arg_type['schema']))
             sub_props = _process_schema_property(schema)
+            sub_props = sub_props.rstrip(",")
             rv = f"{arg['name']}: {sub_props}"
         else:
             log(f"WARNING: object with no properties in args - {arg}")

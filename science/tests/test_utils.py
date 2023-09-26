@@ -7,6 +7,7 @@ from load_fixtures import (
     united_get_status_get_or_create,
 )
 from app.utils import (
+    _process_property_spec,
     _process_schema_property,
     camel_case,
     create_new_conversation,
@@ -80,7 +81,7 @@ REF_FUNC = {
                     "properties": [
                         {
                             "name": "costTotal",
-                            "description": "",
+                            "description": "I am total cost",
                             "required": True,
                             "type": {"kind": "primitive", "type": "number"},
                         },
@@ -243,6 +244,329 @@ JSONREF_PROPERTY = {
     },
 }
 
+OPTORO = {
+    "name": "returnsPortalOrder",
+    "description": "JSON object for creating the portal return order",
+    "required": True,
+    "type": {
+        "kind": "object",
+        "schema": {
+            "$schema": "http://json-schema.org/draft-06/schema#",
+            "definitions": {
+                "ReturnsPortalOrder": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "orders": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Order"
+                            },
+                            "description": "Array containing the orders details."
+                        }
+                    },
+                    "required": [
+                        "orders"
+                    ],
+                    "title": "ReturnsPortalOrder"
+                },
+                "Order": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "identifier": {
+                            "type": "string",
+                            "description": "Identifier is the order identifier used by the clients internal ecomm systems."
+                        },
+                        "raw_status": {
+                            "type": "string",
+                            "description": "The raw status of the order."
+                        },
+                        "status": {
+                            "type": "string",
+                            "description": "Status can be sent as Created, Shipped, or Cancelled."
+                        },
+                        "total_amount_cents": {
+                            "type": "integer",
+                            "description": "Total_amount_cents is the sum of the header level total_amount_cents and product_amount_cents."
+                        },
+                        "product_amount_cents": {
+                            "type": "integer",
+                            "description": "Product_amount_cents at the header level is the sum of the product_amount_cents for each line."
+                        },
+                        "tax_amount_cents": {
+                            "type": "integer",
+                            "description": "Tax_amount_cents at the header level is the sum of the tax_amount_cents for each line."
+                        },
+                        "discount_amount_cents": {
+                            "type": "integer"
+                        },
+                        "shipping_amount_cents": {
+                            "type": "integer"
+                        },
+                        "shipping_tax_amount_cents": {
+                            "type": "integer"
+                        },
+                        "currency": {
+                            "type": "string"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Created_at should be the time the order was created in the Order Management System."
+                        },
+                        "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Item"
+                            },
+                            "description": "Array containing the items details."
+                        },
+                        "customer": {
+                            "$ref": "#/definitions/Customer"
+                        },
+                        "shipping_address": {
+                            "$ref": "#/definitions/IngAddress"
+                        },
+                        "billing_address": {
+                            "$ref": "#/definitions/IngAddress"
+                        },
+                        "transactions": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "refunds": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "discounts": {
+                            "type": "array",
+                            "items": {}
+                        }
+                    },
+                    "required": [
+                        "billing_address",
+                        "created_at",
+                        "currency",
+                        "customer",
+                        "discount_amount_cents",
+                        "discounts",
+                        "identifier",
+                        "items",
+                        "product_amount_cents",
+                        "raw_status",
+                        "refunds",
+                        "shipping_address",
+                        "shipping_amount_cents",
+                        "shipping_tax_amount_cents",
+                        "status",
+                        "tags",
+                        "tax_amount_cents",
+                        "total_amount_cents",
+                        "transactions",
+                        "updated_at"
+                    ],
+                    "title": "Order"
+                },
+                "IngAddress": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "street1": {
+                            "type": "string"
+                        },
+                        "city": {
+                            "type": "string"
+                        },
+                        "state": {
+                            "type": "string"
+                        },
+                        "zip_code": {
+                            "type": "string",
+                            "format": "integer"
+                        },
+                        "country_code": {
+                            "type": "string"
+                        },
+                        "phone": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "city",
+                        "country_code",
+                        "name",
+                        "phone",
+                        "state",
+                        "street1",
+                        "zip_code"
+                    ],
+                    "title": "IngAddress"
+                },
+                "Customer": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "identifier": {
+                            "type": "string",
+                            "format": "integer",
+                            "description": "If there is no customer identifier it is recommended to send the customers email as the identifier."
+                        },
+                        "first_name": {
+                            "type": "string"
+                        },
+                        "last_name": {
+                            "type": "string"
+                        },
+                        "email": {
+                            "type": "string"
+                        },
+                        "phone": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "email",
+                        "first_name",
+                        "identifier",
+                        "last_name",
+                        "phone"
+                    ],
+                    "title": "Customer"
+                },
+                "Item": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "identifier": {
+                            "type": "string",
+                            "format": "integer",
+                            "description": "Identifier is the forward order lines identifier."
+                        },
+                        "sku": {
+                            "type": "string"
+                        },
+                        "upc": {
+                            "type": "string",
+                            "format": "integer"
+                        },
+                        "quantity": {
+                            "type": "integer",
+                            "description": "The quantity is the total quantity on the order-line."
+                        },
+                        "quantity_shipped": {
+                            "type": "integer",
+                            "description": "The quantity_shipped is the total quantity of shipped units on the order-line. This scenario is a full shipment and refund so the quantity_shipped is equal to the quantity."
+                        },
+                        "quantity_canceled": {
+                            "type": "integer",
+                            "description": "The quantity_canceled is the total quantity of cancelled units on the order-line. This scenario is a full shipment and refund so the quantity_canceled is 0."
+                        },
+                        "tracking_number": {
+                            "type": "string"
+                        },
+                        "shipped_date": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Shipped_date can be used to mark the start of the return window."
+                        },
+                        "product_identifier": {
+                            "type": "string",
+                            "format": "integer",
+                            "description": "Product_identifier is the Client Id unique to that product (ex. same SKU from different vendors). Send SKU if no product_identifier exists."
+                        },
+                        "variant_identifier": {
+                            "type": "string",
+                            "format": "integer",
+                            "description": "Variant_identifier is used to find the skus that should be made available to the customer as part of the even exchange."
+                        },
+                        "title": {
+                            "type": "string"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "product_amount_cents": {
+                            "type": "integer",
+                            "description": "Product_amount_cents is the unit_price_amount_cents multiplied by the quantity_shipped."
+                        },
+                        "tax_amount_cents": {
+                            "type": "integer",
+                            "description": "Tax_amount_cents is the tax, in cents, for all units for the sku in the shipment."
+                        },
+                        "discount_amount_cents": {
+                            "type": "integer"
+                        },
+                        "unit_price_amount_cents": {
+                            "type": "integer",
+                            "description": "Unit_price_amount_cents is the price, in cents, for a single unit of the sku."
+                        },
+                        "image_url": {
+                            "type": "string",
+                            "format": "uri",
+                            "qt-uri-protocols": [
+                                "https"
+                            ],
+                            "qt-uri-extensions": [
+                                ".jpg"
+                            ]
+                        },
+                        "weight": {
+                            "type": "number",
+                            "description": "Weight is needed for determining ER eligibility if catalog is not provided."
+                        }
+                    },
+                    "required": [
+                        "discount_amount_cents",
+                        "identifier",
+                        "image_url",
+                        "product_amount_cents",
+                        "product_identifier",
+                        "quantity",
+                        "quantity_canceled",
+                        "quantity_shipped",
+                        "shipped_date",
+                        "sku",
+                        "tags",
+                        "tax_amount_cents",
+                        "title",
+                        "tracking_number",
+                        "unit_price_amount_cents",
+                        "upc",
+                        "variant_identifier",
+                        "weight"
+                    ],
+                    "title": "Item"
+                }
+            },
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "returns_portal_order": {
+                    "$ref": "#/definitions/ReturnsPortalOrder",
+                    "description": "Contains details of the returns portal order."
+                }
+            },
+            "required": [
+                "returns_portal_order"
+            ],
+            "title": "Argument"
+        }
+    }
+}
+
 
 class T(DbTestCase):
     def test_load_fixtures(self) -> None:
@@ -270,6 +594,13 @@ class T(DbTestCase):
     def test_func_args_ref(self):
         arguments = func_args(REF_FUNC)
         self.assertIn("rateArray", arguments[0])
+
+    def test_process_property_optoro_desc(self):
+        """ nested properties under JSONREF should provide description
+        """
+        property_str = _process_property_spec(OPTORO)
+        self.assertIn("status", property_str)
+        self.assertIn("// Status can be sent", property_str)
 
     def test_process_schema_property(self):
         processed = _process_schema_property(JSONREF_PROPERTY)

@@ -1,4 +1,4 @@
-import { IsString, Validate, IsEnum, IsOptional, ValidateNested, IsObject } from 'class-validator';
+import { IsString, Validate, IsEnum, IsOptional, ValidateNested, IsObject, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ArgumentsMetadata } from '../../function';
 import { ContextIdentifier, NameIdentifier } from '../validators';
@@ -39,4 +39,7 @@ export class UpdateApiFunctionDto {
   @ValidateNested()
   @Type(() => UpdateSourceFunctionDto)
   source?: UpdateSourceFunctionDto;
+  @IsOptional()
+  @IsBoolean()
+  enableRedirect: boolean | undefined;
 }

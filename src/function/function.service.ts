@@ -19,6 +19,8 @@ import { stripComments } from 'jsonc-parser';
 import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
+  ApiFunctionDetailsDto,
+  ApiFunctionPublicDetailsDto,
   ApiFunctionResponseDto,
   ApiFunctionSpecification,
   ArgumentsMetadata,
@@ -222,7 +224,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  apiFunctionToDetailsDto(apiFunction: ApiFunction): FunctionDetailsDto {
+  apiFunctionToDetailsDto(apiFunction: ApiFunction): ApiFunctionDetailsDto {
     const argumentsList = this.getFunctionArguments(apiFunction)
       .map<Omit<FunctionArgument<Record<string, any>>, 'location'>>(arg => ({
         ...omit(arg, 'location'),
@@ -255,6 +257,7 @@ export class FunctionService implements OnModuleInit {
         body: this.getBodySource(parsedBody),
         auth: parsedAuth,
       },
+      enabledRedirect: apiFunction.enableRedirect,
     };
   }
 
@@ -267,7 +270,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  apiFunctionToPublicDetailsDto(apiFunction: WithTenant<ApiFunction> & { hidden: boolean }): FunctionPublicDetailsDto {
+  apiFunctionToPublicDetailsDto(apiFunction: WithTenant<ApiFunction> & { hidden: boolean }): ApiFunctionPublicDetailsDto {
     return {
       ...this.apiFunctionToDetailsDto(apiFunction),
       context: this.commonService.getPublicContext(apiFunction),
@@ -294,6 +297,7 @@ export class FunctionService implements OnModuleInit {
     templateUrl: string,
     templateBody: Body,
     introspectionResponse: IntrospectionQuery | null,
+    enableRedirect: boolean,
     templateAuth?: Auth,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
   ): Promise<ApiFunction> {
@@ -513,6 +517,7 @@ export class FunctionService implements OnModuleInit {
       argumentsMetadata: JSON.stringify(argumentsMetadata),
       graphqlIdentifier,
       graphqlIntrospectionResponse,
+      enableRedirect,
     };
 
     if (apiFunction && updating) {
@@ -551,6 +556,7 @@ export class FunctionService implements OnModuleInit {
     payload: string | undefined,
     visibility: Visibility | null,
     source: UpdateSourceFunctionDto | undefined,
+    enableRedirect: boolean | undefined,
   ) {
     if (name != null || context != null) {
       name = name ? await this.resolveFunctionName(apiFunction.environmentId, name, apiFunction.context, true) : null;
@@ -670,6 +676,7 @@ export class FunctionService implements OnModuleInit {
         responseType,
         payload,
         visibility: visibility == null ? apiFunction.visibility : visibility,
+        enableRedirect,
         ...patchSourceData,
       },
     });
@@ -871,7 +878,7 @@ export class FunctionService implements OnModuleInit {
           headers,
           params,
           data: executionData,
-          maxRedirects: 0,
+          ...(!apiFunction.enableRedirect ? { maxRedirects: 0 } : null),
         })
         .pipe(
           map((response) => {
