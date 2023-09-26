@@ -2104,7 +2104,7 @@ export class FunctionService implements OnModuleInit {
             }
           }
         } else {
-          const [type, typeSchema] = value == null ? ['string'] : await this.resolveArgumentType(value);
+          const [type, typeSchema] = value == null ? ['string'] : await this.resolveArgumentType(this.unpackArgsAndGetValue(value, variables));
 
           assignNewMetadata(arg, type, typeSchema);
         }
@@ -2490,5 +2490,25 @@ export class FunctionService implements OnModuleInit {
         ...updatedArgumentsMetadata[argument.key],
       });
     }, []);
+  }
+
+  /**
+   * Process and unpack nested args for value.
+   */
+  private unpackArgsAndGetValue(value: string, variables: Variables) {
+    const result = mustache.render(value, variables, {}, {
+      escape(text) {
+        return text;
+      },
+    });
+
+    // Get args list.
+    const args = mustache.parse(result).filter((row) => row[0] === 'name');
+
+    if (args.length) {
+      return this.unpackArgsAndGetValue(result, variables);
+    }
+
+    return result;
   }
 }
