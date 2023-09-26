@@ -13,6 +13,8 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { TriggerModule } from 'trigger/trigger.module';
 import { LimitModule } from 'limit/limit.module';
 import { FunctionModule } from 'function/function.module';
+import { EnvironmentModule } from 'environment/environment.module';
+import { StatisticsModule } from 'statistics/statistics.module';
 
 @Module({
   providers: [WebhookService],
@@ -30,6 +32,8 @@ import { FunctionModule } from 'function/function.module';
     forwardRef(() => TriggerModule),
     LimitModule,
     forwardRef(() => FunctionModule),
+    EnvironmentModule,
+    StatisticsModule,
   ],
   exports: [WebhookService],
 })

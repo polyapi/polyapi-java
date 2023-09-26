@@ -1,11 +1,21 @@
 import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
-import { ApiKey, LimitTier, Tenant, TenantAgreement, TenantSignUp, Tos } from '@prisma/client';
+import { LimitTier, Tenant, TenantAgreement, TenantSignUp, Tos } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
 import { UserService } from 'user/user.service';
-import { ConfigVariableName, DefaultTierValue, DefaultTosValue, Role, SignUpDto, SignUpVerificationResultDto, TenantAgreementDto, TenantDto, TenantFullDto } from '@poly/model';
+import {
+  ConfigVariableName,
+  DefaultTierValue,
+  DefaultTosValue,
+  Role,
+  SignUpDto,
+  SignUpVerificationResultDto,
+  TenantAgreementDto,
+  TenantDto,
+  TenantFullDto,
+} from '@poly/model';
 import crypto from 'crypto';
 import { ApplicationService } from 'application/application.service';
 import { AuthService } from 'auth/auth.service';
@@ -67,6 +77,13 @@ export class TenantService implements OnModuleInit {
       publicNamespace: tenant.publicNamespace,
       tierId: tenant.limitTierId,
       enabled: tenant.enabled,
+    };
+  }
+
+  toDtoWithAdminApiKey(tenant: Tenant, apiKey: string): TenantDto & {adminApiKey: string} {
+    return {
+      ...this.toDto(tenant),
+      adminApiKey: apiKey,
     };
   }
 
@@ -146,7 +163,10 @@ export class TenantService implements OnModuleInit {
     limitTierId: string | null = null,
     enabled = true,
     options: CreateTenantOptions = {},
-  ): Promise<{ tenant: Tenant; apiKey: ApiKey }> {
+  ): Promise<{
+    tenant: Tenant;
+    apiKey: string;
+  }> {
     const {
       environmentName,
       teamName,
@@ -211,10 +231,11 @@ export class TenantService implements OnModuleInit {
     });
 
     // create API key for user
-    const apiKey = await tx.apiKey.create({
+    const apiKey = userApiKey || crypto.randomUUID();
+    await tx.apiKey.create({
       data: {
         name: `api-key-${userRole || Role.Admin}`,
-        key: userApiKey || crypto.randomUUID(),
+        key: await this.authService.hashApiKey(apiKey),
         user: {
           connect: {
             id: tenant.users[0].id,
@@ -247,7 +268,7 @@ export class TenantService implements OnModuleInit {
   ) {
     return this.prisma.$transaction(async tx => {
       try {
-        return (await this.createTenantRecord(tx, name, email, publicVisibilityAllowed, publicNamespace, limitTierId, enabled, options)).tenant;
+        return await this.createTenantRecord(tx, name, email, publicVisibilityAllowed, publicNamespace, limitTierId, enabled, options);
       } catch (error) {
         if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
           throw new ConflictException('Tenant with this name already exists');
@@ -418,7 +439,7 @@ export class TenantService implements OnModuleInit {
     }
 
     return this.prisma.$transaction(async tx => {
-      let apiKey: ApiKey | null = null;
+      let apiKey: string | null = null;
       let tenant: Tenant | null = null;
 
       try {
@@ -478,7 +499,7 @@ export class TenantService implements OnModuleInit {
       await this.emailService.sendWelcomeToPolyEmail(tenantSignUp, apiKey, tenant);
 
       return {
-        apiKey: apiKey.key,
+        apiKey,
         apiBaseUrl: this.config.hostUrl,
         tenantId: tenant.id,
       };
@@ -492,7 +513,7 @@ export class TenantService implements OnModuleInit {
   }
 
   async getTenantAgreements(tenantId: string) {
-    const agreements = await this.prisma.tenantAgreement.findMany({
+    return this.prisma.tenantAgreement.findMany({
       where: {
         tenantId,
       },
@@ -505,8 +526,6 @@ export class TenantService implements OnModuleInit {
         },
       ],
     });
-
-    return agreements;
   }
 
   async createTenantAgreement(tenantId: string, tosId: string, email: string, agreedAt?: Date, notes?: string) {

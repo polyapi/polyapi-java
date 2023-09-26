@@ -294,7 +294,7 @@ export class WebhookService {
     }
   }
 
-  async triggerWebhookHandle(webhookHandle: WebhookHandle, eventPayload: any, eventHeaders: Record<string, any>, subpath?: string) {
+  async triggerWebhookHandle(webhookHandle: WebhookHandle, executionEnvironment: Environment | null, eventPayload: any, eventHeaders: Record<string, any>, subpath?: string) {
     this.logger.debug(`Triggering webhook for ${webhookHandle.id} (subpath=${subpath})...`);
 
     const subpathParams = subpath && webhookHandle.subpath
@@ -302,14 +302,20 @@ export class WebhookService {
       : {};
 
     if (webhookHandle.securityFunctionIds) {
-      await this.executeSecurityFunctions(webhookHandle, eventPayload, eventHeaders, subpathParams);
+      await this.executeSecurityFunctions(webhookHandle, executionEnvironment, eventPayload, eventHeaders, subpathParams);
     }
 
-    this.eventService.sendWebhookEvent(webhookHandle.id, eventPayload, eventHeaders, subpathParams);
+    this.eventService.sendWebhookEvent(webhookHandle.id, executionEnvironment, eventPayload, eventHeaders, subpathParams);
     return await this.triggerService.triggerWebhookEvent(webhookHandle.id, eventPayload, eventHeaders, subpathParams);
   }
 
-  private async executeSecurityFunctions(webhookHandle: WebhookHandle, eventPayload: any, eventHeaders: Record<string, any>, params: Record<string, any>) {
+  private async executeSecurityFunctions(
+    webhookHandle: WebhookHandle,
+    executionEnvironment: Environment | null,
+    eventPayload: any,
+    eventHeaders: Record<string, any>,
+    params: Record<string, any>,
+  ) {
     const securityFunctionIds = webhookHandle.securityFunctionIds ? JSON.parse(webhookHandle.securityFunctionIds) : [];
     if (securityFunctionIds.length === 0) {
       return;
@@ -323,11 +329,15 @@ export class WebhookService {
         continue;
       }
 
-      const response = await this.functionService.executeServerFunction(securityFunction, [
-        eventPayload,
-        eventHeaders,
-        params,
-      ]);
+      const response = await this.functionService.executeServerFunction(
+        securityFunction,
+        executionEnvironment || securityFunction.environment,
+        [
+          eventPayload,
+          eventHeaders,
+          params,
+        ],
+      );
       if (response?.body !== true) {
         throw new ForbiddenException(`Security function ${securityFunction.id} check failed - access denied.`);
       }

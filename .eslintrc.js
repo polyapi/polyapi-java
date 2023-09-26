@@ -15,7 +15,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js'],
+  ignorePatterns: ['.eslintrc.js', 'scripts/*'],
   rules: {
     'no-var': 'warn',
     'object-shorthand': ['warn', 'properties'],

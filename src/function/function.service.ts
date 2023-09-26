@@ -30,7 +30,9 @@ import {
   CustomFunctionSpecification,
   FunctionArgument,
   FunctionBasicDto,
-  FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
+  FunctionDetailsDto,
+  FunctionPublicBasicDto,
+  FunctionPublicDetailsDto,
   GraphQLBody,
   Header,
   Method,
@@ -61,10 +63,15 @@ import { cloneDeep, isPlainObject, mergeWith, omit, uniqBy } from 'lodash';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import { VariableService } from 'variable/variable.service';
 import { IntrospectionQuery, VariableDefinitionNode } from 'graphql';
-import { getGraphqlIdentifier, getGraphqlVariables, getJsonSchemaFromIntrospectionQuery, resolveGraphqlArgumentType } from './graphql/utils';
+import {
+  getGraphqlIdentifier,
+  getGraphqlVariables,
+  getJsonSchemaFromIntrospectionQuery,
+  resolveGraphqlArgumentType,
+} from './graphql/utils';
 import { AuthService } from 'auth/auth.service';
 import crypto from 'crypto';
-import { WithTenant } from 'common/types';
+import { AuthData, WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
 
 const ARGUMENT_PATTERN = /(?<=\{\{)([^}]+)(?=\})/g;
@@ -782,6 +789,13 @@ export class FunctionService implements OnModuleInit {
           {
             OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
+          {
+            name: {
+              not: {
+                equals: this.config.prebuiltBaseImageName,
+              },
+            },
+          },
         ],
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -819,7 +833,9 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  customFunctionToPublicBasicDto(customFunction: WithTenant<CustomFunction> & { hidden: boolean }): FunctionPublicBasicDto {
+  customFunctionToPublicBasicDto(customFunction: WithTenant<CustomFunction> & {
+    hidden: boolean
+  }): FunctionPublicBasicDto {
     const tenant = customFunction.environment.tenant;
     return {
       ...this.customFunctionToBasicDto(customFunction),
@@ -829,7 +845,9 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  customFunctionToPublicDetailsDto(customFunction: WithTenant<CustomFunction> & { hidden: boolean }): FunctionPublicDetailsDto {
+  customFunctionToPublicDetailsDto(customFunction: WithTenant<CustomFunction> & {
+    hidden: boolean
+  }): FunctionPublicDetailsDto {
     return {
       ...this.customFunctionToDetailsDto(customFunction),
       context: this.commonService.getPublicContext(customFunction),
@@ -847,6 +865,7 @@ export class FunctionService implements OnModuleInit {
     serverFunction: boolean,
     apiKey: string,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
+    createFromScratch = false,
   ): Promise<CustomFunction> {
     const {
       code,
@@ -965,6 +984,7 @@ export class FunctionService implements OnModuleInit {
           requirements,
           apiKey,
           await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
+          createFromScratch,
         );
 
         return customFunction;
@@ -1133,6 +1153,13 @@ export class FunctionService implements OnModuleInit {
           {
             OR: this.commonService.getContextsNamesIdsFilterConditions(contexts, names, ids),
           },
+          {
+            name: {
+              not: {
+                equals: this.config.prebuiltBaseImageName,
+              },
+            },
+          },
         ],
         serverSide: true,
       },
@@ -1211,7 +1238,8 @@ export class FunctionService implements OnModuleInit {
   }
 
   async executeServerFunction(
-    customFunction: CustomFunction & { environment: Environment },
+    customFunction: CustomFunction,
+    executionEnvironment: Environment,
     args: Record<string, any> | any[],
     headers: Record<string, any> = {},
     userId: string | null = null,
@@ -1223,7 +1251,7 @@ export class FunctionService implements OnModuleInit {
     const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => args[arg.key]);
 
     try {
-      const result = await this.faasService.executeFunction(customFunction.id, customFunction.environment.tenantId, customFunction.environment.id, argumentsList, headers);
+      const result = await this.faasService.executeFunction(customFunction.id, executionEnvironment.tenantId, executionEnvironment.id, argumentsList, headers);
       this.logger.debug(
         `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
       );
@@ -1233,8 +1261,8 @@ export class FunctionService implements OnModuleInit {
       const functionPath = `${customFunction.context ? `${customFunction.context}.` : ''}${customFunction.name}`;
       if (await this.eventService.sendErrorEvent(
         customFunction.id,
-        customFunction.environmentId,
-        customFunction.environment.tenantId,
+        executionEnvironment.id,
+        executionEnvironment.tenantId,
         customFunction.visibility as Visibility,
         applicationId,
         userId,
@@ -1349,6 +1377,28 @@ export class FunctionService implements OnModuleInit {
         environmentId,
       },
     });
+  }
+
+  async createOrUpdatePrebuiltBaseImage(user: AuthData) {
+    const functionName = this.config.prebuiltBaseImageName;
+
+    const code = `
+      function ${functionName}(): void {};
+    `;
+
+    const customFunction = await this.createOrUpdateCustomFunction(
+      user.environment,
+      '',
+      functionName,
+      '',
+      code,
+      true,
+      user.key,
+      () => Promise.resolve(),
+      true,
+    );
+
+    return this.faasService.getFunctionName(customFunction.id);
   }
 
   private filterDisabledValues<T extends PostmanVariableEntry>(values: T[]) {
@@ -1713,7 +1763,9 @@ export class FunctionService implements OnModuleInit {
   ) {
     const { graphqlIntrospectionResponse } = apiFunction;
 
-    const introspectionJSONSchema = graphqlIntrospectionResponse ? getJsonSchemaFromIntrospectionQuery(JSON.parse(graphqlIntrospectionResponse)) : null;
+    const introspectionJSONSchema = graphqlIntrospectionResponse
+      ? getJsonSchemaFromIntrospectionQuery(JSON.parse(graphqlIntrospectionResponse))
+      : null;
 
     const functionArgs = this.getFunctionArguments(apiFunction);
     const newMetadata: ArgumentsMetadata = {};
@@ -1863,7 +1915,9 @@ export class FunctionService implements OnModuleInit {
       } else if (argMetadata.typeSchema) {
         let typeSchema: Record<string, any>;
         try {
-          typeSchema = typeof argMetadata.typeSchema === 'object' ? argMetadata.typeSchema : JSON.parse(argMetadata.typeSchema);
+          typeSchema = typeof argMetadata.typeSchema === 'object'
+            ? argMetadata.typeSchema
+            : JSON.parse(argMetadata.typeSchema);
         } catch (e) {
           throw new BadRequestException(`Argument '${argKey}' with typeSchema='${argMetadata.typeSchema}' is invalid`);
         }

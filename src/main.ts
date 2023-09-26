@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
+import swStats from 'swagger-stats';
 import { AppModule } from 'app.module';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConfigService } from 'config/config.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { API_TAG_INTERNAL } from 'common/constants';
+import { Request } from 'express';
 
 const logger = new Logger('main');
 
@@ -47,6 +49,8 @@ const initSwagger = (app: INestApplication) => {
       return acc;
     }, {});
   SwaggerModule.setup('swagger', app, publicDocument);
+
+  return internalDocument;
 };
 
 // eslint-disable-next-line func-style
@@ -65,7 +69,15 @@ async function bootstrap() {
   await prismaService.enableShutdownHooks(app);
 
   if (config.useSwaggerUI) {
-    initSwagger(app);
+    const document = initSwagger(app);
+
+    app.use(swStats.getMiddleware({
+      swaggerSpec: document,
+      authentication: true,
+      onAuthenticate: (req: Request, username: string, password: string) => {
+        return username === config.swaggerStatsUsername && password === config.swaggerStatsPassword;
+      },
+    }));
   }
 
   await app.listen(config.port);

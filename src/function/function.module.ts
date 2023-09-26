@@ -12,6 +12,7 @@ import { VariableModule } from 'variable/variable.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { LimitModule } from 'limit/limit.module';
 import { StatisticsModule } from 'statistics/statistics.module';
+import { EnvironmentModule } from 'environment/environment.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { StatisticsModule } from 'statistics/statistics.module';
     VariableModule,
     LimitModule,
     StatisticsModule,
+    EnvironmentModule,
   ],
   providers: [FunctionService],
   exports: [FunctionService],
