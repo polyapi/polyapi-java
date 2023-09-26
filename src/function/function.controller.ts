@@ -331,6 +331,7 @@ export class FunctionController {
       .map((serverFunction) => this.service.customFunctionToBasicDto(serverFunction));
   }
 
+  @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/prebuilt-base-image')
   @Header('Content-Type', 'text/plain')
