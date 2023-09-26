@@ -1,5 +1,5 @@
 import { Auth } from '../../auth';
-import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlencodedBody } from '../../function';
+import { ArgumentType, FormDataBody, GraphQLBody, UrlencodedBody } from '../../function';
 import { Visibility } from '../../specs';
 
 export type ApiFunctionSource = {
@@ -18,7 +18,7 @@ export type ApiFunctionSource = {
   } | {
       raw: string
   } | {
-    graphql: Omit<PostmanGraphQLBody['graphql'], 'variables'>
+    graphql: Omit<GraphQLBody['graphql'], 'variables'>
   };
   auth: Auth;
 }

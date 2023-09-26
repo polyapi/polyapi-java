@@ -29,7 +29,7 @@ import {
   FunctionArgument,
   FunctionBasicDto,
   FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
-  PostmanGraphQLBody,
+  GraphQLBody,
   Header,
   Method,
   PostmanVariableEntry,
@@ -1569,7 +1569,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  private isGraphQLBody(body: Body): body is PostmanGraphQLBody {
+  private isGraphQLBody(body: Body): body is GraphQLBody {
     return body.mode === 'graphql';
   }
 
