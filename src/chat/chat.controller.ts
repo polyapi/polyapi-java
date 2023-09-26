@@ -26,7 +26,7 @@ import {
   StoreMessageDto,
   MessageUUIDDto,
 } from '@poly/model';
-import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
+import { ApiSecurity } from '@nestjs/swagger';
 import { ChatService } from 'chat/chat.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import { AiService } from 'ai/ai.service';
@@ -36,7 +36,6 @@ import { AuthService } from 'auth/auth.service';
 import { MessageDto } from '@poly/model';
 import { ChatQuestionsLimitGuard } from 'limit/chat-questions-limit-guard';
 import { StatisticsService } from 'statistics/statistics.service';
-import { API_TAG_INTERNAL } from 'common/constants';
 
 @ApiSecurity('PolyApiKey')
 @Controller('chat')
@@ -135,15 +134,14 @@ export class ChatController {
     return { response: 'New system prompt set!' };
   }
 
-  @ApiOperation({ tags: [API_TAG_INTERNAL] })
-  @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
+  @UseGuards(PolyAuthGuard)
   @Get('/conversations')
   public async conversationsList(@Req() req: AuthRequest, @Query() query) {
-    const conversationIds = await this.service.getConversationIds(query.userId, query.workspaceFolder);
+    const conversationIds = await this.service.getConversationIds(req.user, query.userId, query.workspaceFolder);
     return { conversationIds };
   }
 
-  @ApiOperation({ tags: [API_TAG_INTERNAL] })
+  @UseGuards(PolyAuthGuard)
   @Header('content-type', 'text/plain')
   @Get('/conversations/:conversationId')
   public async conversationsDetail(
@@ -154,7 +152,7 @@ export class ChatController {
     return this.service.getConversationDetail(req.user, userId, conversationId);
   }
 
-  @UseGuards(new PolyAuthGuard())
+  @UseGuards(PolyAuthGuard)
   @Get('/history')
   public async chatHistory(
     @Req() req: AuthRequest,

@@ -113,11 +113,51 @@ describe('ChatService', () => {
 
     it('should get the list of conversation ids', async () => {
       const user = await prisma.user.findFirstOrThrow();
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        user,
+      };
       await prisma.conversationMessage.deleteMany({ where: { conversation: { userId: user.id } } });
       await prisma.conversation.deleteMany({ where: { userId: user.id } });
       const conversation = await prisma.conversation.create({ data: { userId: user.id } });
-      const ids = await service.getConversationIds(user.id, '');
+      const ids = await service.getConversationIds(auth, user.id, '');
       expect(ids).toStrictEqual([conversation.id]);
+    });
+
+    it('should get only application conversation ids as application', async () => {
+      const tenant = await prisma.tenant.findFirstOrThrow();
+      const application = await prisma.application.create({ data: { name: 'Test', tenantId: tenant.id } });
+      const user = await prisma.user.findFirstOrThrow();
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        application,
+      };
+      await prisma.conversation.create({ data: { userId: user.id } });
+      const appConvo = await prisma.conversation.create({ data: { applicationId: application.id } });
+      const ids = await service.getConversationIds(auth, '', '');
+      expect(ids).toStrictEqual([appConvo.id]);
+    });
+
+    it('should NOT allow the Admin to get conversations cross-tenant', async () => {
+      const user = await prisma.user.findFirstOrThrow({ where: { role: Role.Admin } });
+      // now create a user from another tenant and create a convo for another tenant
+      const otherTenant = await prisma.tenant.findFirstOrThrow({ where: { id: { not: user.tenantId } } });
+      const otherUser = await prisma.user.create({ data: { name: 'TestUser', tenantId: otherTenant.id } });
+      const otherConvo = await prisma.conversation.create({ data: { userId: otherUser.id } });
+
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const auth: AuthData = {
+        user,
+      };
+
+      const convoIds = await service.getConversationIds(auth, '', '');
+      await expect(convoIds.includes(otherConvo.id)).toBeFalsy();
     });
 
     it('should get history', async () => {
