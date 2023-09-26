@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { ErrorEvent, VariableChangeEvent, VariableChangeEventType, Visibility } from '@poly/model';
 import { AxiosError } from 'axios';
-import { Variable } from '@prisma/client';
+import { Environment, Variable } from '@prisma/client';
 import { AuthService } from 'auth/auth.service';
 import { AuthData } from 'common/types';
 
@@ -20,6 +20,11 @@ type ErrorHandler = {
   tenant?: boolean;
 }
 type WebhookHandleID = string;
+type WebhookHandleListener = {
+  clientID: string;
+  socket: Socket;
+  authData: AuthData;
+}
 type AuthFunctionID = string;
 type VariableID = string;
 type VariableSocketListener = {
@@ -33,8 +38,8 @@ type VariableSocketListener = {
 export class EventService {
   private logger: Logger = new Logger(EventService.name);
   private errorHandlers: ErrorHandler[] = [];
+  private readonly webhookHandleListeners: Record<WebhookHandleID, WebhookHandleListener[]> = {};
   // TODO: future: use flat array structure for this
-  private readonly webhookEventHandlers: Record<ClientID, Record<WebhookHandleID, Socket[]>> = {};
   private readonly authFunctionHandlers: Record<ClientID, Record<AuthFunctionID, Socket[]>> = {};
   private readonly variableChangeHandlers: Record<ClientID, Record<VariableID, Socket[]>> = {};
   private readonly variablesChangeHandlers: Record<ClientID, Record<Path, VariableSocketListener[]>> = {};
@@ -150,15 +155,16 @@ export class EventService {
     }
   }
 
-  registerWebhookEventHandler(client: Socket, clientID: string, webhookHandleID: string) {
+  registerWebhookEventHandler(client: Socket, clientID: string, webhookHandleID: string, authData: AuthData) {
     this.logger.debug(`Registering webhook handler for webhook handle ${webhookHandleID} on ${clientID}`);
-    if (!this.webhookEventHandlers[clientID]) {
-      this.webhookEventHandlers[clientID] = {};
+    if (!this.webhookHandleListeners[webhookHandleID]) {
+      this.webhookHandleListeners[webhookHandleID] = [];
     }
-    if (!this.webhookEventHandlers[clientID][webhookHandleID]) {
-      this.webhookEventHandlers[clientID][webhookHandleID] = [];
-    }
-    this.webhookEventHandlers[clientID][webhookHandleID].push(client);
+    this.webhookHandleListeners[webhookHandleID].push({
+      socket: client,
+      clientID,
+      authData,
+    });
 
     client.on('disconnect', () => {
       this.logger.debug(`Client for webhook event handler disconnected: ${clientID} '${webhookHandleID}'`);
@@ -168,28 +174,27 @@ export class EventService {
 
   unregisterWebhookEventHandler(client: Socket, clientID: string, webhookHandleID: string) {
     this.logger.debug(`Unregistering webhook event handler: '${webhookHandleID}' on ${clientID}`);
-    if (!this.webhookEventHandlers[clientID]?.[webhookHandleID]) {
+    if (!this.webhookHandleListeners[webhookHandleID]) {
       return;
     }
 
-    this.webhookEventHandlers[clientID][webhookHandleID] = this.webhookEventHandlers[clientID][webhookHandleID]
-      .filter(socket => socket.id !== client.id);
+    this.webhookHandleListeners[webhookHandleID] = this.webhookHandleListeners[webhookHandleID]
+      .filter(listener => listener.clientID !== clientID);
   }
 
-  sendWebhookEvent(webhookHandleID: string, eventPayload: any, eventHeaders: Record<string, any>, subpathParams: Record<string, string>) {
+  sendWebhookEvent(webhookHandleID: string, executionEnvironment: Environment | null, eventPayload: any, eventHeaders: Record<string, any>, subpathParams: Record<string, string>) {
     this.logger.debug(`Sending webhook event: '${webhookHandleID}'`, eventPayload);
 
-    Object.values(this.webhookEventHandlers).forEach(clientHandlers => {
-      if (!clientHandlers[webhookHandleID]) {
+    this.webhookHandleListeners[webhookHandleID]?.forEach(({ socket, authData }) => {
+      if (executionEnvironment && authData.environment.id !== executionEnvironment.id) {
         return;
       }
-      clientHandlers[webhookHandleID].forEach(
-        socket => socket.emit(`handleWebhookEvent:${webhookHandleID}`, {
-          body: eventPayload,
-          headers: eventHeaders,
-          params: subpathParams,
-        }),
-      );
+
+      socket.emit(`handleWebhookEvent:${webhookHandleID}`, {
+        body: eventPayload,
+        headers: eventHeaders,
+        params: subpathParams,
+      });
     });
   }
 

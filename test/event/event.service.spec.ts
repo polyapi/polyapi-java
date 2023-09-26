@@ -410,32 +410,66 @@ describe('EventService', () => {
   });
 
   describe('registerWebhookEventHandler', () => {
+    const authData = {
+      environment: {
+        id: 'env123',
+      },
+      tenant: {
+        id: 'tenant123',
+      },
+    } as AuthData;
+
     it('registers new webhook handler', () => {
-      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1');
+      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1', authData);
 
       // @ts-ignore
-      expect(service.webhookEventHandlers['client1']['webhook1']).toEqual([socket1]);
+      expect(service.webhookHandleListeners['webhook1']).toEqual([
+        {
+          socket: socket1,
+          authData,
+          clientID: 'client1',
+        },
+      ]);
     });
 
     it('adds socket to existing handler', () => {
-      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1');
-      service.registerWebhookEventHandler(socket2, 'client1', 'webhook1');
+      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1', authData);
+      service.registerWebhookEventHandler(socket2, 'client1', 'webhook1', authData);
 
       // @ts-ignore
-      expect(service.webhookEventHandlers['client1']['webhook1']).toEqual([socket1, socket2]);
+      expect(service.webhookHandleListeners['webhook1']).toEqual([
+        {
+          socket: socket1,
+          authData,
+          clientID: 'client1',
+        }, {
+          socket: socket2,
+          authData,
+          clientID: 'client1',
+        },
+      ]);
     });
   });
 
   describe('unregisterWebhookEventHandler', () => {
+    const authData = {
+      environment: {
+        id: 'env123',
+      },
+      tenant: {
+        id: 'tenant123',
+      },
+    } as AuthData;
+
     it('removes handler socket', () => {
       // register handler
-      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1');
+      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1', authData);
 
       // unregister
       service.unregisterWebhookEventHandler(socket1, 'client1', 'webhook1');
 
       // @ts-ignore
-      expect(service.webhookEventHandlers['client1']['webhook1']).toEqual([]);
+      expect(service.webhookHandleListeners['webhook1']).toEqual([]);
     });
 
     it('does not throw error if handler does not exist', () => {
@@ -446,14 +480,24 @@ describe('EventService', () => {
   });
 
   describe('sendWebhookEvent', () => {
+    const authData = {
+      environment: {
+        id: 'env123',
+      },
+      tenant: {
+        id: 'tenant123',
+      },
+    } as AuthData;
+
     it('sends event to matching handlers', () => {
       // register handlers
-      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1');
-      service.registerWebhookEventHandler(socket2, 'client2', 'webhook1');
+      service.registerWebhookEventHandler(socket1, 'client1', 'webhook1', authData);
+      service.registerWebhookEventHandler(socket2, 'client2', 'webhook1', authData);
 
       // send event
       service.sendWebhookEvent(
         'webhook1',
+        null,
         { payload: 'data' },
         { header1: 'value1' },
         { param: 'value2' },
@@ -476,6 +520,7 @@ describe('EventService', () => {
       // send event
       service.sendWebhookEvent(
         'webhook1',
+        null,
         { payload: 'data' },
         { header1: 'value1' },
         { param: 'value2' },

@@ -399,11 +399,11 @@ model PerfLog {
   start         DateTime
   duration      Float  // in seconds
   snippet       String   // human readable snippet about this logline
-  input_length  Int  // how long was the input in characters?
-  output_length Int   // how long was output in characters?
-  type          Int   // see PerfLogType
-  data          String @default("")  // more granular JSON data like how did each stage perform?
-  load          Int @default(0)  // what is the load on the system? always 0 for now
+  inputLength   Int          @map("input_length") // how long was input in characters?
+  outputLength  Int          @map("output_length") // how long was output in characters?
+  type          Int // see PerfLogType
+  data          String       @default("") // more granular JSON data like how did each stage perform?
+  load          Int          @default(0) // what is the load on the system? always 0 for now
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   applicationId String?      @map("application_id")
   user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)

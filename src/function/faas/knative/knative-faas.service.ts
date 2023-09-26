@@ -82,6 +82,7 @@ export class KNativeFaasService implements FaasService {
     requirements: string[],
     apiKey: string,
     limits: ServerFunctionLimits,
+    createFromScratch = false,
   ): Promise<void> {
     this.logger.debug(`Creating function ${id} for tenant ${tenantId} in environment ${environmentId}...`);
 
@@ -103,7 +104,7 @@ export class KNativeFaasService implements FaasService {
     };
 
     const additionalRequirements = this.filterPreinstalledNpmPackages(requirements);
-    if (additionalRequirements.length > 0) {
+    if (additionalRequirements.length > 0 || createFromScratch) {
       const customImageName = `${this.config.faasDockerContainerRegistry}/${this.getFunctionName(id)}`;
 
       // not awaiting on purpose, so it returns immediately with the message
@@ -222,7 +223,7 @@ export class KNativeFaasService implements FaasService {
     return `${relative ? '' : `${this.config.faasFunctionsBasePath}/`}${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
   }
 
-  private getFunctionName(id: string) {
+  public getFunctionName(id: string) {
     return `function-${id}`;
   }
 
