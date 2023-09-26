@@ -23,14 +23,14 @@ import {
   ApiFunctionSpecification,
   ArgumentsMetadata,
   Auth,
-  PostmanBody,
+  Body,
   ConfigVariableName,
   CustomFunctionSpecification,
   FunctionArgument,
   FunctionBasicDto,
   FunctionDetailsDto, FunctionPublicBasicDto, FunctionPublicDetailsDto,
   PostmanGraphQLBody,
-  PostmanHeader,
+  Header,
   Method,
   PostmanVariableEntry,
   PropertySpecification,
@@ -42,13 +42,10 @@ import {
   Variables,
   Visibility,
   VisibilityQuery,
-  ApiFunctionBody,
-  Header,
   UpdateSourceFunctionDto,
   UpdateSourceNullableEntry,
   FormDataEntry,
-  Entry,
-  PostmanRawBody,
+  RawBody,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -276,7 +273,7 @@ export class FunctionService implements OnModuleInit {
     id: string | null,
     environment: Environment,
     url: string,
-    body: PostmanBody,
+    body: Body,
     requestName: string,
     name: string | null,
     context: string | null,
@@ -285,10 +282,10 @@ export class FunctionService implements OnModuleInit {
     response: any,
     variables: Variables,
     statusCode: number,
-    templateHeaders: PostmanHeader[],
+    templateHeaders: Header[],
     method: Method,
     templateUrl: string,
-    templateBody: PostmanBody,
+    templateBody: Body,
     introspectionResponse: IntrospectionQuery | null,
     templateAuth?: Auth,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
@@ -696,13 +693,13 @@ export class FunctionService implements OnModuleInit {
       auth: undefined,
     };
 
-    const entryRecordToList = (entryRecord: Record<string, string | null>): Entry[] => {
+    const entryRecordToList = (entryRecord: Record<string, string | null>): PostmanVariableEntry[] => {
       return Object.entries(entryRecord).reduce<UpdateSourceNullableEntry[]>((acum, [key, value]) => {
         return [...acum, { key, value }];
-      }, []).filter((entry): entry is Entry => entry.value !== null);
+      }, []).filter((entry): entry is PostmanVariableEntry => entry.value !== null);
     };
 
-    const mergeEntries = (currentEntries: Entry[], entryRecord: Record<string, string | null>): typeof currentEntries => {
+    const mergeEntries = (currentEntries: PostmanVariableEntry[], entryRecord: Record<string, string | null>): typeof currentEntries => {
       let clonedEntries = [...currentEntries];
 
       for (const [key, value] of Object.entries(entryRecord)) {
@@ -746,7 +743,7 @@ export class FunctionService implements OnModuleInit {
     }
 
     if (typeof source.body !== 'undefined') {
-      let currentBody = JSON.parse(apiFunction.body || '{}') as ApiFunctionBody;
+      let currentBody = JSON.parse(apiFunction.body || '{}') as Body;
 
       if (source.body.mode === 'empty') {
         currentBody = {};
@@ -820,12 +817,12 @@ export class FunctionService implements OnModuleInit {
     const url = mustache.render(apiFunction.url, argumentValueMap);
     const method = apiFunction.method;
     const auth = apiFunction.auth ? JSON.parse(mustache.render(apiFunction.auth, argumentValueMap)) : null;
-    const parsedBody = JSON.parse(apiFunction.body || '{}') as PostmanBody;
+    const parsedBody = JSON.parse(apiFunction.body || '{}') as Body;
 
-    let body: PostmanBody | null = null;
+    let body: Body | null = null;
 
     if (parsedBody.mode !== 'raw') {
-      body = JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap)) as PostmanBody;
+      body = JSON.parse(mustache.render(apiFunction.body || '{}', argumentValueMap)) as Body;
     } else {
       body = this.getSanitizedRawBody(parsedBody, JSON.parse(apiFunction.argumentsMetadata || '{}'), argumentValueMap);
     }
@@ -1572,7 +1569,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  private isGraphQLBody(body: PostmanBody): body is PostmanGraphQLBody {
+  private isGraphQLBody(body: Body): body is PostmanGraphQLBody {
     return body.mode === 'graphql';
   }
 
@@ -1591,7 +1588,7 @@ export class FunctionService implements OnModuleInit {
     return values.filter(({ disabled }) => !disabled);
   }
 
-  private getBodyWithContentFiltered(body: PostmanBody): PostmanBody {
+  private getBodyWithContentFiltered(body: Body): Body {
     switch (body.mode) {
       case 'raw':
         if (body.options?.raw?.language === 'json') {
@@ -1616,7 +1613,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private getFilteredHeaders(headers: PostmanHeader[]): PostmanHeader[] {
+  private getFilteredHeaders(headers: Header[]): Header[] {
     return this.filterDisabledValues(headers)
       .filter(({ key }) => !!key?.trim());
   }
@@ -1839,7 +1836,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private getBodyData(body: PostmanBody): any | undefined {
+  private getBodyData(body: Body): any | undefined {
     switch (body.mode) {
       case 'raw':
         if (!body.raw?.trim()) {
@@ -1866,7 +1863,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private getContentTypeHeaders(body: PostmanBody) {
+  private getContentTypeHeaders(body: Body) {
     switch (body.mode) {
       case 'raw':
         return {
@@ -2251,7 +2248,7 @@ export class FunctionService implements OnModuleInit {
     return stripComments(jsonString);
   }
 
-  private getSanitizedRawBody(body: PostmanRawBody, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): PostmanRawBody {
+  private getSanitizedRawBody(body: RawBody, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): RawBody {
     const uuidRemovableKeyValue = crypto.randomUUID();
 
     const parsedArgumentsMetadata = Object.entries(argumentsMetadata).reduce<Record<string, FunctionArgument>>((acum, [key]) => {
@@ -2395,7 +2392,7 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  private getBodySource(body: ApiFunctionBody) {
+  private getBodySource(body: Body) {
     switch (body.mode) {
       case 'raw':
         return {

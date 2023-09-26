@@ -1,4 +1,4 @@
-import { IsString, IsIn, ValidateIf, IsOptional, ValidateNested, IsArray, ArrayMaxSize, arrayMinSize, ArrayMinSize, ArrayUnique, IsObject, ArrayContains } from 'class-validator';
+import { IsString, IsIn, ValidateIf, IsOptional, ValidateNested, IsArray, ArrayMaxSize, ArrayMinSize, ArrayUnique, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Record } from '../../validators';
 import { HTTP_METHODS } from '../../utils';

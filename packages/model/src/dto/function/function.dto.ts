@@ -1,5 +1,5 @@
 import { Auth } from '../../auth';
-import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlEncodedBody } from '../../function';
+import { ArgumentType, FormDataBody, PostmanGraphQLBody, UrlencodedBody } from '../../function';
 import { Visibility } from '../../specs';
 
 export type ApiFunctionSource = {
@@ -12,7 +12,7 @@ export type ApiFunctionSource = {
   body: {
     mode: 'empty';
   } | {
-      urlencoded: UrlEncodedBody['urlencoded']
+      urlencoded: UrlencodedBody['urlencoded']
   } | {
       formdata: FormDataBody['formdata']
   } | {

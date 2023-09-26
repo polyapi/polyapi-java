@@ -6,7 +6,7 @@ export type PostmanVariableEntry = {
   disabled?: boolean;
 };
 
-export type PostmanHeader = PostmanVariableEntry;
+export type Header = PostmanVariableEntry;
 
 export type PostmanGraphQLBody = {
   mode: 'graphql',
@@ -16,7 +16,7 @@ export type PostmanGraphQLBody = {
   }
 }
 
-export type PostmanRawBody = {
+export type RawBody = {
   mode: 'raw';
   raw: string;
   options?: {
@@ -26,38 +26,23 @@ export type PostmanRawBody = {
   }
 };
 
-export type PostmanUrlencodedBody = {
+export type UrlencodedBody = {
   mode: 'urlencoded';
   urlencoded: PostmanVariableEntry[];
 };
 
-export type PostmanFormDataBody = {
+export type FormDataEntry = PostmanVariableEntry & { type: string };
+
+export type FormDataBody = {
   mode: 'formdata';
-  formdata: (PostmanVariableEntry & { type: string })[];
+  formdata: FormDataEntry[];
 };
 
-export type PostmanEmptyBody = {
+export type EmptyBody = {
   mode?: 'empty';
 };
 
-export type PostmanBody = PostmanRawBody | PostmanUrlencodedBody | PostmanFormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
-
-export type Entry = Omit<PostmanVariableEntry, 'disabled'>;
-export type FormDataEntry = Entry & { type: string };
-
-export type UrlEncodedBody = {
-  mode: PostmanUrlencodedBody['mode'],
-  urlencoded: Entry[]
-};
-
-export type FormDataBody = {
-  mode: PostmanFormDataBody['mode'];
-  formdata: FormDataEntry[]
-};
-
-export type Header = Omit<PostmanHeader, 'disabled'>;
-
-export type ApiFunctionBody = PostmanRawBody | UrlEncodedBody | FormDataBody | PostmanEmptyBody | PostmanGraphQLBody;
+export type Body = RawBody | UrlencodedBody | FormDataBody | EmptyBody | PostmanGraphQLBody;
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD';
 
