@@ -2,11 +2,15 @@ import { IsString, IsIn, ValidateIf, IsOptional, ValidateNested, IsArray, ArrayM
 import { Type } from 'class-transformer';
 import { Record } from '../../validators';
 import { HTTP_METHODS  } from '../../utils'
+import { ApiModelProperty } from '@nestjs/swagger/dist/decorators/api-model-property.decorator';
+import { ApiExtraModels, ApiProperty, getSchemaPath,  } from '@nestjs/swagger'
 
 class UpdateSourceEntry { 
+    @ApiModelProperty()
     @IsString()
     key: string;
-  
+
+    @ApiModelProperty()
     @IsString()
     value: string;
 }
@@ -21,28 +25,48 @@ export class UpdateSourceNullableEntry {
   }
   
 class Body {
+    @ApiModelProperty({
+      name: "mode"
+    })
     @IsString()
     @IsIn(['urlencoded', 'formdata', 'raw', 'empty'])
     mode: 'urlencoded' | 'formdata' | 'raw' | 'empty';
   }
   
 class EmptyBody extends Body {
+    @ApiModelProperty({
+      enum: ["empty"]
+    })
     @IsString()
     mode: 'empty';
   }
   
 class RawBody extends Body {
     @IsString()
+    @ApiModelProperty({
+      enum: ["raw"]
+    })
     mode: 'raw';
   
     @IsString()
+    @ApiModelProperty()
     raw: string;
   }
   
 class UrlEncodedBody extends Body {
     @IsString()
+    @ApiModelProperty({
+      enum: ["urlencoded"]
+    })
     mode: 'urlencoded';
-  
+
+    @ApiProperty({
+      type: "object",
+      additionalProperties: {
+        type: "string",
+        nullable: true
+      }
+    })
     @Record({
       nullable: true,
       type: 'string',
@@ -52,8 +76,18 @@ class UrlEncodedBody extends Body {
   
 class FormDataBody extends Body {
     @IsString()
+    @ApiModelProperty({
+      enum: ["formdata"]
+    })
     mode: 'formdata';
-  
+    
+    @ApiProperty({
+      type: "object",
+      additionalProperties: {
+        type: "string",
+        nullable: true
+      }
+    })
     @Record({
       nullable: true,
       type: 'string',
@@ -69,18 +103,34 @@ export class UpdateAuth {
 
 class BasicAuthEntries {
     
+    @ApiModelProperty({
+      enum: ["username", "password"]
+    })
     @IsString()
     @IsIn(['username', 'password'])
     key: 'username' | 'password';
 
+    @ApiModelProperty()
     @IsString()
     value: string;
 }
 
 class BasicAuth extends UpdateAuth {
+    @ApiModelProperty({
+      enum: ["basic"]
+    })
     @IsString()
     type: 'basic';
 
+    @ApiProperty({
+      type: "array",
+      items: {
+        $ref: getSchemaPath(BasicAuthEntries)
+      },
+      uniqueItems: true,
+      minimum: 2,
+      maximum: 2
+    })
     @IsArray()
     @ValidateNested({ each: true })
     @ArrayMaxSize(2)
@@ -91,9 +141,20 @@ class BasicAuth extends UpdateAuth {
 }
 
 class ApiKeyAuth extends UpdateAuth{
+    @ApiModelProperty({
+      enum: ["apikey"]
+    })
     @IsString()
     type: 'apikey';
-
+    
+    @ApiProperty({
+      type: "array",
+      items: {
+        $ref: getSchemaPath(UpdateSourceEntry)
+      },
+      uniqueItems: true,
+      minimum: 3,
+    })
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => UpdateSourceEntry)
@@ -103,27 +164,58 @@ class ApiKeyAuth extends UpdateAuth{
   }
 
 class BearerAuth extends UpdateAuth {
+    @ApiModelProperty({
+      enum: ["bearer"]
+    })
     @IsString()
     type: 'bearer'
     
+    @ApiModelProperty()
     @IsString()
     bearer: string;
 }
 
 class NoAuth extends UpdateAuth {
+  @ApiModelProperty({
+    enum: ["noauth"]
+  })
   @IsString()
   type: 'noauth';
 }
 
+@ApiExtraModels(UrlEncodedBody, FormDataBody, RawBody, EmptyBody, BasicAuth,  BearerAuth,  ApiKeyAuth,  NoAuth, BasicAuthEntries, UpdateSourceEntry)
 export class UpdateSourceFunctionDto {
+    @ApiModelProperty({
+      name: 'url',
+      required: false
+    })
     @IsOptional()
     @IsString()
     url?: string;
-  
+    
+    @ApiModelProperty({
+      name: 'method',
+      enum: HTTP_METHODS,
+      required: false
+    })
     @IsOptional()
     @IsIn(HTTP_METHODS)
     method?: string;
-  
+    
+    @ApiModelProperty({
+      name: 'headers',
+      description: "Set headers values through strings. Provide `null` to remove a header.",
+      type: "object",
+      additionalProperties: {
+        type: "string",
+        nullable: true
+      },
+      example: {
+        "X-My-Custom-Header": null,
+        "X-Page": "{{page}}"
+      },
+      required: false
+    })
     @IsOptional()
     @Record({
       nullable: true,
@@ -131,6 +223,21 @@ export class UpdateSourceFunctionDto {
     })
     headers?: Record<string, string | null>;
     
+    @ApiModelProperty({
+      name: "auth",
+      required: false,
+      oneOf: [{
+        $ref: getSchemaPath(BasicAuth)
+      }, {
+        $ref: getSchemaPath(BearerAuth)
+      },
+      {
+        $ref: getSchemaPath(ApiKeyAuth)
+      },
+      {
+        $ref: getSchemaPath(NoAuth)
+      }],
+    })
     @IsObject()
     @IsOptional()
     @ValidateNested()
@@ -147,11 +254,29 @@ export class UpdateSourceFunctionDto {
             }, {
                 value: ApiKeyAuth,
                 name: 'apikey'
+            }, {
+              value: NoAuth,
+              name: 'noauth'
             }]
         }
     })
     auth?: BasicAuth | BearerAuth | ApiKeyAuth | NoAuth;
     
+    @ApiModelProperty({
+      name: "body",
+      required: false,
+      oneOf: [{
+        $ref: getSchemaPath(UrlEncodedBody)
+      }, {
+        $ref: getSchemaPath(FormDataBody)
+      },
+      {
+        $ref: getSchemaPath(RawBody)
+      },
+      {
+        $ref: getSchemaPath(EmptyBody)
+      }],
+    })
     @IsObject()
     @IsOptional()
     @ValidateNested()
