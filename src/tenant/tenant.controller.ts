@@ -14,7 +14,14 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiConflictResponse, ApiNotFoundResponse, ApiOperation, ApiQuery, ApiSecurity } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import { TenantService } from 'tenant/tenant.service';
 import {
   ApiKeyDto,
@@ -73,7 +80,8 @@ export class TenantController {
     private readonly configVariableService: ConfigVariableService,
     private readonly limitService: LimitService,
     private readonly tosService: TosService,
-  ) {}
+  ) {
+  }
 
   @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
@@ -85,7 +93,7 @@ export class TenantController {
   @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post()
-  async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto> {
+  async createTenant(@Body() data: CreateTenantDto): Promise<TenantDto & { adminApiKey: string }> {
     const {
       name = null,
       email,
@@ -109,14 +117,15 @@ export class TenantController {
       throw new BadRequestException(`Public namespace '${publicNamespace}' is not available.`);
     }
 
-    return this.tenantService.toDto(await this.tenantService.create(
+    const { tenant, apiKey } = await this.tenantService.create(
       name,
       email,
       publicVisibilityAllowed,
       publicNamespace,
       limitTier?.id,
       enabled,
-    ));
+    );
+    return this.tenantService.toDtoWithAdminApiKey(tenant, apiKey);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -233,7 +242,10 @@ export class TenantController {
   @Patch('/:id/config-variables/:name')
   async setConfigVariableUnderTenant(
     @Req() req: AuthRequest,
-    @MergeRequestData(['body', 'params'], new ValidationPipe({ validateCustomDecorators: true })) data: SetConfigVariableDto,
+    @MergeRequestData([
+      'body',
+      'params',
+    ], new ValidationPipe({ validateCustomDecorators: true })) data: SetConfigVariableDto,
     @Param('id') tenantId: string,
   ) {
     await this.findTenant(tenantId);
@@ -292,7 +304,10 @@ export class TenantController {
   @Patch('/:id/environments/:environment/config-variables/:name')
   async setConfigVariableUnderEnvironment(
     @Req() req: AuthRequest,
-    @MergeRequestData(['body', 'params'], new ValidationPipe({ validateCustomDecorators: true })) data: SetConfigVariableDto,
+    @MergeRequestData([
+      'body',
+      'params',
+    ], new ValidationPipe({ validateCustomDecorators: true })) data: SetConfigVariableDto,
     @Param('id') tenantId: string,
     @Param('environment') environmentId: string,
   ) {

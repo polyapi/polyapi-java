@@ -5,11 +5,18 @@ import { AuthService } from 'auth/auth.service';
 import { Permission, CreateVariableDto, UpdateVariableDto, Visibility } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { PrismaService } from 'prisma/prisma.service';
-import { limitServiceMock, prismaServiceMock, statisticsServiceMock, variableServiceMock } from '../mocks';
+import {
+  configServiceMock,
+  limitServiceMock,
+  prismaServiceMock,
+  statisticsServiceMock,
+  variableServiceMock,
+} from '../mocks';
 import { ForbiddenException } from '@nestjs/common';
 import { Variable } from '@prisma/client';
 import { StatisticsService } from 'statistics/statistics.service';
 import { LimitService } from 'limit/limit.service';
+import { ConfigService } from 'config/config.service';
 
 jest.mock('variable/variable.service');
 
@@ -21,6 +28,10 @@ describe('VariableController', () => {
       controllers: [VariableController],
       providers: [
         AuthService,
+        {
+          provide: ConfigService,
+          useValue: configServiceMock,
+        },
         {
           provide: PrismaService,
           useValue: prismaServiceMock,

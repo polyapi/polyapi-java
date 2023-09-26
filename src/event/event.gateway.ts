@@ -73,7 +73,12 @@ export class EventGateway {
     if (!await this.checkWebhookEventHandler(handler)) {
       return false;
     }
-    this.eventService.registerWebhookEventHandler(client, handler.clientID, handler.webhookHandleID);
+    const authData = await this.authService.getAuthData(handler.apiKey);
+    if (!authData) {
+      return false;
+    }
+
+    this.eventService.registerWebhookEventHandler(client, handler.clientID, handler.webhookHandleID, authData);
     return true;
   }
 

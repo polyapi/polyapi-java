@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import crypto, { createHash } from 'crypto';
+import _ from 'lodash';
 import { AuthData } from 'common/types';
 import { ApiKeyDto, Permission, Permissions, Role, Visibility } from '@poly/model';
 import { ApiKey, Application, Environment, Tenant, User } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import crypto from 'crypto';
-import _ from 'lodash';
+import { ConfigService } from 'config/config.service';
 
 type ApiKeyWithUser = ApiKey & { user: User | null };
 
@@ -12,14 +13,17 @@ type ApiKeyWithUser = ApiKey & { user: User | null };
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  toApiKeyDto(apiKey: ApiKeyWithUser): ApiKeyDto {
+  toApiKeyDto(apiKey: ApiKeyWithUser & {plainTextKey?: string }): ApiKeyDto {
     return {
       id: apiKey.id,
       name: apiKey.name,
       environmentId: apiKey.environmentId,
-      key: apiKey.key,
+      key: apiKey.plainTextKey,
       applicationId: apiKey.applicationId,
       userId: apiKey.userId,
       permissions: this.fillPermissions(JSON.parse(apiKey.permissions), apiKey.user),
@@ -49,10 +53,12 @@ export class AuthService {
     });
   }
 
-  async findApiKeyByKey(key: string, includeEnvironment = false, includeApplication = false, includeUser = false) {
+  async findApiKeyByKey(plainTextKey: string, includeEnvironment = false, includeApplication = false, includeUser = false) {
+    const hashedKey = await this.hashApiKey(plainTextKey);
+
     return this.prisma.apiKey.findFirst({
       where: {
-        key,
+        key: hashedKey,
       },
       include: {
         application: includeApplication,
@@ -76,24 +82,31 @@ export class AuthService {
     permissions?: Permissions,
   ): Promise<
     ApiKey & {
+      plainTextKey: string;
       user: User | null;
     }
   > {
-    return this.prisma.apiKey.create({
-      data: {
-        environmentId,
-        name,
-        key: crypto.randomUUID(),
-        userId: user ? user.id : null,
-        applicationId: application ? application.id : null,
-        permissions: JSON.stringify(
-          this.pickPermissions(permissions || this.getDefaultApiKeyPermissions(application, user)),
-        ),
-      },
-      include: {
-        user: true,
-      },
-    });
+    const key = crypto.randomUUID();
+    const hashedKey = await this.hashApiKey(key);
+
+    return {
+      ...await this.prisma.apiKey.create({
+        data: {
+          environmentId,
+          name,
+          key: hashedKey,
+          userId: user ? user.id : null,
+          applicationId: application ? application.id : null,
+          permissions: JSON.stringify(
+            this.pickPermissions(permissions || this.getDefaultApiKeyPermissions(application, user)),
+          ),
+        },
+        include: {
+          user: true,
+        },
+      }),
+      plainTextKey: key,
+    };
   }
 
   async updateApiKey(apiKey: ApiKey, name?: string, permissions?: Permissions): Promise<ApiKeyWithUser> {
@@ -268,5 +281,12 @@ export class AuthService {
       user,
       permissions: this.fillPermissions(JSON.parse(apiKey.permissions), user),
     } as AuthData;
+  }
+
+  async hashApiKey(apiKey: string): Promise<string> {
+    const hash = createHash('sha256');
+    hash.update(this.config.apiKeyHashPepper);
+    hash.update(apiKey);
+    return hash.digest('hex');
   }
 }

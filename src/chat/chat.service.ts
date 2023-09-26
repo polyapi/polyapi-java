@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { Cache } from 'cache-manager';
 import crypto from 'crypto';
 import { Permission, Role } from '@poly/model';
-import { Conversation } from '@prisma/client';
+import { Conversation, User, Prisma } from '@prisma/client';
 import { AuthData } from 'common/types';
 
 @Injectable()
@@ -132,31 +132,91 @@ export class ChatService {
     }
   }
 
-  async getConversationIds(userId: string, workspaceFolder: string): Promise<string[]> {
+  async getConversationIdsForUser(requestor: User, userId: string, workspaceFolder: string): Promise<string[]> {
+    // let's filter down to what a user has access to
+    let where: Prisma.ConversationWhereInput = {};
+
+    if (requestor.role === Role.SuperAdmin) {
+      // a super admin can see everything!
+      where = { userId, workspaceFolder };
+    } else if (requestor.role === Role.Admin) {
+      // an admin can see everything in their own tenant
+      const tenantUserIds: string[] = (
+        await this.prisma.user.findMany({
+          where: { tenantId: requestor.tenantId },
+          select: { id: true },
+        })
+      ).map((d) => d.id);
+      const tenantApplicationIds: string[] = (
+        await this.prisma.application.findMany({
+          where: { tenantId: requestor.tenantId },
+          select: { id: true },
+        })
+      ).map((d) => d.id);
+
+      if (userId) {
+        // show just conversations for requested userId
+        if (!tenantUserIds.includes(userId)) {
+          throw new BadRequestException('userId not found in tenant');
+        }
+        where = { userId, workspaceFolder };
+      } else {
+        // show conversations for all userIds
+        where = {
+          OR: [{ userId: { in: tenantUserIds } }, { applicationId: { in: tenantApplicationIds } }],
+          workspaceFolder,
+        };
+      }
+    } else {
+      // a regular user can only see their own conversations
+      where = { userId: requestor.id, workspaceFolder };
+    }
     const conversations = await this.prisma.conversation.findMany({
-      where: { userId, workspaceFolder },
+      where,
       orderBy: { createdAt: 'desc' },
       take: 100, // limit to 100 results for now
     });
     return conversations.map((c) => c.id);
   }
 
+  async getConversationIds(auth: AuthData, userId: string, workspaceFolder: string): Promise<string[]> {
+    // get all the conversationIds the auth'd user or app has access to
+    // limit to just `userId` conversations if a valid userId is passed
+
+    if (auth.application) {
+      // an application can only see its own conversations
+      // userId is ignored
+      const conversations = await this.prisma.conversation.findMany({
+        where: { applicationId: auth.application.id, workspaceFolder },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+      return conversations.map((c) => c.id);
+    }
+
+    if (!auth.user) {
+      throw new BadRequestException("Error, request must be auth'd with user or application");
+    }
+
+    return this.getConversationIdsForUser(auth.user, userId, workspaceFolder);
+  }
+
   async getConversationDetail(auth: AuthData, userId: string, conversationId: string): Promise<string> {
     // user is the user for permissions purposes whereas userId is which userId to see last convo for
-    let conversation;
-    let where;
+    let conversation: Conversation;
+    let where: Prisma.ConversationWhereInput;
     if (userId && conversationId === 'last') {
-      where = { where: { userId }, orderBy: { createdAt: 'desc' } };
+      where = { userId };
     } else {
-      where = { where: { id: conversationId } };
+      where = { id: conversationId };
     }
     try {
-      conversation = await this.prisma.conversation.findFirstOrThrow(where);
+      conversation = await this.prisma.conversation.findFirstOrThrow({ where, orderBy: { createdAt: 'desc' } });
     } catch {
       return new Promise((resolve) => resolve('Conversation not found.'));
     }
 
-    await this.checkConversationPermissions(auth, conversation);
+    await this.checkConversationDetailPermissions(auth, conversation);
 
     const messages = await this.prisma.conversationMessage.findMany({
       where: { conversationId: conversation.id },
@@ -166,10 +226,19 @@ export class ChatService {
     return parts.join('\n\n');
   }
 
-  async checkConversationPermissions(auth: AuthData, conversation: Conversation) {
+  async checkConversationDetailPermissions(auth: AuthData, conversation: Conversation) {
     // return null if user has permission, otherwise throw an exception
+    if (auth.application) {
+      if (auth.application.id === conversation.applicationId) {
+        // application can access its own conversations
+        return null;
+      } else {
+        throw new BadRequestException('Access Denied For This Application');
+      }
+    }
+
     if (!auth.user) {
-      throw new BadRequestException('must be user not application to access conversations');
+      throw new BadRequestException('must be user or application to access conversations');
     }
 
     if (auth.user.role === Role.SuperAdmin) {

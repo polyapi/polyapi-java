@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EmailServiceProvider } from './provider/email-service-provider';
 import { ConfigService } from 'config/config.service';
 import MailChimp from './provider/mailchimp';
-import { ApiKey, Tenant, TenantSignUp } from '@prisma/client';
+import { Tenant, TenantSignUp } from '@prisma/client';
 
 type WelcomeToPolyEmailVariables = {
   API_URL: string,
@@ -31,9 +31,9 @@ export class EmailService {
     return this.emailServiceProvider.sendEmailTemplate<T>(fromEmail, subject, to, templateName, variables);
   }
 
-  sendWelcomeToPolyEmail(tenantSignUp: TenantSignUp, apiKey: ApiKey, tenant: Tenant) {
+  sendWelcomeToPolyEmail(tenantSignUp: TenantSignUp, apiKey: string, tenant: Tenant) {
     return this.sendEmailTemplate<WelcomeToPolyEmailVariables>(this.config.signUpEmail, 'Poly API Tenant Information', tenantSignUp.email, this.config.signUpTenantInformationTemplateName, {
-      API_KEY: apiKey.key,
+      API_KEY: apiKey,
       TENANT_ID: tenant.id,
       API_URL: this.config.hostUrl,
     });

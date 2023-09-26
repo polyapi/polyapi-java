@@ -61,6 +61,18 @@ export class EnvironmentService implements OnModuleInit {
     });
   }
 
+  async findByHost(host: string) {
+    const [subdomain] = host.split('.');
+    return this.prisma.environment.findFirst({
+      where: {
+        subdomain,
+      },
+      include: {
+        tenant: true,
+      },
+    });
+  }
+
   async create(tenantId: string, name: string) {
     this.logger.log(`Creating environment '${name}' for tenant ${tenantId}`);
 

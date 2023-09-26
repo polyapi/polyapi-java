@@ -14,7 +14,7 @@ import {
   Query,
   Req,
   Res,
-  UseGuards,
+  UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
@@ -37,7 +37,11 @@ import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
 import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
+import { PerfLog } from 'statistics/perf-log.decorator';
+import { PerfLogType } from 'statistics/perf-log-type';
+import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
 
+@UseInterceptors(PerfLogInterceptor)
 @ApiSecurity('PolyApiKey')
 @Controller('auth-providers')
 export class AuthProviderController {
@@ -171,6 +175,7 @@ export class AuthProviderController {
     await this.service.deleteAuthProvider(authProvider);
   }
 
+  @PerfLog(PerfLogType.AuthFunctionExecution)
   @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/:id/execute')
   async executeAuthProvider(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: ExecuteAuthProviderDto): Promise<ExecuteAuthProviderResponseDto> {

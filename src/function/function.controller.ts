@@ -15,7 +15,7 @@ import {
   Post,
   Query,
   Req, Res,
-  UseGuards,
+  UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { FunctionService } from 'function/function.service';
@@ -32,22 +32,28 @@ import {
   Permission,
   Role,
   UpdateApiFunctionDto,
-  UpdateCustomFunctionDto,
+  UpdateCustomFunctionDto, Visibility,
 } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { VariableService } from 'variable/variable.service';
 import { LimitService } from 'limit/limit.service';
 import { FunctionCallsLimitGuard } from 'limit/function-calls-limit-guard';
-import { Tenant } from '@prisma/client';
+import { CustomFunction, Environment, Tenant } from '@prisma/client';
 import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
 import { API_TAG_INTERNAL } from 'common/constants';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+import { EnvironmentService } from 'environment/environment.service';
+import { PerfLog } from 'statistics/perf-log.decorator';
+import { PerfLogType } from 'statistics/perf-log-type';
+import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
+import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
+@UseInterceptors(PerfLogInterceptor)
 export class FunctionController {
   private logger: Logger = new Logger(FunctionController.name);
 
@@ -58,6 +64,8 @@ export class FunctionController {
     private readonly limitService: LimitService,
     private readonly statisticsService: StatisticsService,
     private readonly commonService: CommonService,
+    private readonly environmentService: EnvironmentService,
+    private readonly perfLogInfoProvider: PerfLogInfoProvider,
   ) {
   }
 
@@ -189,6 +197,7 @@ export class FunctionController {
     );
   }
 
+  @PerfLog(PerfLogType.ApiFunctionExecution)
   @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/api/:id/execute')
   async executeApiFunction(
@@ -205,6 +214,11 @@ export class FunctionController {
     data = await this.variableService.unwrapVariables(req.user, data);
 
     await this.statisticsService.trackFunctionCall(req.user, apiFunction.id, 'api');
+
+    this.perfLogInfoProvider.data = {
+      id: apiFunction.id,
+      url: apiFunction.url,
+    };
 
     return await this.service.executeApiFunction(apiFunction, data, req.user.user?.id, req.user.application?.id);
   }
@@ -445,6 +459,7 @@ export class FunctionController {
     await this.service.deleteCustomFunction(id, req.user.environment);
   }
 
+  @PerfLog(PerfLogType.ServerFunctionExecution)
   @UseGuards(PolyAuthGuard, FunctionCallsLimitGuard)
   @Post('/server/:id/execute')
   async executeServerFunction(
@@ -469,11 +484,20 @@ export class FunctionController {
     }
 
     await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, true, Permission.Use);
+
+    console.log('Data before unwrap', JSON.stringify(data));
     data = await this.variableService.unwrapVariables(req.user, data);
+    console.log('Data after unwrap', data);
 
     await this.statisticsService.trackFunctionCall(req.user, customFunction.id, 'server');
 
-    const { body, statusCode = 200 } = await this.service.executeServerFunction(customFunction, data, headers, clientId) || {};
+    const executionEnvironment = await this.resolveExecutionEnvironment(customFunction, req);
+
+    this.perfLogInfoProvider.data = {
+      id: customFunction.id,
+    };
+
+    const { body, statusCode = 200 } = await this.service.executeServerFunction(customFunction, executionEnvironment, data, headers, clientId) || {};
     return res.status(statusCode).send(body);
   }
 
@@ -504,5 +528,19 @@ export class FunctionController {
         }
       }
     }
+  }
+
+  private async resolveExecutionEnvironment(customFunction: CustomFunction & {environment: Environment}, req: Request) {
+    let executionEnvironment: Environment | null = null;
+
+    if (customFunction.visibility !== Visibility.Environment) {
+      executionEnvironment = await this.environmentService.findByHost(req.hostname);
+    }
+
+    if (!executionEnvironment) {
+      executionEnvironment = customFunction.environment;
+    }
+
+    return executionEnvironment;
   }
 }
