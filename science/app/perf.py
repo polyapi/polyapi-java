@@ -17,6 +17,7 @@ class PerfLogger:
         type: int,
         input_length: int,
         output_length: int,
+        data: str = '',
         apiKey: Optional[str] = None,
         userId: Optional[str] = None,
         applicationId: Optional[str] = None,
@@ -24,6 +25,7 @@ class PerfLogger:
         self.snippet = snippet
         self.input_length = input_length
         self.output_length = output_length
+        self.data = data
         self.type = type
         self.apiKey = apiKey
         self.userId = userId
@@ -39,12 +41,13 @@ class PerfLogger:
 
         duration = time.perf_counter() - self.start_count
         return db.perflog.create(
-            {
+            data={
                 "start": self.start,
                 "duration": duration,
                 "snippet": self.snippet,
-                "input_length": self.input_length,
-                "output_length": self.output_length,
+                "data": self.data,
+                "inputLength": self.input_length,
+                "outputLength": self.output_length,
                 "type": self.type,
                 "userId": self.userId,
                 "applicationId": self.applicationId,

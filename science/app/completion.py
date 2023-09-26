@@ -263,6 +263,8 @@ def _id_extraction_fallback(content: str) -> List[str]:
 BEST_FUNCTION_DETAILS_TEMPLATE = """To import the Poly API Library:
 `import poly from 'polyapi'`
 
+Consider the comments when generating example data.
+
 Use any combination of only the following functions to answer my question:
 
 {spec_str}

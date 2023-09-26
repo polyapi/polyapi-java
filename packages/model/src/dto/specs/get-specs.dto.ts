@@ -22,4 +22,10 @@ export class GetSpecsDto {
   @Type(() => String)
   @Transform(({ value }) => Array.isArray(value) ? value : value.split(','))
   ids?: string[];
+
+  @IsOptional()
+  environmentId: string;
+
+  @IsOptional()
+  tenantId: string;
 }

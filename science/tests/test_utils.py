@@ -607,14 +607,14 @@ class T(DbTestCase):
         expected = """[{
 base: {
 amountBeforeTax: integer,
-currencyCode: string
+currencyCode: string,
 },
 total: {
-amountBeforeTax: integer
+amountBeforeTax: integer,
 },
 start: string,
-end: string
-}]"""
+end: string,
+},],"""
         self.assertEqual(processed, expected)
 
     def test_func_path_with_args(self):

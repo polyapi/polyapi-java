@@ -22,7 +22,6 @@ from prisma.models import (
     ConversationMessage,
     Conversation,
     ConfigVariable,
-    ApiKey,
     User,
 )
 
@@ -289,27 +288,25 @@ def get_user(user_id: str) -> Optional[User]:
     return db.user.find_first(where={"id": user_id})
 
 
-def get_user_key(user_id: str, environment_id: str) -> Optional[ApiKey]:
-    db = get_client()
-    return db.apikey.find_first(
-        where={"userId": user_id, "environmentId": environment_id}
-    )
-
-
 def query_node_server(user_id: str, environment_id: str, path: str) -> Response:
-    user_key = get_user_key(user_id, environment_id)
-    if not user_key:
-        raise NotImplementedError(
-            f"No user key found for user {user_id} and environment {environment_id}"
-        )
+    db = get_client()
+    user = db.user.find_first(where={"id": user_id})
+    if not user:
+        raise Exception(f"Bad user_id {user_id} pased!")
 
+    admin_key = os.environ["POLY_SUPER_ADMIN_USER_KEY"]
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {user_key.key}",
+        "Authorization": f"Bearer {admin_key}",
         "Accept": "application/poly.function-definition+json",
     }
+
     base = current_app.config["NODE_API_URL"]
-    resp = requests.get(f"{base}/{path}", headers=headers)
+    resp = requests.get(
+        f"{base}/{path}",
+        headers=headers,
+        params={"tenantId": user.tenantId, "environmentId": environment_id},
+    )
     assert resp.status_code == 200, resp.content
     return resp
 
