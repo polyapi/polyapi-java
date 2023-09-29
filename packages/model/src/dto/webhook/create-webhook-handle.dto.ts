@@ -2,6 +2,7 @@ import { IsArray, IsEnum, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsSt
 import { ContextIdentifier, NameIdentifier } from '../validators';
 import { Visibility } from '../../specs';
 import { HTTP_METHODS } from '../utils';
+import { WebhookSecurityFunction } from './webhook-security-function';
 
 export class CreateWebhookHandleDto {
   @IsNotEmpty()
@@ -48,7 +49,6 @@ export class CreateWebhookHandleDto {
   method?: string;
 
   @IsOptional()
-  @IsString({ each: true })
   @IsArray()
-  securityFunctionIds?: string[];
+  securityFunctions?: WebhookSecurityFunction[];
 }

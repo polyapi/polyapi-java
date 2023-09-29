@@ -1,6 +1,21 @@
-import { IsArray, IsBoolean, IsEnum, IsIn, IsNumber, IsObject, IsOptional, IsString, Max, Min, Validate } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  Validate,
+  ValidateNested,
+} from 'class-validator';
 import { Visibility } from '../../specs';
 import { ContextIdentifier, NameIdentifier } from '../validators';
+import { WebhookSecurityFunction } from './webhook-security-function';
+import { Type } from 'class-transformer';
 
 export class UpdateWebhookHandleDto {
   @IsOptional()
@@ -54,9 +69,10 @@ export class UpdateWebhookHandleDto {
   method?: string;
 
   @IsOptional()
-  @IsString({ each: true })
   @IsArray()
-  securityFunctionIds?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => WebhookSecurityFunction)
+  securityFunctions?: WebhookSecurityFunction[];
 
   @IsOptional()
   @IsBoolean()

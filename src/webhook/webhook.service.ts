@@ -13,7 +13,7 @@ import {
   VisibilityQuery,
   WebhookHandleDto,
   WebhookHandlePublicDto,
-  WebhookHandleSpecification,
+  WebhookHandleSpecification, WebhookSecurityFunction,
 } from '@poly/model';
 import { ConfigService } from 'config/config.service';
 import { SpecsService } from 'specs/specs.service';
@@ -173,7 +173,7 @@ export class WebhookService {
     responseStatus?: number,
     subpath?: string,
     method?: string,
-    securityFunctionIds: string[] = [],
+    securityFunctions: WebhookSecurityFunction[] = [],
     checkBeforeCreate: () => Promise<void> = async () => undefined,
   ): Promise<WebhookHandle> {
     this.logger.debug(`Creating webhook handle for ${context}/${name}...`);
@@ -189,7 +189,7 @@ export class WebhookService {
         name,
         context,
         environmentId: environment.id,
-        securityFunctionIds: JSON.stringify(securityFunctionIds),
+        securityFunctions: JSON.stringify(securityFunctions),
       },
     });
 
@@ -217,7 +217,7 @@ export class WebhookService {
       responseStatus,
       subpath,
       method,
-      securityFunctionIds: securityFunctionIds ? JSON.stringify(securityFunctionIds) : undefined,
+      securityFunctions: securityFunctions ? JSON.stringify(securityFunctions) : undefined,
     };
 
     if (webhookHandle) {
@@ -311,7 +311,7 @@ export class WebhookService {
       ? await this.resolveSubpathParams(subpath, webhookHandle.subpath)
       : {};
 
-    if (webhookHandle.securityFunctionIds) {
+    if (webhookHandle.securityFunctions) {
       await this.executeSecurityFunctions(webhookHandle, executionEnvironment, eventPayload, eventHeaders, subpathParams);
     }
 
@@ -326,22 +326,22 @@ export class WebhookService {
     eventHeaders: Record<string, any>,
     params: Record<string, any>,
   ) {
-    const securityFunctionIds = webhookHandle.securityFunctionIds ? JSON.parse(webhookHandle.securityFunctionIds) : [];
-    if (securityFunctionIds.length === 0) {
+    const securityFunctions = webhookHandle.securityFunctions ? JSON.parse(webhookHandle.securityFunctions) : [];
+    if (securityFunctions.length === 0) {
       return;
     }
 
-    this.logger.debug(`Found ${securityFunctionIds.length} security function(s) - executing for security check...`);
-    for (const securityFunctionId of securityFunctionIds) {
-      const securityFunction = await this.functionService.findServerFunction(securityFunctionId, true);
-      if (!securityFunction) {
-        this.logger.debug(`Security function ${securityFunctionId} not found - skipping...`);
+    this.logger.debug(`Found ${securityFunctions.length} security function(s) - executing for security check...`);
+    for (const securityFunction of securityFunctions) {
+      const serverFunction = await this.functionService.findServerFunction(securityFunction.id, true);
+      if (!serverFunction) {
+        this.logger.debug(`Security function ${securityFunction.id} not found - skipping...`);
         continue;
       }
 
       const response = await this.functionService.executeServerFunction(
-        securityFunction,
-        executionEnvironment || securityFunction.environment,
+        serverFunction,
+        executionEnvironment || serverFunction.environment,
         [
           eventPayload,
           eventHeaders,
@@ -349,7 +349,7 @@ export class WebhookService {
         ],
       );
       if (response?.body !== true) {
-        throw new ForbiddenException(`Security function ${securityFunction.id} check failed - access denied.`);
+        throw new ForbiddenException(securityFunction.message);
       }
     }
   }
@@ -371,7 +371,7 @@ export class WebhookService {
       responseStatus: webhookHandle.responseStatus,
       subpath: webhookHandle.subpath,
       method: webhookHandle.method,
-      securityFunctionIds: webhookHandle.securityFunctionIds ? JSON.parse(webhookHandle.securityFunctionIds) : [],
+      securityFunctions: webhookHandle.securityFunctions ? JSON.parse(webhookHandle.securityFunctions) : [],
       enabled: !webhookHandle.enabled ? false : undefined,
     };
   }
@@ -399,7 +399,7 @@ export class WebhookService {
     responseStatus: number | null | undefined,
     subpath: string | null | undefined,
     method: string | null | undefined,
-    securityFunctionIds: string[] | undefined,
+    securityFunctions: WebhookSecurityFunction[] | undefined,
     enabled: boolean | undefined,
   ) {
     name = this.normalizeName(name, webhookHandle);
@@ -438,7 +438,7 @@ export class WebhookService {
         responseStatus,
         subpath,
         method,
-        securityFunctionIds: securityFunctionIds ? JSON.stringify(securityFunctionIds) : undefined,
+        securityFunctions: securityFunctions ? JSON.stringify(securityFunctions) : undefined,
         enabled,
       },
     });

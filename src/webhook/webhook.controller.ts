@@ -107,7 +107,7 @@ export class WebhookController {
       responseStatus,
       subpath,
       method,
-      securityFunctionIds = [],
+      securityFunctions = [],
     } = createWebhookHandle;
 
     await this.authService.checkPermissions(req.user, Permission.Teach);
@@ -133,7 +133,7 @@ export class WebhookController {
       responseStatus,
       subpath,
       method,
-      securityFunctionIds,
+      securityFunctions,
     );
     return this.webhookService.toDto(webhookHandle);
   }
@@ -158,7 +158,7 @@ export class WebhookController {
       responseStatus,
       subpath,
       method,
-      securityFunctionIds,
+      securityFunctions,
       enabled,
     } = updateWebhookHandleDto;
 
@@ -204,7 +204,7 @@ export class WebhookController {
         responseStatus,
         subpath,
         method,
-        securityFunctionIds,
+        securityFunctions,
         enabled,
       ),
     );
