@@ -9,6 +9,7 @@ assert requests
 from typing import Dict, List
 import openai
 from prisma import get_client
+from prisma.models import ConversationMessage, ApiKey
 
 from app.constants import CHAT_GPT_MODEL, MessageType
 from app.typedefs import ChatGptChoice, MessageDict
@@ -67,17 +68,8 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
     return rv
 
 
-def get_plugin_chat(
-    api_key: str,
-    plugin_id: int,
-    conversation_id: str,
-    message: str,
-) -> List[MessageDict]:
-    """chat with a plugin"""
+def _get_previous_messages(conversation_id: str, db_api_key: ApiKey) -> List[ConversationMessage]:
     db = get_client()
-    db_api_key = db.apikey.find_unique(where={"key": api_key})
-    assert db_api_key
-
     conversation = db.conversation.find_first(where={"id": conversation_id})
     if conversation:
         if conversation.userId and conversation.userId != db_api_key.userId:
@@ -105,6 +97,21 @@ def get_plugin_chat(
             }
         )
         prev_msgs = []
+    return prev_msgs
+
+
+def get_plugin_chat(
+    api_key: str,
+    plugin_id: int,
+    conversation_id: str,
+    message: str,
+) -> List[MessageDict]:
+    """chat with a plugin"""
+    db = get_client()
+    db_api_key = db.apikey.find_unique(where={"key": api_key})
+    assert db_api_key
+
+    prev_msgs = _get_previous_messages(conversation_id, db_api_key)
 
     openapi = _get_openapi_spec(plugin_id)
     functions = openapi_to_openai_functions(openapi)

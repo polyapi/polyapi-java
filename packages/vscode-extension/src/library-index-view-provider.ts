@@ -188,7 +188,7 @@ export default class LibraryIndexViewProvider implements vscode.TreeDataProvider
         }
         break;
       case 'webhookHandle':
-        vscode.env.clipboard.writeText(`poly${parentPath}.${name}((event, headers, params) => {\n\n});`);
+        vscode.env.clipboard.writeText(`poly${parentPath}.${name}(async(event, headers, params) => {\n\n});`);
         break;
       case 'serverVariable':
         vscode.env.clipboard.writeText(`await vari${parentPath}.${name}.get();`);

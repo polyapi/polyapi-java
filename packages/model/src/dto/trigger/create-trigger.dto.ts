@@ -10,7 +10,7 @@ export class CreateTriggerDto {
   name?: string;
 
   @IsNotEmpty()
-  @IsOnlyOneOfDefined(['webhookHandleId', 'serverFunctionId'])
+  @IsOnlyOneOfDefined(['webhookHandleId'])
   source: TriggerSource;
 
   @IsNotEmpty()

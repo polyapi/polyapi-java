@@ -15,7 +15,6 @@ import { toCamelCase } from '@guanghechen/helper-string';
 import { HttpService } from '@nestjs/axios';
 import { catchError, from, lastValueFrom, map } from 'rxjs';
 import mustache from 'mustache';
-import { stripComments } from 'jsonc-parser';
 import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import {
@@ -1651,7 +1650,7 @@ export class FunctionService implements OnModuleInit {
         if (body.options?.raw?.language === 'json') {
           return {
             ...body,
-            raw: this.filterJSONComments(body.raw),
+            raw: this.commonService.filterJSONComments(body.raw),
           };
         }
         return body;
@@ -2191,7 +2190,7 @@ export class FunctionService implements OnModuleInit {
     }
   }
 
-  private mergeArgumentsMetadata(argumentsMetadata: string | null, updatedArgumentsMetadata: ArgumentsMetadata | null) {
+  private mergeArgumentsMetadata(argumentsMetadata: string | null, updatedArgumentsMetadata: ArgumentsMetadata | null): ArgumentsMetadata {
     return mergeWith(JSON.parse(argumentsMetadata || '{}') as ArgumentsMetadata, updatedArgumentsMetadata || {}, (objValue, srcValue) => {
       if (objValue?.typeObject && srcValue?.typeObject) {
         return {
@@ -2305,10 +2304,6 @@ export class FunctionService implements OnModuleInit {
     return type === 'object' ? JSON.stringify(typeSchema) : type;
   }
 
-  private filterJSONComments(jsonString: string) {
-    return stripComments(jsonString);
-  }
-
   private getSanitizedRawBody(body: RawBody, argumentsMetadata: ArgumentsMetadata, argumentValueMap: Record<string, any>): RawBody {
     const uuidRemovableKeyValue = crypto.randomUUID();
 
@@ -2382,8 +2377,8 @@ export class FunctionService implements OnModuleInit {
       });
     };
 
-    const unquotedArgsRegexp = /(?<!\\")\{\{.+?\}\}(?!\\")/ig;
-    const quotedArgsRegexp = /(?<=\\")\{\{.+?\}\}(?=\\")/ig;
+    const unquotedArgsRegexp = /(?<!")\{\{.+?\}\}(?!")/ig;
+    const quotedArgsRegexp = /(?<=")\{\{.+?\}\}(?=")/ig;
     const bodyString = body.raw || '';
 
     const unquotedArgsMatchResult = bodyString.match(unquotedArgsRegexp) || [];

@@ -3,8 +3,12 @@ import { InputData, jsonInputForTargetLanguage, quicktype } from 'quicktype-core
 import jsonpath from 'jsonpath';
 import { validator } from '@exodus/schemasafe';
 import axios from 'axios';
+import _ from 'lodash';
+import { toPascalCase } from '@guanghechen/helper-string';
+import { ConfigVariable, Environment, Prisma, Tenant } from '@prisma/client';
+import { CommentToken, parse, stringify } from 'comment-json';
+import { ConfigService } from 'config/config.service';
 import { PathError } from './path-error';
-
 import {
   ArgumentType,
   CONTEXT_ALLOWED_CHARACTERS_PATTERN,
@@ -17,8 +21,6 @@ import {
   Visibility,
   VisibilityQuery,
 } from '@poly/model';
-import { toPascalCase } from '@guanghechen/helper-string';
-import { ConfigVariable, Prisma, Tenant } from '@prisma/client';
 
 const ARGUMENT_TYPE_SUFFIX = '.Argument';
 const JSON_META_SCHEMA_CACHE = {};
@@ -26,6 +28,11 @@ const JSON_META_SCHEMA_CACHE = {};
 @Injectable()
 export class CommonService {
   private readonly logger = new Logger(CommonService.name);
+
+  constructor(
+    private readonly config: ConfigService,
+  ) {
+  }
 
   async getJsonSchema(typeName: string, content: any): Promise<Record<string, any> | null> {
     if (!content) {
@@ -79,7 +86,7 @@ export class CommonService {
     }
   }
 
-  async resolveType(typeName: string, value: any): Promise<[string, Record<string, any>?]> {
+  async resolveType(typeName: string, value: any): Promise<[string, Record<string, any>?, Record<string, string>?]> {
     const numberRegex = /^-?\d+\.?\d*$/;
     const booleanRegex = /^(true|false)$/;
 
@@ -90,12 +97,18 @@ export class CommonService {
       return ['boolean'];
     }
     try {
-      const obj = typeof value === 'string' ? JSON.parse(value) : value;
+      const isStringValue = typeof value === 'string';
+      const obj = isStringValue ? JSON.parse(this.filterJSONComments(value)) : value;
       if (obj && typeof obj === 'object') {
-        const type = await this.getJsonSchema(typeName, obj);
-        return ['object', type || undefined];
+        const typeSchema = await this.getJsonSchema(typeName, obj);
+        if (typeSchema) {
+          return ['object', isStringValue ? this.enhanceJSONSchemaWithComments(typeSchema, value) : typeSchema];
+        } else {
+          return ['object'];
+        }
       }
     } catch (e) {
+      console.log(e);
       // not json
     }
 
@@ -335,5 +348,89 @@ export class CommonService {
     if (tenant.name === null && visibility === Visibility.Public) {
       throw new BadRequestException(`Cannot set ${Visibility.Public} if tenant does not have a name.`);
     }
+  }
+
+  filterJSONComments(jsonString: string) {
+    try {
+      return stringify(parse(jsonString, undefined, true));
+    } catch (e) {
+      // error while parsing json, return original string
+      return jsonString;
+    }
+  }
+
+  private enhanceJSONSchemaWithComments(typeSchema: Record<string, any>, jsoncString: string): Record<string, any> {
+    const comments = this.extractComments(jsoncString);
+
+    const processObject = (obj: any, currentPath = '') => {
+      if (obj.$ref) {
+        processObject(_.get(typeSchema, obj.$ref.replace('#/', '').replace('/', '.')), currentPath);
+        return;
+      }
+
+      if (comments[currentPath]) {
+        obj.description = comments[currentPath];
+      }
+
+      if (obj.type === 'object' && obj.properties) {
+        Object.keys(obj.properties).forEach((key) => {
+          const propertyPath = currentPath ? `${currentPath}.${key}` : key;
+
+          processObject(obj.properties[key], propertyPath);
+        });
+      } else if (obj.type === 'array' && obj.items) {
+        processObject(obj.items, `${currentPath}.[]`);
+      }
+    };
+
+    processObject(typeSchema);
+
+    return typeSchema;
+  }
+
+  private extractComments(jsoncString: string): Record<string, string> {
+    const propComments = {};
+    const parsed = parse(jsoncString, undefined);
+
+    const commentsToString = (comments: CommentToken[] | undefined) => comments
+      ?.map((comment) => comment.value.trim())
+      ?.join('\n');
+
+    const processObject = (obj: any, currentPath = '') => {
+      Object.keys(obj).forEach((key) => {
+        const commentSymbols = [
+          `before:${key}`,
+          `after-prop:${key}`,
+          `after-colon:${key}`,
+          `after-value:${key}`,
+          `after:${key}`,
+        ];
+        const propertyPath = currentPath ? `${currentPath}.${Array.isArray(obj) ? '[]' : key}` : key;
+        const propertyComments = commentSymbols
+          .map(symbol => commentsToString(obj[Symbol.for(symbol)]))
+          .filter(Boolean)
+          .join('\n');
+
+        if (propertyComments) {
+          propComments[propertyPath] = [propComments[propertyPath]].filter(Boolean)
+            .concat(propertyComments)
+            .join('\n');
+        }
+
+        if (obj[key] && typeof obj[key] === 'object') {
+          processObject(obj[key], propertyPath);
+        }
+      });
+    };
+
+    processObject(parsed);
+
+    return propComments;
+  }
+
+  getHostUrlWithSubdomain(environment: Environment) {
+    const hostUrl = this.config.hostUrl;
+    const urlParts = hostUrl.split('://');
+    return `${urlParts[0]}://${environment.subdomain}.${urlParts[1]}`;
   }
 }

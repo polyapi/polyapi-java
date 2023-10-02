@@ -64,11 +64,11 @@ def get_function_options_prompt(
     variable_parts: List[str] = []
     for match in top_matches:
         if match["type"] == "webhookHandle":
-            webhook_parts.append(spec_prompt(match))
+            webhook_parts.append(spec_prompt(match, include_argument_schema=False))
         elif match["type"] == "serverVariable":
-            variable_parts.append(spec_prompt(match))
+            variable_parts.append(spec_prompt(match, include_argument_schema=False))
         else:
-            function_parts.append(spec_prompt(match))
+            function_parts.append(spec_prompt(match, include_argument_schema=False))
 
     content = _join_content(function_parts, webhook_parts, variable_parts)
 
@@ -112,13 +112,13 @@ def _has_double_data(return_props: Dict) -> bool:
         return False
 
 
-def spec_prompt(spec: SpecificationDto, *, include_return_type=False) -> str:
+def spec_prompt(spec: SpecificationDto, *, include_argument_schema=True, include_return_type=False) -> str:
     desc = spec.get("description", "")
     if spec["type"] == "serverVariable":
         path = f"// secret: {spec['variable']['secret']}\n"  # type: ignore
         path += f"vari.{spec['context']}.{spec['name']}"
     else:
-        path = func_path_with_args(spec)
+        path = func_path_with_args(spec, include_argument_schema=include_argument_schema)
 
     parts = [
         f"// id: {spec['id']}",
@@ -312,11 +312,11 @@ def get_best_function_example(
             spec_prompt(spec, include_return_type=True) for spec in specs
         )
     )
-    messages = [MessageDict(role="user", content=best_functions_prompt)]
+    messages = [MessageDict(role="user", content=best_functions_prompt, type=MessageType.context.value)]
 
     if variables:
         best_variables_prompt = BEST_FUNCTION_VARIABLES_TEMPLATE % "\n\n".join(spec_prompt(v) for v in variables)
-        messages.append(MessageDict(role="user", content=best_variables_prompt))
+        messages.append(MessageDict(role="user", content=best_variables_prompt, type=MessageType.context.value))
 
     question_msg = MessageDict(
         role="user", content=QUESTION_TEMPLATE.format(question), type=MessageType.user

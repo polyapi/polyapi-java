@@ -9,7 +9,6 @@ export class TriggerDto {
 
 export class TriggerSource {
   webhookHandleId?: string;
-  serverFunctionId?: string;
 }
 
 export class TriggerDestination {

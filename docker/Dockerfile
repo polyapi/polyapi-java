@@ -1,6 +1,6 @@
 FROM node:18
 RUN apt-get update && apt-get install -y \
-    python3-pip sqlite3 postgresql-client
+    python3-pip postgresql-client jq
 
 ENV DOCKER_VERSION=20.10.9
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz -C /tmp && \

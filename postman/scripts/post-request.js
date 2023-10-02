@@ -34,7 +34,7 @@ const rawObject = {
   description: description?.context,
   requestName: pm.info.requestName,
   ...polyData,
-  url,
+  url: url.toString(),
   body,
   templateHeaders,
   method,

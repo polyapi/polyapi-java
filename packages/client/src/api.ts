@@ -50,7 +50,7 @@ export const getSpecs = async (contexts?: string[], names?: string[], ids?: stri
   ).data;
 };
 
-export const createServerFunction = async (
+export const createOrUpdateServerFunction = async (
   context: string | null,
   name: string,
   description: string | null,
@@ -75,7 +75,7 @@ export const createServerFunction = async (
   ).data;
 };
 
-export const createClientFunction = async (
+export const createOrUpdateClientFunction = async (
   context: string | null,
   name: string,
   description: string | null,

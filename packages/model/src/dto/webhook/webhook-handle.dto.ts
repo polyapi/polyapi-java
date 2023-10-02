@@ -1,4 +1,5 @@
 import { Visibility } from '../../specs';
+import { WebhookSecurityFunction } from './webhook-security-function';
 
 export interface WebhookHandleDto {
   id: string;
@@ -7,12 +8,14 @@ export interface WebhookHandleDto {
   description: string;
   url: string;
   visibility: Visibility;
+  eventPayloadType: string;
+  eventPayloadTypeSchema?: Record<string, any>;
   responsePayload?: any;
   responseHeaders?: any;
   responseStatus: number | null;
   subpath: string | null;
   method: string | null;
-  securityFunctionIds: string[];
+  securityFunctions: WebhookSecurityFunction[];
   enabled?: boolean;
 }
 

@@ -5,6 +5,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { FunctionService } from 'function/function.service';
 import { MigrationContext } from 'migration/types';
 import { AuthService } from 'auth/auth.service';
+import { WebhookService } from 'webhook/webhook.service';
 
 @Injectable()
 export class MigrationService implements OnModuleInit {
@@ -14,6 +15,7 @@ export class MigrationService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly functionService: FunctionService,
     private readonly authService: AuthService,
+    private readonly webhookService: WebhookService,
     // add more services when needed
   ) {
   }
@@ -34,6 +36,12 @@ export class MigrationService implements OnModuleInit {
       .map(file => file.replace('.js', ''));
     const executedMigrations = await this.prisma.migration.findMany();
     let found = false;
+    const migrationContext: MigrationContext = {
+      prisma: this.prisma,
+      functionService: this.functionService,
+      authService: this.authService,
+      webhookService: this.webhookService,
+    };
 
     migrationFiles.sort();
 
@@ -45,12 +53,7 @@ export class MigrationService implements OnModuleInit {
 
         this.logger.log(`Executing migration ${file}...`);
         const migration = await import(path.join(__dirname, 'migrations', file));
-        await migration.run({
-          prisma,
-          functionService: this.functionService,
-          authService: this.authService,
-          // add more services when needed
-        } as MigrationContext);
+        await migration.run(migrationContext);
         await prisma.migration.create({
           data: {
             fileName: file,

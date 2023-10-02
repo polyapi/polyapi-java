@@ -15,4 +15,6 @@ export interface AuthRequest extends Request {
   user: AuthData;
 }
 
-export type WithTenant<T> = T & {environment: { tenant: Tenant }};
+export type WithEnvironment<T> = T & { environment: Environment };
+
+export type WithTenant<T> = T & { environment: Environment & { tenant: Tenant } };

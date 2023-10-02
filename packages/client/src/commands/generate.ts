@@ -536,8 +536,8 @@ const showErrGeneratingFiles = (error: any) => {
   shell.exit(2);
 };
 
-const generateSingleCustomFunction = async (functionId: string) => {
-  shell.echo('-n', chalk.rgb(255, 255, 255)('Generating new custom function...'));
+const generateSingleCustomFunction = async (functionId: string, updated: boolean) => {
+  shell.echo('-n', chalk.rgb(255, 255, 255)(updated ? 'Regenerating custom function...' : 'Generating new custom function...'));
 
   let contextData: Record<string, any> = {};
 

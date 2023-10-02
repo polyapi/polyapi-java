@@ -53,7 +53,7 @@ def _process_schema_property(property: Dict) -> str:
         rv = f"[{child}],"
     elif property_type == "object":
         sub_props = []
-        for key, val in property["properties"].items():
+        for key, val in property.get("properties", {}).items():
             sub_props.append(f"{key}: {_process_schema_property(val)}")
         rv = "{\n%s\n}," % "\n".join(sub_props)
     else:
@@ -63,7 +63,7 @@ def _process_schema_property(property: Dict) -> str:
     return rv
 
 
-def _process_property_spec(arg: PropertySpecification) -> str:
+def _process_property_spec(arg: PropertySpecification, *, include_argument_schema=True) -> str:
     kind = arg["type"]["kind"]
     if kind == "void":
         # seems weird to have a void argument...
@@ -71,13 +71,16 @@ def _process_property_spec(arg: PropertySpecification) -> str:
     elif kind == "primitive":
         rv = f"{arg['name']}: {arg['type']['type']}"
     elif kind == "array":
-        item_type = arg["type"]["items"]["type"]
+        # assume to be object if no explicit type provided
+        item_type = arg["type"]["items"].get("type", "object")
         rv = "{name}: [{item_type}, {item_type}, ...]".format(
             name=arg["name"], item_type=item_type
         )
     elif kind == "object":
         arg_type = arg["type"]
-        if arg_type.get("properties"):
+        if not include_argument_schema:
+            rv = "{name}: object".format(name=arg["name"])
+        elif arg_type.get("properties"):
             properties = [_process_property_spec(p) for p in arg["type"]["properties"]]
             sub_props = "\n".join(properties)
             sub_props = "{\n" + sub_props + "\n}"
@@ -91,7 +94,11 @@ def _process_property_spec(arg: PropertySpecification) -> str:
             log(f"WARNING: object with no properties in args - {arg}")
             rv = "{name}: object".format(name=arg["name"])
     elif kind == "function":
-        rv = f"{arg['name']}: {kind}"
+        if include_argument_schema:
+            function_spec = json.dumps(arg.get("type", {}).get("spec", "function"))
+            rv = f"{arg['name']}: {function_spec}"
+        else:
+            rv = f"{arg['name']}: {kind}"
     elif kind == "plain":
         rv = f"{arg['name']}: {arg['type']['value']}"
     else:
@@ -104,18 +111,24 @@ def _process_property_spec(arg: PropertySpecification) -> str:
     return rv
 
 
-def func_args(spec: SpecificationDto) -> List[str]:
+def func_args(spec: SpecificationDto, *, include_argument_schema=True) -> List[str]:
     """get the args for a function from the headers and url"""
     arg_strings = []
     func = spec.get("function")
     if func:
-        for arg in func["arguments"]:
-            arg_strings.append(_process_property_spec(arg))
+        for idx, arg in enumerate(func["arguments"]):
+            arg_string = _process_property_spec(arg, include_argument_schema=include_argument_schema)
+            # if idx == 0 and spec['type'] == "webhookHandle":
+            #     # the first argument to webhookHandle callback functions is the eventPayload
+            #     # let's add a comment explaining to chatGPT that's what this is!
+            #     arg_string += " // This is the event payload that will be received by the webhook"
+            arg_strings.append(arg_string)
+
     return arg_strings
 
 
-def func_path_with_args(func: SpecificationDto) -> str:
-    args = func_args(func)
+def func_path_with_args(func: SpecificationDto, *, include_argument_schema=True) -> str:
+    args = func_args(func, include_argument_schema=include_argument_schema)
     sep = "\n"
     return f"{func_path(func)}(\n{sep.join(args)}\n)"
 

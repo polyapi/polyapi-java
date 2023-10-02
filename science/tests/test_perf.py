@@ -26,8 +26,8 @@ class T(DbTestCase):
         perflog = perflogs[0]
         self.assertEqual(perflog.userId, user.id)
         self.assertEqual(perflog.snippet, "hi world")
-        self.assertEqual(perflog.input_length, 8)
-        self.assertEqual(perflog.output_length, 3)
+        self.assertEqual(perflog.inputLength, 8)
+        self.assertEqual(perflog.outputLength, 3)
         self.assertEqual(perflog.type, PerfLogType.science_api_execute.value)
         self.assertGreater(perflog.duration, 0)
 

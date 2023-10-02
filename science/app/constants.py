@@ -19,6 +19,7 @@ class MessageType(IntEnum):
     user = 2  # what the user sees
     internal = 3  # totally internal messages for our own logging
     plugin = 4  # plugin api messages
+    context = 5  # context that the user can't see but that should be included as context in subsequent requests
 
 
 @unique

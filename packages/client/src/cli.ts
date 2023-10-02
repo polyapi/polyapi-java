@@ -4,7 +4,7 @@ import yargs from 'yargs';
 import shell from 'shelljs';
 import setup from './commands/setup';
 import { generate } from './commands/generate';
-import { addCustomFunction } from './commands/function';
+import { addOrUpdateCustomFunction } from './commands/function';
 import { loadConfig } from './config';
 import { create as createTenant } from './commands/tenant';
 
@@ -82,13 +82,13 @@ void yargs
             describe: 'Marks the function as a server function',
             type: 'boolean',
           }),
-      async ({ name, description, file, context, server = false }) => {
+      async ({ name, description, file, context, server }) => {
         if (!name || !file) {
           yargs.showHelp();
           return;
         }
 
-        await addCustomFunction(context, name, description, file, server);
+        await addOrUpdateCustomFunction(context, name, description, file, server);
       },
     );
   })

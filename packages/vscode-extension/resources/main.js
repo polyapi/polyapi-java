@@ -76,7 +76,7 @@ const COMMANDS = [
   let chatFocussed = true;
   let scrollBarAtBottom = null;
 
-  const patch = snabbdom.init([]);
+  const patch = snabbdom.init([snabbdom.attributesModule, snabbdom.styleModule]);
 
   const setInitialMessageInputHeight = () => {
     messageInput.style.height = '38px';

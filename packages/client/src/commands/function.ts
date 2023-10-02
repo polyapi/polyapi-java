@@ -2,7 +2,7 @@ import fs from 'fs';
 import chalk from 'chalk';
 import shell from 'shelljs';
 import ts from 'typescript';
-import { createServerFunction, createClientFunction } from '../api';
+import { createOrUpdateServerFunction, createOrUpdateClientFunction, getSpecs } from '../api';
 import { loadConfig } from '../config';
 import { generateSingleCustomFunction } from './generate';
 import { FunctionDetailsDto } from '@poly/model';
@@ -43,45 +43,48 @@ const getDependencies = (code: string) => {
     .filter(library => !EXCLUDED_REQUIREMENTS.includes(library));
 };
 
-export const addCustomFunction = async (
+export const addOrUpdateCustomFunction = async (
   context: string | null,
   name: string,
   description: string | null,
   file: string,
-  server: boolean,
+  server: boolean | undefined,
 ) => {
   loadConfig();
 
   try {
     let customFunction: FunctionDetailsDto;
-    let generate = false;
+
+    const specs = await getSpecs([context], [name]);
+    const functionSpec = specs.find(spec => spec.name === name && spec.context === context);
+    const updating = !!functionSpec;
+    if (server === undefined && updating) {
+      server = functionSpec.type === 'serverFunction';
+    } else {
+      server = server ?? false;
+    }
 
     const code = fs.readFileSync(file, 'utf8');
 
     if (server) {
-      shell.echo('-n', chalk.rgb(255, 255, 255)('Adding custom server side function...\n'));
+      shell.echo('-n', chalk.rgb(255, 255, 255)(`${updating ? 'Updating' : 'Adding'} custom server side function...`));
 
       if (getDependencies(code).length) {
         shell.echo(chalk.yellow('Please note that deploying your functions will take a few minutes because it makes use of libraries other than polyapi.'));
       }
 
-      const result = await createServerFunction(context, name, description, code);
-      customFunction = result;
+      customFunction = await createOrUpdateServerFunction(context, name, description, code);
       shell.echo(chalk.green('DEPLOYED'));
-      generate = true;
 
-      shell.echo(chalk.rgb(255, 255, 255)(`Function ID: ${result.id}`));
+      shell.echo(chalk.rgb(255, 255, 255)(`Function ID: ${customFunction.id}`));
     } else {
-      shell.echo('-n', chalk.rgb(255, 255, 255)('Adding custom client side function...'));
-      customFunction = await createClientFunction(context, name, description, code);
+      shell.echo('-n', chalk.rgb(255, 255, 255)(`${updating ? 'Updating' : 'Adding'} custom client side function...`));
+      customFunction = await createOrUpdateClientFunction(context, name, description, code);
       shell.echo(chalk.green('DONE'));
       shell.echo(chalk.rgb(255, 255, 255)(`Function ID: ${customFunction.id}`));
-      generate = true;
     }
 
-    if (generate) {
-      await generateSingleCustomFunction(customFunction.id);
-    }
+    await generateSingleCustomFunction(customFunction.id, updating);
   } catch (e) {
     shell.echo(chalk.red('ERROR\n'));
     shell.echo(`${e.response?.data?.message || e.message}`);
