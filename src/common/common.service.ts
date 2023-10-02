@@ -108,7 +108,6 @@ export class CommonService {
         }
       }
     } catch (e) {
-      console.log(e);
       // not json
     }
 

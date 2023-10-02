@@ -21,3 +21,4 @@ export { default as configVariableServiceMock } from './config-variable.service'
 export { default as emailServiceMock } from './email.service';
 export { default as statisticsServiceMock } from './statistics.service';
 export { default as limitServiceMock } from './limit.service';
+export { default as perfLogInfoProviderMock } from './perf-log-info-provider';

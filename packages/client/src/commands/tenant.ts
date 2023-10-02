@@ -101,9 +101,8 @@ export const create = async (instance: string, loadedTenantSignUp: SignUpDto | n
   try {
     if (!await signUp()) {
       return;
-    };
+    }
   } catch (err) {
-    console.log(err.message);
     return;
   }
 
@@ -182,7 +181,6 @@ export const create = async (instance: string, loadedTenantSignUp: SignUpDto | n
       return;
     }
   } catch (error) {
-    console.log(error.message);
     return;
   }
 

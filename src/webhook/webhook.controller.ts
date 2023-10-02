@@ -244,7 +244,7 @@ export class WebhookController {
       this.throwWebhookDisabledException();
     }
 
-    const subpath = req.url.split('/').slice(3).join('/');
+    const subpath = this.resolveSubpath(req, webhookHandle);
     const executionEnvironment = await this.resolveExecutionEnvironment(webhookHandle, req);
     const response = await this.webhookService.triggerWebhookHandle(webhookHandle, executionEnvironment, payload, headers, subpath);
 
@@ -329,9 +329,33 @@ export class WebhookController {
 
   private async resolveExecutionEnvironment(webhookHandle: WebhookHandle, req: Request) {
     if (webhookHandle.visibility !== Visibility.Environment) {
-      return await this.environmentService.findByHost(req.hostname);
+      const environment = await this.environmentService.findByHost(req.hostname);
+      if (!environment) {
+        throw new NotFoundException();
+      }
+
+      return environment;
     }
 
     return null;
+  }
+
+  private resolveSubpath(req: Request, webhookHandle: WebhookHandle) {
+    const subpath = req.url.split('/').slice(3).join('/');
+
+    if (!webhookHandle.subpath) {
+      throw new NotFoundException();
+    }
+    let subpathTemplate = webhookHandle.subpath;
+    if (subpathTemplate.startsWith('/')) {
+      subpathTemplate = subpathTemplate.slice(1);
+    }
+
+    const subpathRegex = new RegExp(`^${subpathTemplate.replace(/\?/g, '\\?').replace(/\{[^}]+}/g, '[^/]+')}$`);
+    if (!subpathRegex.test(subpath)) {
+      throw new NotFoundException();
+    }
+
+    return subpath;
   }
 }
