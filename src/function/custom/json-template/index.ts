@@ -3,12 +3,22 @@ import { parse } from 'node-html-parser';
 import { getExtendedJsonLanguage, LANGUAGE_NAME } from './extended-json-language';
 import { ARGUMENT_PATTERN } from '../constants';
 import { cloneDeep, isPlainObject } from 'lodash';
+import { stringify, parse as parseCommentJson } from 'comment-json';
 
 hls.registerLanguage(LANGUAGE_NAME, getExtendedJsonLanguage);
 
 export const POLY_ARG_NAME_KEY = '$polyArgName';
 
 export const isTemplateArg = (value): value is ArgMetadata => typeof value[POLY_ARG_NAME_KEY] !== 'undefined';
+
+const filterJSONComments = (jsonString: string) => {
+  try {
+    return stringify(parseCommentJson(jsonString, undefined, true));
+  } catch (e) {
+    // error while parsing json, return original string
+    return jsonString;
+  }
+};
 
 /**
  * This function replaces all arguments from raw json string for valid objects of type {@link ArgMetadata}
@@ -18,6 +28,7 @@ export const isTemplateArg = (value): value is ArgMetadata => typeof value[POLY_
 export const getMetadataTemplateObject = (raw: string): Record<string, any> => {
   const { value } = hls.highlight(raw, {
     language: LANGUAGE_NAME,
+    ignoreIllegals: true,
   });
 
   const dom = parse(value);
@@ -36,7 +47,7 @@ export const getMetadataTemplateObject = (raw: string): Record<string, any> => {
     }
   }
 
-  return JSON.parse(dom.textContent);
+  return JSON.parse(filterJSONComments(dom.textContent));
 };
 
 export type ArgMetadata = {

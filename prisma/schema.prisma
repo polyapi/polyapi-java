@@ -421,3 +421,15 @@ model PerfLog {
 
   @@map("perf_log")
 }
+
+model Log {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  context    String
+  message    String
+  level      String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+
+  @@map("log")
+}

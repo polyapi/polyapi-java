@@ -63,7 +63,7 @@ export class VariableController {
   }
 
   @UseGuards(PolyAuthGuard)
-  @Get('/public')
+  @Get('/public/:id')
   async getPublicVariable(@Req() req: AuthRequest, @Param('id') id: string): Promise<VariablePublicDto> {
     const { tenant, environment } = req.user;
 

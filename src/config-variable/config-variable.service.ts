@@ -129,7 +129,7 @@ export class ConfigVariableService {
     });
   }
 
-  async getEffectiveValue<T>(name: ConfigVariableName, tenantId: string | null, environmentId: string | null) {
+  async getEffectiveValue<T>(name: ConfigVariableName, tenantId?: string | null, environmentId?: string | null) {
     const configVariables = await this.prisma.configVariable.findMany({
       where: this.commonService.getConfigVariableFilters(name, tenantId, environmentId),
     });

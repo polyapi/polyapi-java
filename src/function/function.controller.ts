@@ -8,7 +8,6 @@ import {
   Headers,
   HttpException,
   HttpStatus,
-  Logger,
   NotFoundException,
   Param,
   Patch,
@@ -17,7 +16,7 @@ import {
   Req,
   Res,
   UseGuards,
-  UseInterceptors,
+  UseInterceptors, UsePipes, ValidationPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { FunctionService } from 'function/function.service';
@@ -36,6 +35,8 @@ import {
   FunctionDetailsDto,
   FunctionPublicBasicDto,
   FunctionPublicDetailsDto,
+  LogDto,
+  LogsQuery,
   Permission,
   Role,
   UpdateApiFunctionDto,
@@ -44,7 +45,7 @@ import {
   UpdateSourceFunctionDto,
   Visibility,
 } from '@poly/model';
-import { AuthRequest } from 'common/types';
+import { AuthData, AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { VariableService } from 'variable/variable.service';
 import { LimitService } from 'limit/limit.service';
@@ -60,12 +61,14 @@ import { PerfLog } from 'statistics/perf-log.decorator';
 import { PerfLogType } from 'statistics/perf-log-type';
 import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
+import { DbLogger } from 'logger/db-logger';
+import { LoggerService } from 'logger/logger.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
 @UseInterceptors(PerfLogInterceptor)
 export class FunctionController {
-  private logger: Logger = new Logger(FunctionController.name);
+  private logger: DbLogger;
 
   constructor(
     private readonly service: FunctionService,
@@ -76,7 +79,9 @@ export class FunctionController {
     private readonly commonService: CommonService,
     private readonly environmentService: EnvironmentService,
     private readonly perfLogInfoProvider: PerfLogInfoProvider,
+    private readonly loggerService: LoggerService,
   ) {
+    this.logger = this.loggerService.createLogger(FunctionController.name);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -113,9 +118,11 @@ export class FunctionController {
 
     await this.authService.checkPermissions(req.user, Permission.ManageApiFunctions);
 
-    this.logger.debug(`Creating or updating API function in environment ${environmentId}...`);
-    this.logger.debug(
+    await this.logger.debug(`Creating or updating API function in environment ${environmentId}...`, 'api-function', id);
+    await this.logger.debug(
       `name: ${name}, context: ${context}, description: ${description}, payload: ${payload}, response: ${response}, statusCode: ${statusCode}`,
+      'api-function',
+      id,
     );
 
     return this.service.apiFunctionToBasicDto(
@@ -281,6 +288,13 @@ export class FunctionController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @Get('/api/:id/logs')
+  async getApiFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query() logsQuery: LogsQuery) {
+    return this.getLogs(req.user, 'api-function', id, logsQuery);
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Get('/client')
   async getClientFunctions(@Req() req: AuthRequest): Promise<FunctionBasicDto[]> {
     const functions = await this.service.getClientFunctions(req.user.environment.id);
@@ -378,7 +392,14 @@ export class FunctionController {
 
     await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user, false, Permission.CustomDev);
 
-    await this.service.deleteCustomFunction(id, req.user.environment);
+    await this.service.deleteCustomFunction(clientFunction, req.user.environment);
+  }
+
+  @UseGuards(PolyAuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @Get('/client/:id/logs')
+  async getClientFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query() logsQuery: LogsQuery) {
+    return this.getLogs(req.user, 'client-function', id, logsQuery);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -507,7 +528,7 @@ export class FunctionController {
 
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, false, Permission.CustomDev);
 
-    await this.service.deleteCustomFunction(id, req.user.environment);
+    await this.service.deleteCustomFunction(serverFunction, req.user.environment);
   }
 
   @PerfLog(PerfLogType.ServerFunctionExecution)
@@ -521,7 +542,7 @@ export class FunctionController {
     @Headers() headers: Record<string, any>,
     @Query() { clientId }: ExecuteCustomFunctionQueryParams,
   ): Promise<any> {
-    this.logger.debug(`Headers: ${JSON.stringify(headers)}`);
+    await this.logger.debug(`Headers: ${JSON.stringify(headers)}`, 'server-function', id);
 
     const customFunction = await this.service.findServerFunction(id, true);
     if (!customFunction) {
@@ -536,9 +557,7 @@ export class FunctionController {
 
     await this.authService.checkEnvironmentEntityAccess(customFunction, req.user, true, Permission.Execute);
 
-    console.log('Data before unwrap', JSON.stringify(data));
     data = await this.variableService.unwrapVariables(req.user, data);
-    console.log('Data after unwrap', data);
 
     await this.statisticsService.trackFunctionCall(req.user, customFunction.id, 'server');
 
@@ -552,20 +571,27 @@ export class FunctionController {
     return res.status(statusCode).send(body);
   }
 
+  @UseGuards(PolyAuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @Get('/server/:id/logs')
+  async getServerFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query() logsQuery: LogsQuery) {
+    return this.getLogs(req.user, 'server-function', id, logsQuery);
+  }
+
   @ApiOperation({ tags: [API_TAG_INTERNAL] })
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/all/update')
   async updateAllServerFunctions() {
     this.service.updateAllServerFunctions()
       .then(() => {
-        this.logger.debug('All functions are being updated in background...');
+        return this.logger.debug('All functions are being updated in background...');
       });
     return 'Functions are being updated in background. Please check logs for more details.';
   }
 
   private async checkFunctionsLimit(tenant: Tenant, debugMessage: string) {
     if (!await this.limitService.checkTenantFunctionsLimit(tenant)) {
-      this.logger.debug(`Tenant ${tenant.id} reached its limit of functions while ${debugMessage}.`);
+      await this.logger.debug(`Tenant ${tenant.id} reached its limit of functions while ${debugMessage}.`);
       throw new HttpException(FUNCTIONS_LIMIT_REACHED, HttpStatus.TOO_MANY_REQUESTS);
     }
   }
@@ -621,5 +647,25 @@ export class FunctionController {
     }
 
     return executionEnvironment;
+  }
+
+  private async getLogs(
+    authData: AuthData,
+    entityType: string,
+    entityId: string,
+    { level, context, dateFrom, dateTo }: LogsQuery,
+  ): Promise<LogDto[]> {
+    await this.authService.checkPermissions(authData, Permission.Execute);
+
+    const logs = await this.loggerService.getLogs(
+      level,
+      context,
+      dateFrom,
+      dateTo,
+      entityType,
+      entityId,
+    );
+
+    return logs.map(log => this.loggerService.toDto(log));
   }
 }

@@ -7,7 +7,6 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
@@ -77,6 +76,8 @@ import { AuthData, WithEnvironment, WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
 import { getMetadataTemplateObject, isTemplateArg, mergeArgumentsInTemplateObject, POLY_ARG_NAME_KEY } from './custom/json-template';
 import { ARGUMENT_PATTERN } from './custom/constants';
+import { LoggerService } from 'logger/logger.service';
+import { DbLogger } from 'logger/db-logger';
 
 mustache.escape = (text) => {
   if (typeof text === 'string') {
@@ -88,7 +89,7 @@ mustache.escape = (text) => {
 
 @Injectable()
 export class FunctionService implements OnModuleInit {
-  private readonly logger: Logger = new Logger(FunctionService.name);
+  private readonly logger: DbLogger;
   private readonly faasService: FaasService;
 
   constructor(
@@ -104,8 +105,10 @@ export class FunctionService implements OnModuleInit {
     private readonly variableService: VariableService,
     private readonly authService: AuthService,
     private readonly limitService: LimitService,
+    private readonly loggerService: LoggerService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
+    this.logger = this.loggerService.createLogger(FunctionService.name);
   }
 
   async onModuleInit() {
@@ -389,7 +392,7 @@ export class FunctionService implements OnModuleInit {
         throw new BadRequestException('Cannot mix training between graphql and api rest functions.');
       }
 
-      this.logger.debug(`Explicitly retraining function with id ${id}.`);
+      await this.logger.debug(`Explicitly retraining function with id ${id}.`, 'api-function', id);
     }
 
     const updating = (id === null || id !== 'new') && apiFunction !== null;
@@ -412,16 +415,16 @@ export class FunctionService implements OnModuleInit {
     );
 
     if (id === 'new') {
-      this.logger.debug('Explicitly avoid retrain.');
-      this.logger.debug('Creating a new poly function...');
+      await this.logger.debug('Explicitly avoid retrain.');
+      await this.logger.debug('Creating a new poly function...');
     }
 
     if (id === null && updating && apiFunction) {
-      this.logger.debug(`Found existing function ${apiFunction.id} for retraining. Updating...`);
+      await this.logger.debug(`Found existing function ${apiFunction.id} for retraining. Updating...`, 'api-function', apiFunction.id);
     }
 
     if (id === null && !apiFunction) {
-      this.logger.debug('Creating new poly function...');
+      await this.logger.debug('Creating new poly function...');
     }
 
     if ((!name || !context || !description) && !updating) {
@@ -453,7 +456,7 @@ export class FunctionService implements OnModuleInit {
             description = aiDescription;
           }
 
-          this.logger.debug(`Setting argument descriptions to arguments metadata from AI: ${JSON.stringify(aiArguments)}...`);
+          await this.logger.debug(`Setting argument descriptions to arguments metadata from AI: ${JSON.stringify(aiArguments)}...`);
 
           (aiArguments || [])
             .filter((aiArgument) => !argumentsMetadata[aiArgument.name].description)
@@ -461,7 +464,7 @@ export class FunctionService implements OnModuleInit {
               argumentsMetadata[aiArgument.name].description = aiArgument.description;
             });
         } catch (err) {
-          this.logger.error('Failed to generate AI data for new api function. Taking function name from request name if not provided...');
+          await this.logger.error('Failed to generate AI data for new api function. Taking function name from request name if not provided...');
 
           if (!name) {
             name = this.commonService.sanitizeNameIdentifier(requestName);
@@ -477,7 +480,7 @@ export class FunctionService implements OnModuleInit {
       payload = this.normalizePayload(payload, apiFunction);
     }
 
-    this.logger.debug(
+    await this.logger.debug(
       `Normalized: name: ${name}, context: ${context}, description: ${description}, payload: ${payload}`,
     );
 
@@ -575,8 +578,8 @@ export class FunctionService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(
-      `Updating URL function ${apiFunction.id} with name ${name}, context ${context}, description ${description}`,
+    await this.logger.debug(
+      `Updating URL function ${apiFunction.id} with name ${name}, context ${context}, description ${description}`, 'api-function', apiFunction.id,
     );
 
     const finalContext = (context == null ? apiFunction.context : context).trim();
@@ -870,7 +873,7 @@ export class FunctionService implements OnModuleInit {
     userId: string | null = null,
     applicationId: string | null = null,
   ): Promise<ApiFunctionResponseDto | null> {
-    this.logger.debug(`Executing function ${apiFunction.id}...`);
+    await this.logger.debug(`Executing function ${apiFunction.id}...`, 'api-function', apiFunction.id);
 
     const argumentsMetadata = JSON.parse(apiFunction.argumentsMetadata || '{}') as ArgumentsMetadata;
     let argumentValueMap: {[key: string]: any } = {};
@@ -931,15 +934,17 @@ export class FunctionService implements OnModuleInit {
           {},
         ),
       ...this.getContentTypeHeaders(body),
-      ...this.getAuthorizationHeaders(auth),
+      ...await this.getAuthorizationHeaders(auth),
     };
 
     const isGraphql = this.isGraphQLBody(body);
 
-    this.logger.debug(
+    await this.logger.debug(
       `Performing HTTP request ${method} ${url} (id: ${apiFunction.id})...\nHeaders:\n${JSON.stringify(
         headers,
       )}\nBody:\n${JSON.stringify(body)}`,
+      'api-function',
+      apiFunction.id,
     );
 
     const executionData = this.getBodyData(body);
@@ -959,15 +964,17 @@ export class FunctionService implements OnModuleInit {
           ...(!apiFunction.enableRedirect ? { maxRedirects: 0 } : null),
         })
         .pipe(
-          map((response) => {
-            const processData = () => {
+          map(async (response) => {
+            const processData = async () => {
               try {
                 const payloadResponse = this.commonService.getPathContent(response.data, apiFunction.payload);
                 if (response.data !== payloadResponse) {
-                  this.logger.debug(
+                  await this.logger.debug(
                     `Payload response (id: ${apiFunction.id}, payload: ${apiFunction.payload}):\n${JSON.stringify(
                       payloadResponse,
                     )}`,
+                    'api-function',
+                    apiFunction.id,
                   );
                 }
                 return payloadResponse;
@@ -976,7 +983,11 @@ export class FunctionService implements OnModuleInit {
               }
             };
 
-            this.logger.debug(`Raw response (id: ${apiFunction.id}):\nStatus: ${response.status}\n${JSON.stringify(response.data)}`);
+            await this.logger.debug(
+              `Raw response (id: ${apiFunction.id}):\nStatus: ${response.status}\n${JSON.stringify(response.data)}`,
+              'api-function',
+              apiFunction.id,
+            );
 
             const finalResponse = {
               status: response.status,
@@ -985,14 +996,14 @@ export class FunctionService implements OnModuleInit {
 
             return {
               ...finalResponse,
-              data: processData(),
+              data: await processData(),
             } as ApiFunctionResponseDto;
           }),
         )
         .pipe(
           catchError((error: AxiosError) => {
             const processError = async () => {
-              this.logger.error(`Error while performing HTTP request (id: ${apiFunction.id}): ${error}`);
+              await this.logger.error(`Error while performing HTTP request (id: ${apiFunction.id}): ${error}`, 'api-function', apiFunction.id);
 
               const functionPath = `${apiFunction.context ? `${apiFunction.context}.` : ''}${apiFunction.name}`;
               const errorEventSent = await this.eventService.sendErrorEvent(
@@ -1026,7 +1037,7 @@ export class FunctionService implements OnModuleInit {
   }
 
   async deleteApiFunction(id: string) {
-    this.logger.debug(`Deleting API function ${id}`);
+    await this.logger.debug(`Deleting API function ${id}`, 'api-function', id);
     await this.prisma.apiFunction.delete({
       where: {
         id,
@@ -1281,7 +1292,11 @@ export class FunctionService implements OnModuleInit {
     }
 
     if (customFunction) {
-      this.logger.debug(`Updating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
+      await this.logger.debug(
+        `Updating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`,
+        serverFunction ? 'server-function' : 'client-function',
+        customFunction.id,
+      );
       const serverSide = customFunction.serverSide;
 
       customFunction = await this.prisma.customFunction.update({
@@ -1307,7 +1322,7 @@ export class FunctionService implements OnModuleInit {
     } else {
       await checkBeforeCreate();
 
-      this.logger.debug(`Creating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
+      await this.logger.debug(`Creating custom function ${name} with context ${context}, imported libraries: [${[...requirements].join(', ')}], code:\n${code}`);
 
       customFunction = await this.prisma.customFunction.create({
         data: {
@@ -1331,7 +1346,7 @@ export class FunctionService implements OnModuleInit {
     }
 
     if (serverFunction && apiKey) {
-      this.logger.debug(`Creating server side custom function ${name}`);
+      await this.logger.debug(`Creating server side custom function ${name}`);
 
       const revertServerFunctionFlag = async () => {
         await this.prisma.customFunction.update({
@@ -1360,8 +1375,10 @@ export class FunctionService implements OnModuleInit {
 
         return customFunction;
       } catch (e) {
-        this.logger.error(
+        await this.logger.error(
           `Error creating server side custom function ${name}: ${e.message}. Function created as client side.`,
+          'server-function',
+          customFunction.id,
         );
         await revertServerFunctionFlag();
         throw e;
@@ -1435,8 +1452,10 @@ export class FunctionService implements OnModuleInit {
       argumentsMetadata = this.mergeCustomFunctionArgumentsMetadata(customFunction.arguments, argumentsMetadata);
     }
 
-    this.logger.debug(
+    await this.logger.debug(
       `Updating custom function ${id} with name ${name}, context ${context}, description ${description}`,
+      customFunction.serverSide ? 'server-function' : 'client-function',
+      id,
     );
 
     if (customFunction.serverSide && (sleepAfter != null || sleep != null)) {
@@ -1471,17 +1490,27 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
-  async deleteCustomFunction(id: string, environment: Environment) {
-    this.logger.debug(`Deleting custom function ${id}`);
-    const customFunction = await this.prisma.customFunction.delete({
+  async deleteCustomFunction(customFunction: CustomFunction, environment: Environment) {
+    await this.logger.debug(
+      `Deleting custom function ${customFunction.id}`,
+      customFunction.serverSide ? 'server-function' : 'client-function',
+      customFunction.id,
+    );
+    await this.prisma.customFunction.delete({
       where: {
-        id,
+        id: customFunction.id,
       },
     });
 
     if (customFunction.serverSide) {
-      this.faasService.deleteFunction(id, environment.tenantId, environment.id).catch((err) => {
-        this.logger.error(err, `Something failed when removing custom function ${id}.`);
+      // deleting the function 'in background' without waiting
+      this.faasService.deleteFunction(customFunction.id, environment.tenantId, environment.id).catch(async (err) => {
+        await this.logger.error(
+          err,
+          'server-function',
+          customFunction.id,
+          `Something failed when removing custom function ${customFunction.id}.`,
+        );
       });
     }
   }
@@ -1681,19 +1710,21 @@ export class FunctionService implements OnModuleInit {
     userId: string | null = null,
     applicationId: string | null = null,
   ) {
-    this.logger.debug(`Executing server function ${customFunction.id}...`);
+    await this.logger.debug(`Executing server function ${customFunction.id}...`, 'server-function', customFunction.id);
 
     const functionArguments = JSON.parse(customFunction.arguments || '[]');
     const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => args[arg.key]);
 
     try {
       const result = await this.faasService.executeFunction(customFunction.id, executionEnvironment.tenantId, executionEnvironment.id, argumentsList, headers);
-      this.logger.debug(
+      await this.logger.debug(
         `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
+        'server-function',
+        customFunction.id,
       );
       return result;
     } catch (error) {
-      this.logger.error(`Error executing server function ${customFunction.id}: ${error.message}`);
+      await this.logger.error(`Error executing server function ${customFunction.id}: ${error.message}`, 'server-function', customFunction.id);
       const functionPath = `${customFunction.context ? `${customFunction.context}.` : ''}${customFunction.name}`;
       if (await this.eventService.sendErrorEvent(
         customFunction.id,
@@ -1713,7 +1744,7 @@ export class FunctionService implements OnModuleInit {
   }
 
   async updateAllServerFunctions() {
-    this.logger.debug('Updating all server functions...');
+    await this.logger.debug('Updating all server functions...');
     const serverFunctions = await this.prisma.customFunction.findMany({
       where: {
         serverSide: true,
@@ -1735,11 +1766,11 @@ export class FunctionService implements OnModuleInit {
 
       const apiKey = serverFunction.apiKey || await getApiKey();
       if (!apiKey) {
-        this.logger.error(`No API key found for server function ${serverFunction.id}`);
+        await this.logger.error(`No API key found for server function ${serverFunction.id}`, 'server-function', serverFunction.id);
         continue;
       }
 
-      this.logger.debug(`Updating server function ${serverFunction.id}...`);
+      await this.logger.debug(`Updating server function ${serverFunction.id}...`, 'server-function', serverFunction.id);
       await this.faasService.updateFunction(
         serverFunction.id,
         serverFunction.environment.tenantId,
@@ -1962,11 +1993,11 @@ export class FunctionService implements OnModuleInit {
           arg.variable,
         );
         argumentValueMap[arg.key] = variable ? await this.variableService.getVariableValue(variable) : undefined;
-        this.logger.debug(`Argument '${arg.name}' resolved to variable ${variable?.id}`);
+        await this.logger.debug(`Argument '${arg.name}' resolved to variable ${variable?.id}`, 'api-function', apiFunction.id);
       } else if (arg.payload) {
         const payload = args['payload'];
         if (typeof payload !== 'object') {
-          this.logger.debug(`Expecting payload as object, but it is not: ${JSON.stringify(payload)}`);
+          await this.logger.debug(`Expecting payload as object, but it is not: ${JSON.stringify(payload)}`, 'api-function', apiFunction.id);
           continue;
         }
         argumentValueMap[arg.key] = normalizeArg ? normalizeArgFn(payload[arg.name]) : payload[arg.name];
@@ -2026,7 +2057,7 @@ export class FunctionService implements OnModuleInit {
     return name;
   }
 
-  private getAuthorizationHeaders(auth: Auth | null) {
+  private async getAuthorizationHeaders(auth: Auth | null) {
     if (!auth) {
       return {};
     }
@@ -2061,7 +2092,7 @@ export class FunctionService implements OnModuleInit {
         };
       }
       default:
-        this.logger.debug('Unknown auth type:', auth);
+        void this.logger.debug(`Unknown auth type: ${auth.type}`);
         return {};
     }
   }
@@ -2101,7 +2132,7 @@ export class FunctionService implements OnModuleInit {
             body.raw.replace(/\n/g, '').replace(/\r/g, '').replace(/\t/g, '').replace(/\f/g, '').replace(/\b/g, ''),
           );
         } catch (e) {
-          this.logger.debug(`Error while parsing body: ${e}`);
+          void this.logger.debug(`Error while parsing body: ${e}`);
           return body.raw;
         }
       case 'formdata':
@@ -2216,16 +2247,18 @@ export class FunctionService implements OnModuleInit {
 
     const graphqlVariablesBody = isGraphQL ? JSON.parse(parsedBody.graphql.variables || '{}') : {};
 
-    const resolvePayloadArguments = () => {
+    const resolvePayloadArguments = async () => {
       if (functionArgs.length <= this.config.functionArgsParameterLimit) {
         return;
       }
 
       if (debug) {
-        this.logger.debug(
+        await this.logger.debug(
           `Generating arguments metadata for ${
             apiFunction.id ? `function ${apiFunction.id}` : 'a new function'
           } with payload 'true' (arguments count: ${functionArgs.length})`,
+          'api-function',
+          apiFunction.id,
         );
       }
 
@@ -2259,9 +2292,9 @@ export class FunctionService implements OnModuleInit {
     const resolveArgumentTypes = async () => {
       if (debug) {
         if (apiFunction.id) {
-          this.logger.debug(`Resolving argument types for function ${apiFunction.id}...`);
+          await this.logger.debug(`Resolving argument types for function ${apiFunction.id}...`, 'api-function', apiFunction.id);
         } else {
-          this.logger.debug('Resolving argument types for new function...');
+          await this.logger.debug('Resolving argument types for new function...');
         }
       }
 

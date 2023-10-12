@@ -16,7 +16,7 @@ import {
   prismaServiceMock,
   specsServiceMock,
   variableServiceMock,
-  configVariableServiceMock, authServiceMock, limitServiceMock,
+  configVariableServiceMock, authServiceMock, limitServiceMock, loggerServiceMock,
 } from '../mocks';
 import { PrismaService } from 'prisma/prisma.service';
 import { ConfigService } from 'config/config.service';
@@ -30,6 +30,7 @@ import { AuthService } from 'auth/auth.service';
 import { LimitService } from 'limit/limit.service';
 
 import * as JsonTemplate from 'function/custom/json-template/index';
+import { LoggerService } from 'logger/logger.service';
 
 describe('FunctionService', () => {
   let functionService: FunctionService;
@@ -82,6 +83,10 @@ describe('FunctionService', () => {
         {
           provide: LimitService,
           useValue: limitServiceMock,
+        },
+        {
+          provide: LoggerService,
+          useValue: loggerServiceMock,
         }
       ],
     }).compile();
@@ -845,7 +850,7 @@ describe('FunctionService', () => {
         headers: {},
       });
     });
-    
+
     it('Should remove optional arguments that has not been provided for formdata body.', async () => {
       const apiFunction = {
         url: 'https://jsonplaceholder.typicode.com/posts',
