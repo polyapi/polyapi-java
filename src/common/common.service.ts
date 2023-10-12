@@ -365,24 +365,34 @@ export class CommonService {
   private enhanceJSONSchemaWithComments(typeSchema: Record<string, any>, jsoncString: string, subpath?: string): Record<string, any> {
     const comments = this.extractComments(jsoncString, subpath);
 
-    const processObject = (obj: any, currentPath = '') => {
+    const processObject = (obj: any, currentPath = '', propertiesParent: Record<string, any> = typeSchema) => {
       if (obj.$ref) {
         processObject(_.get(typeSchema, obj.$ref.replace('#/', '').replace('/', '.')), currentPath);
         return;
       }
 
-      if (comments[currentPath]) {
-        obj.description = comments[currentPath];
+      let currentPathComment = comments[currentPath];
+      if (currentPathComment?.startsWith('?')) {
+        if (propertiesParent.required) {
+          propertiesParent.required = propertiesParent.required
+            .filter((requiredProp: string) => requiredProp !== currentPath.split('.').pop());
+        }
+
+        currentPathComment = currentPathComment.substring(1).trim();
+      }
+
+      if (currentPathComment) {
+        obj.description = currentPathComment;
       }
 
       if (obj.type === 'object' && obj.properties) {
         Object.keys(obj.properties).forEach((key) => {
           const propertyPath = currentPath ? `${currentPath}.${key}` : key;
 
-          processObject(obj.properties[key], propertyPath);
+          processObject(obj.properties[key], propertyPath, obj);
         });
       } else if (obj.type === 'array' && obj.items) {
-        processObject(obj.items, `${currentPath}.[]`);
+        processObject(obj.items, `${currentPath}.[]`, propertiesParent);
       }
     };
 
