@@ -176,12 +176,7 @@ export class FunctionController {
   @UseGuards(PolyAuthGuard)
   @Get('/api/:id')
   async getApiFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<ApiFunctionDetailsDto> {
-    const apiFunction = await this.service.findApiFunction(id);
-    if (!apiFunction) {
-      throw new NotFoundException(`Function with ID ${id} not found.`);
-    }
-
-    await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user);
+    const apiFunction = await this.findApiFunction(id, req);
 
     return this.service.apiFunctionToDetailsDto(apiFunction);
   }
@@ -291,7 +286,17 @@ export class FunctionController {
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('/api/:id/logs')
   async getApiFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query() logsQuery: LogsQuery) {
+    await this.findApiFunction(id, req);
+
     return this.getLogs(req.user, 'api-function', id, logsQuery);
+  }
+
+  @UseGuards(new PolyAuthGuard([Role.Admin]))
+  @Delete('/api/:id/logs/:logId')
+  async deleteApiFunctionLog(@Req() req: AuthRequest, @Param('id') id: string, @Param('logId') logId: string) {
+    await this.findApiFunction(id, req);
+
+    return this.deleteLog(logId, 'api-function', id);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -350,12 +355,7 @@ export class FunctionController {
   @UseGuards(PolyAuthGuard)
   @Get('/client/:id')
   async getClientFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionDetailsDto> {
-    const clientFunction = await this.service.findClientFunction(id);
-    if (!clientFunction) {
-      throw new NotFoundException(`Function with ID ${id} not found.`);
-    }
-
-    await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user);
+    const clientFunction = await this.findClientFunction(id, req);
 
     return this.service.customFunctionToDetailsDto(clientFunction);
   }
@@ -399,7 +399,17 @@ export class FunctionController {
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('/client/:id/logs')
   async getClientFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query() logsQuery: LogsQuery) {
+    await this.findClientFunction(id, req);
+
     return this.getLogs(req.user, 'client-function', id, logsQuery);
+  }
+
+  @UseGuards(new PolyAuthGuard([Role.Admin]))
+  @Delete('/client/:id/logs/:logId')
+  async deleteClientFunctionLog(@Req() req: AuthRequest, @Param('id') id: string, @Param('logId') logId: string) {
+    await this.findClientFunction(id, req);
+
+    return this.deleteLog(logId, 'client-function', id);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -468,12 +478,7 @@ export class FunctionController {
   @UseGuards(PolyAuthGuard)
   @Get('/server/:id')
   async getServerFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<FunctionDetailsDto> {
-    const serverFunction = await this.service.findServerFunction(id);
-    if (!serverFunction) {
-      throw new NotFoundException(`Function with ID ${id} not found.`);
-    }
-
-    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user);
+    const serverFunction = await this.findServerFunction(id, req);
 
     return this.service.customFunctionToDetailsDto(serverFunction);
   }
@@ -575,7 +580,17 @@ export class FunctionController {
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('/server/:id/logs')
   async getServerFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query() logsQuery: LogsQuery) {
+    await this.findServerFunction(id, req);
+
     return this.getLogs(req.user, 'server-function', id, logsQuery);
+  }
+
+  @UseGuards(new PolyAuthGuard([Role.Admin]))
+  @Delete('/server/:id/logs/:logId')
+  async deleteServerFunctionLog(@Req() req: AuthRequest, @Param('id') id: string, @Param('logId') logId: string) {
+    await this.findServerFunction(id, req);
+
+    return this.deleteLog(logId, 'server-function', id);
   }
 
   @ApiOperation({ tags: [API_TAG_INTERNAL] })
@@ -649,6 +664,37 @@ export class FunctionController {
     return executionEnvironment;
   }
 
+  private async findApiFunction(id: string, req: AuthRequest) {
+    const apiFunction = await this.service.findApiFunction(id);
+    if (!apiFunction) {
+      throw new NotFoundException(`Function with ID ${id} not found.`);
+    }
+
+    await this.authService.checkEnvironmentEntityAccess(apiFunction, req.user);
+    return apiFunction;
+  }
+
+  private async findClientFunction(id: string, req: AuthRequest) {
+    const clientFunction = await this.service.findClientFunction(id);
+    if (!clientFunction) {
+      throw new NotFoundException(`Function with ID ${id} not found.`);
+    }
+
+    await this.authService.checkEnvironmentEntityAccess(clientFunction, req.user);
+    return clientFunction;
+  }
+
+  private async findServerFunction(id: string, req: AuthRequest) {
+    const serverFunction = await this.service.findServerFunction(id);
+    if (!serverFunction) {
+      throw new NotFoundException(`Function with ID ${id} not found.`);
+    }
+
+    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user);
+
+    return serverFunction;
+  }
+
   private async getLogs(
     authData: AuthData,
     entityType: string,
@@ -667,5 +713,18 @@ export class FunctionController {
     );
 
     return logs.map(log => this.loggerService.toDto(log));
+  }
+
+  private async deleteLog(
+    id: string,
+    entityType: string,
+    entityId: string,
+  ) {
+    const log = await this.loggerService.findLog(id);
+    if (!log || log.entityType !== entityType || log.entityId !== entityId) {
+      throw new NotFoundException(`Log with ID ${id} not found.`);
+    }
+
+    await this.loggerService.deleteLog(log);
   }
 }

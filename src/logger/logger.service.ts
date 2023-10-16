@@ -70,4 +70,20 @@ export class LoggerService {
       },
     });
   }
+
+  async findLog(id: string) {
+    return this.prisma.log.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async deleteLog(log: Log) {
+    return this.prisma.log.delete({
+      where: {
+        id: log.id,
+      },
+    });
+  }
 }
