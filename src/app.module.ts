@@ -11,7 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from 'auth/auth.module';
 import { UserModule } from 'user/user.module';
 import { FunctionModule } from 'function/function.module';
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { ChatModule } from 'chat/chat.module';
 import { EventModule } from 'event/event.module';
 import { WebhookModule } from 'webhook/webhook.module';

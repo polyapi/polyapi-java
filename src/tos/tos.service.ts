@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { CommonService } from 'common/common.service';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { ConfigVariableName, DefaultTosValue } from '../../packages/model/src/dto';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 

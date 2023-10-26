@@ -1,4 +1,4 @@
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatService } from 'chat/chat.service';
 import { aiServiceMock, cacheManagerMock } from '../mocks';

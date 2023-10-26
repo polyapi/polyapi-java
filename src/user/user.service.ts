@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { Role, UserDto } from '@poly/model';
 import { User } from '@prisma/client';
 

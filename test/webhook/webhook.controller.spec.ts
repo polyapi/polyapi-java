@@ -14,7 +14,7 @@ import { EnvironmentService } from 'environment/environment.service';
 import { NotFoundException } from '@nestjs/common';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 import { AuthService } from 'auth/auth.service';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 
 describe('WebhookController', () => {
   let webhookController: WebhookController;

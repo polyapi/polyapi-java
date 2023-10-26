@@ -16,7 +16,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, from, lastValueFrom, map } from 'rxjs';
 import mustache from 'mustache';
 import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import {
   ApiFunctionDetailsDto,
   ApiFunctionPublicDetailsDto,

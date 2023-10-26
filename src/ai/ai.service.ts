@@ -3,7 +3,7 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { SystemPrompt, DocSection } from '@prisma/client';
 import {
   FunctionDescriptionDto,

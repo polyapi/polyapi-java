@@ -1,4 +1,4 @@
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { ConfigVariable } from '@prisma/client';
 import { ParsedConfigVariable } from '@poly/model';
 import { CommonService } from 'common/common.service';

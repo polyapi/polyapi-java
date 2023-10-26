@@ -18,7 +18,7 @@ import {
   variableServiceMock,
   configVariableServiceMock, authServiceMock, limitServiceMock,
 } from '../mocks';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { ConfigService } from 'config/config.service';
 import { SpecsService } from 'specs/specs.service';
 import { EventService } from 'event/event.service';

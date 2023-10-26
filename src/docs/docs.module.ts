@@ -1,4 +1,4 @@
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { DocsController } from './docs.controller';
 import { DocsService } from './docs.service';
 import { AiModule } from 'ai/ai.module';

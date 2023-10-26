@@ -3,7 +3,7 @@ import { BadRequestException, ConflictException, forwardRef, Inject, Injectable,
 import { AuthProvider, AuthToken, Environment, Tenant } from '@prisma/client';
 import { catchError, lastValueFrom, map, of } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import {
   AuthFunctionSpecification,
   AuthProviderDto,

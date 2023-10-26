@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { ConfigVariableDto, ConfigVariableName, DefaultTierValue, DefaultTosValue, PublicVisibilityValue, TrainingDataGeneration } from '@poly/model';
 import {
   ConfigVariableStrategy,

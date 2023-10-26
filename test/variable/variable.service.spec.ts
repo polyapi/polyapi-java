@@ -4,7 +4,7 @@ import { ConflictException } from '@nestjs/common';
 import { VariableService } from 'variable/variable.service';
 import { Variable } from '@prisma/client';
 import { Visibility } from '@poly/model';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { SecretService } from 'secret/secret.service';
 import {
   aiServiceMock,

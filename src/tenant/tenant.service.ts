@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
-import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
+import { PrismaService, PrismaTransaction } from 'prisma-module/prisma.service';
 import { LimitTier, Tenant, TenantAgreement, TenantSignUp, Tos } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';

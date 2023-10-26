@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { Environment } from '@prisma/client';
 import { EnvironmentDto } from '@poly/model';
 import { SecretService } from 'secret/secret.service';

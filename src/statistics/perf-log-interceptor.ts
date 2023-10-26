@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 import { PerfLogType } from 'statistics/perf-log-type';
 import { PERF_LOG_KEY } from 'statistics/perf-log.decorator';

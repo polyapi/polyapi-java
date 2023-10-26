@@ -1,7 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { FunctionService } from 'function/function.service';
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { FunctionController } from 'function/function.controller';
 import { EventModule } from 'event/event.module';
 import { CommonModule } from 'common/common.module';

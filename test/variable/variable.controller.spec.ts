@@ -4,7 +4,7 @@ import { VariableService } from 'variable/variable.service';
 import { AuthService } from 'auth/auth.service';
 import { Permission, CreateVariableDto, UpdateVariableDto, Visibility } from '@poly/model';
 import { AuthRequest } from 'common/types';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import {
   configServiceMock,
   limitServiceMock,

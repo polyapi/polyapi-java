@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LimitService } from './limit.service';
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { StatisticsModule } from 'statistics/statistics.module';
 import { TierController } from 'limit/tier.controller';
 
