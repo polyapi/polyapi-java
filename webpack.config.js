@@ -20,7 +20,7 @@ module.exports = {
               compilerOptions: {
                 ...tsBaseCfg,
                 ...tsCfg.compilerOptions,
-                baseUrl: ".",
+                baseUrl: "./",
                 declaration: false,
                 declarationMap: false
               },
@@ -36,7 +36,7 @@ module.exports = {
     plugins: [new TsconfigPathsPlugin()],
   },
   output: {
-    path: path.join(__dirname, 'dist'),
-    filename: 'server.js',
+    path: path.join(__dirname, 'dist/src'),
+    filename: 'main.js',
   }
 };

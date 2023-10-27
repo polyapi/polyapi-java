@@ -7,7 +7,7 @@
     "url": "https://github.com/polyapi/poly-alpha"
   },
   "scripts": {
-    "build": "nest build",
+    "build": "nest build --webpackPath=\"./webpack.config.js\" --webpack",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -22,8 +22,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:all": "npm run test && npm run test:e2e",
     "prepare": "husky install",
-    "create-migration": "node ./scripts/create-migration.js",
-    "prepare-build": "npx nest build --webpackPath=\"./webpack.config.js\" --webpack && cp -r prisma ./dist && cp -r ./public ./dist"
+    "create-migration": "node ./scripts/create-migration.js"
   },
   "dependencies": {
     "@exodus/schemasafe": "^1.3.0",
