@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
+import { Logger, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { catchError, lastValueFrom, map } from 'rxjs';
@@ -6,7 +6,6 @@ import { getDateFromNanoseconds } from '@poly/common/utils';
 import { FunctionLog } from '@poly/model';
 import { FaasLogsService } from '../faas.service';
 
-@Injectable()
 export class LokiLogsService implements FaasLogsService {
   private readonly logger: Logger = new Logger(LokiLogsService.name);
 
