@@ -45,6 +45,7 @@ export interface FunctionBasicDto {
   description: string;
   visibility: Visibility;
   enabled?: boolean;
+  logsEnabled?: boolean;
 }
 
 export interface TrainingFunctionDto extends FunctionBasicDto{

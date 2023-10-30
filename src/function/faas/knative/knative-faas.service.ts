@@ -86,6 +86,7 @@ export class KNativeFaasService implements FaasService {
     createFromScratch?: boolean,
     sleep?: boolean | null,
     sleepAfter?: number | null,
+    logsEnabled = false,
   ): Promise<void> {
     this.logger.debug(`Creating function ${id} for tenant ${tenantId} in environment ${environmentId}...`);
 
@@ -103,7 +104,7 @@ export class KNativeFaasService implements FaasService {
       this.logger.debug(`Writing function code to ${functionPath}/function/index.js`);
       await writeFile(`${functionPath}/function/index.js`, content);
 
-      await this.deploy(id, tenantId, environmentId, imageName, apiKey, limits, sleep, sleepAfter);
+      await this.deploy(id, tenantId, environmentId, imageName, apiKey, limits, sleep, sleepAfter, logsEnabled);
     };
 
     const additionalRequirements = this.filterPreinstalledNpmPackages(requirements);
@@ -264,6 +265,7 @@ export class KNativeFaasService implements FaasService {
     limits: ServerFunctionLimits,
     sleep?: boolean | null,
     sleepAfter?: number | null,
+    logsEnabled = false,
   ) {
     this.logger.debug(`Deleting function '${id}' before deploying to avoid conflicts...`);
     await this.deleteFunction(id, tenantId, environmentId, false);
@@ -304,6 +306,9 @@ export class KNativeFaasService implements FaasService {
       metadata: {
         name: this.getFunctionName(id),
         namespace: this.config.faasNamespace,
+        labels: {
+          logsEnabled,
+        },
       },
       spec: {
         template: {

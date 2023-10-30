@@ -88,3 +88,5 @@ export const getOneDayLaterDate = () => {
 };
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const getDateFromNanoseconds = (nanoSecondsTime: number): Date => new Date(nanoSecondsTime / 1000000);
