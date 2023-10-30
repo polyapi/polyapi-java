@@ -13,7 +13,6 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { LimitModule } from 'limit/limit.module';
 import { StatisticsModule } from 'statistics/statistics.module';
 import { EnvironmentModule } from 'environment/environment.module';
-import { FaasLogsService } from './faas/faas-logs.service';
 
 @Module({
   imports: [
@@ -30,8 +29,8 @@ import { FaasLogsService } from './faas/faas-logs.service';
     StatisticsModule,
     EnvironmentModule,
   ],
-  providers: [FunctionService, FaasLogsService],
-  exports: [FunctionService, FaasLogsService],
+  providers: [FunctionService],
+  exports: [FunctionService],
   controllers: [FunctionController],
 })
 export class FunctionModule {

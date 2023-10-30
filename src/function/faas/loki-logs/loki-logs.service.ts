@@ -4,12 +4,13 @@ import { ConfigService } from 'config/config.service';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { getDateFromNanoseconds } from '@poly/common/utils';
 import { FunctionLog } from '@poly/model';
+import { FaasLogsService } from '../faas.service';
 
 @Injectable()
-export class FaasLogsService {
-  private readonly logger: Logger = new Logger(FaasLogsService.name);
+export class LokiLogsService implements FaasLogsService {
+  private readonly logger: Logger = new Logger(LokiLogsService.name);
 
-  constructor(private readonly httpService: HttpService, private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService, private readonly httpService: HttpService) {}
 
   async getLogs(functionId: string, keyword: string): Promise<FunctionLog[]> {
     this.logger.debug(`Getting logs for function with id ${functionId}`);

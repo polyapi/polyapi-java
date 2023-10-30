@@ -58,9 +58,8 @@ import { PathError } from 'common/path-error';
 import { ConfigService } from 'config/config.service';
 import { AiService } from 'ai/ai.service';
 import { compareArgumentsByRequired } from 'function/comparators';
-import { FaasService } from 'function/faas/faas.service';
+import { FaasService, FaasLogsService } from 'function/faas/faas.service';
 import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
-import { FaasLogsService } from './faas/faas-logs.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
 import { ApiFunctionArguments } from './types';
@@ -79,6 +78,7 @@ import { AuthData, WithEnvironment, WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
 import { isTemplateArg, JsonTemplate, JsonTemplateProcessor, POLY_ARG_NAME_KEY } from './custom/json-template';
 import { ARGUMENT_PATTERN } from './custom/constants';
+import { LokiLogsService } from './faas/loki-logs/loki-logs.service';
 
 mustache.escape = (text) => {
   if (typeof text === 'string') {
@@ -92,6 +92,7 @@ mustache.escape = (text) => {
 export class FunctionService implements OnModuleInit {
   private readonly logger: Logger = new Logger(FunctionService.name);
   private readonly faasService: FaasService;
+  private readonly faasLogsService: FaasLogsService;
   private readonly jsonTemplate: JsonTemplateProcessor;
 
   constructor(
@@ -107,9 +108,9 @@ export class FunctionService implements OnModuleInit {
     private readonly variableService: VariableService,
     private readonly authService: AuthService,
     private readonly limitService: LimitService,
-    private readonly faasLogsService: FaasLogsService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
+    this.faasLogsService = new LokiLogsService(config, httpService);
     this.jsonTemplate = new JsonTemplate();
   }
 
@@ -1891,7 +1892,7 @@ export class FunctionService implements OnModuleInit {
       code,
       {},
       user.key,
-      user.environment.logsDefault,
+      false,
       () => Promise.resolve(),
       true,
     );
