@@ -294,8 +294,8 @@ def _rehydrate_public_ids(short_ids: List, id_map: Dict[int, str]) -> List[str]:
     return rv
 
 
-BEST_FUNCTION_DETAILS_TEMPLATE = """To import the Poly API Library:
-`import poly from 'polyapi'`
+BEST_FUNCTION_DETAILS_TEMPLATE = """
+{import_prompt}
 
 Consider the comments when generating example data.
 
@@ -349,6 +349,7 @@ def get_best_function_example(
         language_prompt = f"Please provide all code examples in {language}"
 
     best_functions_prompt = BEST_FUNCTION_DETAILS_TEMPLATE.format(
+        import_prompt=_get_import_prompt(language),
         spec_str="\n\n".join(
             spec_prompt(spec, include_return_type=True) for spec in specs
         ),
@@ -406,6 +407,15 @@ def get_best_function_example(
     store_messages(conversation_id, messages)
 
     return resp
+
+
+def _get_import_prompt(language: str) -> str:
+    rv = "To import the Poly API Library:\n"
+    if language == "java":
+        rv += "`import io.polyapi.Poly`"
+    else:
+        rv += "`import poly from 'polyapi'`"
+    return rv
 
 
 def get_completion_answer(

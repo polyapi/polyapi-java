@@ -4,7 +4,7 @@ import { ChatService } from 'chat/chat.service';
 import { aiServiceMock, cacheManagerMock } from '../mocks';
 import { AiService } from 'ai/ai.service';
 import { BadRequestException, CACHE_MANAGER } from '@nestjs/common';
-import { Role } from '@poly/model';
+import { MessageDto, Role } from '@poly/model';
 import { AuthData } from 'common/types';
 
 describe('ChatService', () => {
@@ -59,10 +59,14 @@ describe('ChatService', () => {
         user,
       };
 
-      const detail = await service.getConversationDetail(auth, '', conversation.id);
-      // console.log(detail);
-      expect(detail).toContain('USER');
-      expect(detail).toContain('I am super');
+      const resp = await service.getConversationDetail(auth, '', conversation.id);
+
+      // ignore the type for authData, we have all we need in the mock
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const msg: MessageDto = resp.messages[0];
+      expect(msg.role).toBe('user');
+      expect(msg.content).toContain('I am super');
     });
 
     it('should NOT allow the Admin to get conversations cross-tenant', async () => {

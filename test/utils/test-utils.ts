@@ -41,7 +41,7 @@ export const mockedAuthData: AuthData = {
     name: '',
     subdomain: '',
     tenantId: '',
-    logsDefault: false
+    logsDefault: false,
   },
   tenant: {
     createdAt: currentDate,

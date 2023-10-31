@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { Cache } from 'cache-manager';
 import crypto from 'crypto';
 import { Permission, Role } from '@poly/model';
-import { Conversation, User, Prisma } from '@prisma/client';
+import { Conversation, ConversationMessage, User, Prisma } from '@prisma/client';
 import { AuthData } from 'common/types';
 
 @Injectable()
@@ -202,7 +202,7 @@ export class ChatService {
     return this.getConversationIdsForUser(auth.user, userId, workspaceFolder);
   }
 
-  async getConversationDetail(auth: AuthData, userId: string, conversationId: string): Promise<string> {
+  async getConversationDetail(auth: AuthData, userId: string, conversationId: string): Promise<unknown> {
     // user is the user for permissions purposes whereas userId is which userId to see last convo for
     let conversation: Conversation;
     let where: Prisma.ConversationWhereInput;
@@ -223,11 +223,11 @@ export class ChatService {
       where: { conversationId: conversation.id },
       orderBy: { createdAt: 'asc' },
     });
-    const parts = messages.map((m) => `${m.role.toUpperCase()} (${m.createdAt.toISOString()})\n\n${m.content}`);
-    return parts.join('\n\n');
+    const serialized = this._serialize(messages);
+    return { conversationGuid: conversation.id, messages: serialized };
   }
 
-  async getConversationDetailBySlug(authData: AuthData, conversationSlug: string): Promise<string> {
+  async getConversationDetailBySlug(authData: AuthData, conversationSlug: string): Promise<unknown> {
     // user is the user for permissions purposes whereas userId is which userId to see last convo for
     let conversation: Conversation;
     const where = this._getConversationWhereInput(authData, conversationSlug);
@@ -241,8 +241,16 @@ export class ChatService {
       where: { conversationId: conversation.id },
       orderBy: { createdAt: 'asc' },
     });
-    const parts = messages.map((m) => `${m.role.toUpperCase()} (${m.createdAt.toISOString()})\n\n${m.content}`);
-    return parts.join('\n\n');
+    const serialized = this._serialize(messages);
+    return { conversationGuid: conversation.id, messages: serialized };
+  }
+
+  _serialize(messages: ConversationMessage[]) {
+    const rv: unknown[] = [];
+    for (const message of messages) {
+      rv.push({ role: message.role, content: message.content, createdAt: message.createdAt });
+    }
+    return rv;
   }
 
   async checkConversationDetailPermissions(auth: AuthData, conversation: Conversation) {
