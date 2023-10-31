@@ -48,7 +48,6 @@ const rawObject = {
   statusCode: pm.response.code,
   templateUrl: `${templateUrl.protocol ? `${templateUrl.protocol}://` : ''}${templateUrl.getRemote()}${templateUrl.getPathWithQuery()}`,
   templateBody,
-  scriptVersion
 };
 
 const postRequest = {
@@ -57,6 +56,7 @@ const postRequest = {
   header: {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${apiKey}`,
+    'x-poly-training-script-version': scriptVersion,
   },
   body: {
     mode: 'raw',
@@ -164,7 +164,7 @@ function teachPoly(introspectionResponse) {
     }
 
     if (response.code >= 400) {
-      return console.error(`Training call failed with status code ${response.code}`);
+      return console.error(`Training call failed with status code ${response.code}. Message: ${response.json()?.message}`);
     }
 
     const responseBody = await response.json();

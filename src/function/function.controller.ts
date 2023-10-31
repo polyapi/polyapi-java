@@ -21,7 +21,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
-import { ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER } from '@poly/common/utils';
+import { ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER, TRAINING_SCRIPT_VERSION_HEADER } from '@poly/common/utils';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
@@ -115,10 +115,10 @@ export class FunctionController {
       id = null,
       introspectionResponse = null,
       enableRedirect = false,
-      scriptVersion,
     } = data;
 
-    checkPolyTrainingAssistantScriptVersion(scriptVersion, this.configService.postmanScriptVersion);
+    const clientScriptVersion = req.headers[TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
+    checkPolyTrainingAssistantScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion);
 
     const environmentId = req.user.environment.id;
 
