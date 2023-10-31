@@ -1,10 +1,10 @@
-import { IsArray, IsIn, IsNotEmpty, IsNumber, IsObject, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsEnum, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
 import { JobType, JobExecutionType } from "../../job";
 import { Type } from "class-transformer";
 import { ApiModelProperty } from "@nestjs/swagger/dist/decorators/api-model-property.decorator";
 
 
-class BaseJobType {
+class Options {
     @ApiModelProperty({
       name: 'type',
     })
@@ -13,7 +13,7 @@ class BaseJobType {
     type: JobType;
 }
 
-class OnTime extends BaseJobType {
+export class OnTime extends Options {
     @IsString()
     @ApiModelProperty({
       enum: [JobType.ON_TIME],
@@ -26,7 +26,7 @@ class OnTime extends BaseJobType {
     value: Date;
 }
 
-class Periodically extends BaseJobType {
+export class Periodically extends Options {
     @IsString()
     @ApiModelProperty({
       enum: [JobType.PERIODICALLY],
@@ -38,7 +38,7 @@ class Periodically extends BaseJobType {
     value: string;
 }
 
-class Interval extends BaseJobType {
+export class Interval extends Options {
     @IsString()
     @ApiModelProperty({
       enum: [JobType.INTERVAL],
@@ -51,16 +51,20 @@ class Interval extends BaseJobType {
 }
 
 
-class FunctionJob {
+export class FunctionJob {
   @IsString()
   @IsNotEmpty()
   id: string;
   
-  eventPayload: object | any[];
+  @IsOptional()
+  @IsObject()
+  eventPayload: object;
 
+  @IsOptional()
   @IsObject()
   headersPayload: object;
 
+  @IsOptional()
   @IsObject()
   paramsPayload: object;
   
@@ -74,7 +78,7 @@ export class CreateJob {
 
     @IsObject()
     @ValidateNested()
-    @Type(() => BaseJobType, {
+    @Type(() => Options, {
       keepDiscriminatorProperty: true,
       discriminator: {
         property: 'type',
@@ -92,7 +96,7 @@ export class CreateJob {
         ],
       },
     })
-    execution: Interval | Periodically | OnTime;
+    scheduleConfig: Interval | Periodically | OnTime;
 
 
     @IsArray()
@@ -100,6 +104,6 @@ export class CreateJob {
     @Type(() => FunctionJob)
     functions: FunctionJob[]
 
-
+    @IsEnum(JobExecutionType)
     executionType: JobExecutionType;
 }

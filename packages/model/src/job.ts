@@ -7,5 +7,5 @@ export enum JobType {
 
 export enum JobExecutionType {
     SECUENTIAL = 'secuential',
-    PARALlEL = 'parallel'
+    PARALLEL = 'parallel'
 }

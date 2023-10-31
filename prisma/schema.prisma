@@ -439,3 +439,27 @@ model CustomFunctionWebhookHandle {
 
   @@map("custom_function_webhook_handle")
 }
+
+model Job {
+  id                  String @id @default(uuid())
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  name                String
+  type           String // interval, on time or periodicity
+  value               String // Depends on execution value
+  functions           String
+  executionType       String // Parallel or sequential
+  executions          JobExecutions[]
+
+  @@map("job")
+}
+
+
+model JobExecutions {
+  id                  String @id @default(uuid())
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  job                 Job? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  jobId               String? @map("job_id")
+  results             String
+
+  @@map("job_executions")
+}
