@@ -62,3 +62,8 @@ export type ArgumentsMetadata = {
     removeIfNotPresentOnExecute?: boolean;
   };
 };
+
+export type FunctionLog = {
+  timestamp: Date;
+  value: string;
+};

@@ -35,6 +35,7 @@ export class EnvironmentService implements OnModuleInit {
       id: environment.id,
       name: environment.name,
       subdomain: environment.subdomain,
+      logsDefault: environment.logsDefault,
     };
   }
 
@@ -73,13 +74,14 @@ export class EnvironmentService implements OnModuleInit {
     });
   }
 
-  async create(tenantId: string, name: string) {
+  async create(tenantId: string, name: string, logsDefault = false) {
     this.logger.log(`Creating environment '${name}' for tenant ${tenantId}`);
 
     const environment = await this.prisma.environment.create({
       data: {
         name,
         subdomain: this.generateSubdomainID(),
+        logsDefault,
         tenant: {
           connect: {
             id: tenantId,
@@ -93,7 +95,7 @@ export class EnvironmentService implements OnModuleInit {
     return environment;
   }
 
-  async update(environment: Environment, name: string) {
+  async update(environment: Environment, name: string, logsDefault = false) {
     this.logger.log(`Updating environment '${environment.id}'`);
 
     return this.prisma.environment.update({
@@ -102,6 +104,7 @@ export class EnvironmentService implements OnModuleInit {
       },
       data: {
         name,
+        logsDefault,
       },
     });
   }

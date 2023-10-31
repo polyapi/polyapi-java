@@ -49,6 +49,7 @@ import {
   UpdateSourceNullableEntry,
   FormDataEntry,
   RawBody,
+  FunctionLog,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -57,7 +58,7 @@ import { PathError } from 'common/path-error';
 import { ConfigService } from 'config/config.service';
 import { AiService } from 'ai/ai.service';
 import { compareArgumentsByRequired } from 'function/comparators';
-import { FaasService } from 'function/faas/faas.service';
+import { FaasService, FaasLogsService } from 'function/faas/faas.service';
 import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
@@ -77,6 +78,7 @@ import { AuthData, WithEnvironment, WithTenant } from 'common/types';
 import { LimitService } from 'limit/limit.service';
 import { isTemplateArg, JsonTemplate, JsonTemplateProcessor, POLY_ARG_NAME_KEY } from './custom/json-template';
 import { ARGUMENT_PATTERN } from './custom/constants';
+import { LokiLogsService } from './faas/loki-logs/loki-logs.service';
 
 mustache.escape = (text) => {
   if (typeof text === 'string') {
@@ -90,6 +92,7 @@ mustache.escape = (text) => {
 export class FunctionService implements OnModuleInit {
   private readonly logger: Logger = new Logger(FunctionService.name);
   private readonly faasService: FaasService;
+  private readonly faasLogsService: FaasLogsService;
   private readonly jsonTemplate: JsonTemplateProcessor;
 
   constructor(
@@ -107,6 +110,7 @@ export class FunctionService implements OnModuleInit {
     private readonly limitService: LimitService,
   ) {
     this.faasService = new KNativeFaasService(config, httpService);
+    this.faasLogsService = new LokiLogsService(config, httpService);
     this.jsonTemplate = new JsonTemplate();
   }
 
@@ -227,7 +231,7 @@ export class FunctionService implements OnModuleInit {
   apiFunctionToTrainingDto(apiFunction: ApiFunction & { traceId?: string }) {
     return {
       ...this.apiFunctionToBasicDto(apiFunction),
-      traceId: 'foo',
+      traceId: apiFunction.traceId,
     };
   }
 
@@ -1159,6 +1163,7 @@ export class FunctionService implements OnModuleInit {
       context: customFunction.context,
       visibility: customFunction.visibility as Visibility,
       enabled: customFunction.enabled ? undefined : false,
+      logsEnabled: customFunction.logsEnabled,
     };
   }
 
@@ -1225,6 +1230,7 @@ export class FunctionService implements OnModuleInit {
       typeSchemas,
       false,
       null,
+      false,
       checkBeforeCreate,
     );
   }
@@ -1237,6 +1243,7 @@ export class FunctionService implements OnModuleInit {
     customCode: string,
     typeSchemas: Record<string, any>,
     apiKey: string,
+    logsEnabled: boolean,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
     createFromScratch = false,
   ) {
@@ -1249,6 +1256,7 @@ export class FunctionService implements OnModuleInit {
       typeSchemas,
       true,
       apiKey,
+      logsEnabled,
       checkBeforeCreate,
       createFromScratch,
     );
@@ -1263,6 +1271,7 @@ export class FunctionService implements OnModuleInit {
     typeSchemas: Record<string, any>,
     serverFunction: boolean,
     apiKey: string | null,
+    logsEnabled = false,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
     createFromScratch = false,
   ): Promise<CustomFunction & { traceId?: string }> {
@@ -1362,6 +1371,7 @@ export class FunctionService implements OnModuleInit {
           requirements: JSON.stringify(requirements),
           serverSide: serverFunction,
           apiKey: serverFunction ? apiKey : null,
+          logsEnabled,
         },
       });
     }
@@ -1392,6 +1402,7 @@ export class FunctionService implements OnModuleInit {
           apiKey,
           await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
           createFromScratch,
+          logsEnabled,
         );
 
         return customFunction;
@@ -1438,6 +1449,7 @@ export class FunctionService implements OnModuleInit {
     enabled?: boolean,
     sleep?: boolean,
     sleepAfter?: number,
+    logsEnabled?: boolean,
   ) {
     return this.updateCustomFunction(
       customFunction,
@@ -1449,6 +1461,7 @@ export class FunctionService implements OnModuleInit {
       enabled,
       sleep,
       sleepAfter,
+      logsEnabled,
     );
   }
 
@@ -1462,6 +1475,7 @@ export class FunctionService implements OnModuleInit {
     enabled?: boolean,
     sleep?: boolean,
     sleepAfter?: number,
+    logsEnabled?: boolean,
   ) {
     const { id, name: currentName, context: currentContext } = customFunction;
 
@@ -1506,6 +1520,7 @@ export class FunctionService implements OnModuleInit {
         arguments: argumentsMetadata ? JSON.stringify(argumentsMetadata) : undefined,
         sleep,
         sleepAfter,
+        logsEnabled,
       },
     });
   }
@@ -1839,6 +1854,14 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
+  async getServerFunctionLogs(id: string, keyword: string, logsEnabled: boolean): Promise<{logsEnabled: boolean, logs: FunctionLog[]}> {
+    const logs = await this.faasLogsService.getLogs(id, keyword);
+    return {
+      logsEnabled,
+      logs,
+    };
+  }
+
   private isGraphQLBody(body: Body): body is GraphQLBody {
     return body.mode === 'graphql';
   }
@@ -1869,6 +1892,7 @@ export class FunctionService implements OnModuleInit {
       code,
       {},
       user.key,
+      false,
       () => Promise.resolve(),
       true,
     );

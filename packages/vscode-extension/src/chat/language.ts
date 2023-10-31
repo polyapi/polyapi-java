@@ -9,6 +9,7 @@ export const STATE_KEY = 'assistant';
 export const SUPPORTED_FORMAT_LANGUAGE_MAP = {
   tsx: 'Typescript',
   ts: 'Typescript',
+  java: 'Java',
 };
 
 export const saveLastOpenedFileName = (context: ExtensionContext, filePath: string) => {

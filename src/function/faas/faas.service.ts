@@ -1,8 +1,12 @@
-import { ServerFunctionLimits } from '@poly/model';
+import { ServerFunctionLimits, FunctionLog } from '@poly/model';
 
 export interface ExecuteFunctionResult {
   body: any;
   statusCode: number;
+}
+
+export interface FaasLogsService {
+  getLogs: (functionId: string, keyword: string) => Promise<FunctionLog[]>;
 }
 
 export interface FaasService {

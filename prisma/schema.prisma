@@ -90,6 +90,7 @@ model Environment {
   systemPrompts   SystemPrompt[]
   variables       Variable[]
   webhookHandles  WebhookHandle[]
+  logsDefault     Boolean          @default(false) @map("logs_default")
 
   @@map("environment")
 }
@@ -163,12 +164,14 @@ model CustomFunction {
   requirements  String?      @map("requirements")
   trained       Boolean      @default(false)
   serverSide    Boolean      @default(false) @map("server_side")
+  logsEnabled   Boolean      @default(false) @map("logs_enabled")
   apiKey        String?      @map("api_key")
   visibility    String       @default("ENVIRONMENT")
   enabled       Boolean      @default(true)
   sleep         Boolean?     @map("sleep")
   sleepAfter    Int?         @map("sleep_after")
   environment   Environment  @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  webhookHandles CustomFunctionWebhookHandle[]
 
   @@map("custom_function")
 }
@@ -209,6 +212,7 @@ model WebhookHandle {
   subpath             String?     @map("subpath")
   method              String?
   securityFunctions   String?     @map("security_functions")
+  customFunctions     CustomFunctionWebhookHandle[]
   enabled             Boolean     @default(true)
   environment         Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
   @@map("webhook_handle")
@@ -294,7 +298,7 @@ model GptPlugin {
   iconUrl                   String      @map("icon_url")
   functionIds               String      @map("functionids")
   environmentId             String      @map("environment_id")
-  authType                  String      @default("user_http") @map("auth_type")
+  authType                  String      @default("service_http") @map("auth_type")
   authToken                 String      @default("") @map("authtoken")
   environment               Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
@@ -422,4 +426,16 @@ model PerfLog {
   userId        String?      @map("user_id")
 
   @@map("perf_log")
+}
+
+model CustomFunctionWebhookHandle {
+  id                  String @id @default(uuid())
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  webhookHandle       WebhookHandle  @relation(fields: [webhook_handle_id], references: [id], onDelete: Cascade)
+  customFunction      CustomFunction @relation(fields: [custom_function_id], references: [id], onDelete: Cascade)
+  custom_function_id  String @map("function_id")
+  webhook_handle_id   String
+  message             String?
+
+  @@map("custom_function_webhook_handle")
 }

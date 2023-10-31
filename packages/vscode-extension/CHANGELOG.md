@@ -1,3 +1,6 @@
+### 0.6.1
+* Java support in poly assistant.
+
 ### 0.6.0
 * Pass language option automatically to poly assistant.
 

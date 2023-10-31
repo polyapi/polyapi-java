@@ -332,7 +332,10 @@ export class ChatService {
       return [];
     }
 
-    const conversation = await this.prisma.conversation.findFirst({ where: { userId } });
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { userId, workspaceFolder },
+      orderBy: { createdAt: 'desc' },
+    });
     if (!conversation) {
       return [];
     }

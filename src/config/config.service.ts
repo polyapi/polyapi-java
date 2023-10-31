@@ -103,6 +103,10 @@ export class ConfigService {
     return this.get('FAAS_POLY_SERVER_URL', this.hostUrl);
   }
 
+  get faasPolyServerLogsUrl(): string {
+    return this.get('FAAS_POLY_SERVER_LOGS_URL');
+  }
+
   get faasDockerContainerRegistry(): string {
     return this.get('FAAS_DOCKER_CONTAINER_REGISTRY', 'ghcr.io/polyapi/poly-alpha');
   }

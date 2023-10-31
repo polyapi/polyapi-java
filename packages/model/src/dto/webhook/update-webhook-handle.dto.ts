@@ -82,3 +82,11 @@ export class UpdateWebhookHandleDto {
   @IsString()
   templateBody: string;
 }
+
+export class UpdatePublicWebhookHandleDto {
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WebhookSecurityFunction)
+  securityFunctions?: WebhookSecurityFunction[];
+}

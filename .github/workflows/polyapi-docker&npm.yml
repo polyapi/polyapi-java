@@ -17,10 +17,21 @@ jobs:
       IMAGE: ghcr.io/polyapi/polyapi-dev
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      
+
     steps:
     - uses: actions/checkout@v3
-    
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - name: Obfuscate Python
+      run: |
+        pip3 install pyarmor==8.4.1
+        cd science
+        pyarmor gen -O app_o -r app
+        rm -rf app
+        mv app_o/* ./
+        rmdir app_o
+        cd ..
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
@@ -54,11 +65,11 @@ jobs:
         else
           yarn install
           npx prisma@4.11.0 generate --generator js
-          cd packages/client 
+          cd packages/client
           npm install --include=dev
           npm publish --tag develop
         fi
-        
+
 
   main:
     name: Main Docker build and push.
@@ -69,7 +80,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
       IMAGE: ghcr.io/polyapi/polyapi-main
-      
+
     steps:
     - uses: actions/checkout@v3
 

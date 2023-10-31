@@ -1,4 +1,3 @@
-
 #!/bin/bash
 source .env
 docker build --progress=plain \

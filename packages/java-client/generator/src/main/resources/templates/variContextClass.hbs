@@ -1,0 +1,56 @@
+package {{packageName}};
+
+import java.util.function.Consumer;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import io.polyapi.client.api.*;
+
+public class {{className}} {
+{{#if root}}
+  private final static WebSocketClient webSocketClient = WebSocketClient.getInstance();
+  private final static ObjectMapper objectMapper = ObjectMapper.getInstance();
+{{/if}}
+{{#each variables}}
+  {{#if rootContext}}
+  public static {{className}} {{name}} = new {{className}}();
+  {{else}}
+  public {{className}} {{name}} = new {{className}}();
+  {{/if}}
+{{/each}}
+{{#each subContexts}}
+  {{#if useStatic}}
+  public static {{className}} {{name}} = new {{className}}();
+  {{else}}
+  public {{className}} {{name}} = new {{className}}();
+  {{/if}}
+{{/each}}
+{{#if root}}
+  public static OnUpdateListener onUpdate(String path, Consumer<VariableChangeEvent> callback) {
+    return onUpdate(path, callback, null);
+  }
+  public static OnUpdateListener onUpdate(String path, Consumer<VariableChangeEvent> callback, OnUpdateOptions options) {
+    try {
+      if (options == null) {
+        options = new OnUpdateOptions();
+      }
+      return webSocketClient.registerOnUpdateVariablesEventHandler(path, options, objects -> {
+        var data = (JSONObject) objects[0];
+        var typeRef = new TypeReference<VariableChangeEvent>() {
+        };
+        try {
+          callback.accept(
+            objectMapper.readValue(data.toString(), typeRef)
+          );
+        } catch (Exception e) {
+          throw new PolyRuntimeException(e);
+        }
+      });
+    } catch (JSONException e) {
+      throw new PolyRuntimeException(e);
+    }
+  }
+{{/if}}
+}

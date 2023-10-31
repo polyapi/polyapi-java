@@ -19,17 +19,19 @@ import {
 } from '@nestjs/common';
 import { ApiSecurity } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import { WebhookHandle } from '@prisma/client';
+import { Environment, WebhookHandle } from '@prisma/client';
 import { WebhookService } from 'webhook/webhook.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
   CreateWebhookHandleDto,
   Permission,
   Role,
+  UpdatePublicWebhookHandleDto,
   UpdateWebhookHandleDto,
   Visibility,
   WebhookHandleBasicPublicDto,
   WebhookHandlePublicDto,
+  WebhookSecurityFunction,
 } from '@poly/model';
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
@@ -40,6 +42,7 @@ import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
 import { PerfLogType } from 'statistics/perf-log-type';
 import { PerfLog } from 'statistics/perf-log.decorator';
+import { FunctionService } from 'function/function.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('webhooks')
@@ -53,6 +56,7 @@ export class WebhookController {
     private readonly commonService: CommonService,
     private readonly environmentService: EnvironmentService,
     private readonly perfLogInfoProvider: PerfLogInfoProvider,
+    private readonly functionService: FunctionService,
   ) {
   }
 
@@ -77,6 +81,7 @@ export class WebhookController {
   async getPublicClientFunction(@Req() req: AuthRequest, @Param('id') id: string): Promise<WebhookHandlePublicDto> {
     const { tenant, environment } = req.user;
     const webhookHandle = await this.webhookService.findPublicWebhookHandle(tenant, environment, id);
+
     if (webhookHandle === null) {
       throw new NotFoundException(`Public webhook handle with ID ${id} not found.`);
     }
@@ -85,9 +90,32 @@ export class WebhookController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @Patch('/public/:id')
+  async updatePublicWebhookHandle(@Req() req: AuthRequest, @Param('id') id: string, @Body() updateWebhookHandleDto: UpdatePublicWebhookHandleDto): Promise<WebhookHandlePublicDto> {
+    const { tenant, environment } = req.user;
+
+    const webhookHandle = await this.webhookService.findPublicWebhookHandle(tenant, environment, id);
+
+    if (webhookHandle === null) {
+      throw new NotFoundException(`Public webhook handle with ID ${id} not found.`);
+    }
+
+    await this.checkSecurityFunctions(req.user.environment, updateWebhookHandleDto.securityFunctions);
+
+    return this.webhookService.toPublicDto(
+      await this.webhookService.updatePublicWebhookHandle(webhookHandle, tenant, environment, updateWebhookHandleDto.securityFunctions),
+      environment,
+    );
+  }
+
+  @UseGuards(PolyAuthGuard)
   @Get(':id')
   public async getWebhookHandle(@Req() req: AuthRequest, @Param('id') id: string) {
-    const webhookHandle = await this.findWebhookHandle(id);
+    const webhookHandle = await this.webhookService.getWebhookHandle(id, req.user.environment);
+
+    if (!webhookHandle) {
+      throw new NotFoundException('Webhook handle not found.');
+    }
 
     await this.authService.checkEnvironmentEntityAccess(webhookHandle, req.user, false, Permission.ManageWebhooks);
 
@@ -109,7 +137,7 @@ export class WebhookController {
       responseStatus,
       subpath,
       method,
-      securityFunctions = [],
+      securityFunctions,
       templateBody,
     } = createWebhookHandle;
 
@@ -122,6 +150,8 @@ export class WebhookController {
     if (!eventPayload && !eventPayloadTypeSchema) {
       throw new BadRequestException('eventPayload or eventPayloadTypeSchema is required');
     }
+
+    await this.checkSecurityFunctions(req.user.environment, securityFunctions);
 
     const webhookHandle = await this.webhookService.createOrUpdateWebhookHandle(
       req.user.environment,
@@ -193,6 +223,8 @@ export class WebhookController {
     }
 
     await this.authService.checkEnvironmentEntityAccess(webhookHandle, req.user, false, Permission.ManageWebhooks);
+
+    await this.checkSecurityFunctions(req.user.environment, securityFunctions);
 
     return this.webhookService.toDto(
       await this.webhookService.updateWebhookHandle(
@@ -362,5 +394,17 @@ export class WebhookController {
     }
 
     return subpath;
+  }
+
+  private async checkSecurityFunctions(environment: Environment, securityFunctions: WebhookSecurityFunction[] = []) {
+    const serverFunctions = await this.functionService.getServerFunctions(environment.id, undefined, undefined, securityFunctions.map(({ id }) => id));
+
+    if (serverFunctions.length !== securityFunctions.length) {
+      for (const securityFunction of securityFunctions) {
+        if (!serverFunctions.find(serverFunction => serverFunction.id === securityFunction.id)) {
+          throw new BadRequestException(`Server function with id = ${securityFunction.id} not found`);
+        }
+      }
+    }
   }
 }

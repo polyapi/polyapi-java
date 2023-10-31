@@ -5,6 +5,7 @@ import {
   authServiceMock,
   commonServiceMock,
   environmentServiceMock,
+  functionServiceMock,
   perfLogInfoProviderMock, prismaServiceMock,
   webhookServiceMock,
 } from '../mocks';
@@ -15,6 +16,7 @@ import { NotFoundException } from '@nestjs/common';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 import { AuthService } from 'auth/auth.service';
 import { PrismaService } from 'prisma-module/prisma.service';
+import { FunctionService } from 'function/function.service';
 
 describe('WebhookController', () => {
   let webhookController: WebhookController;
@@ -45,6 +47,10 @@ describe('WebhookController', () => {
         {
           provide: PerfLogInfoProvider,
           useValue: perfLogInfoProviderMock,
+        },
+        {
+          provide: FunctionService,
+          useValue: functionServiceMock,
         },
       ],
       controllers: [WebhookController],

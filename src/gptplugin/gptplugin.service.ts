@@ -404,6 +404,13 @@ export class GptPluginService {
   }
 
   async createOrUpdatePlugin(environment: Environment, body: CreatePluginDto): Promise<GptPlugin> {
+    // user_http is not working atm
+    if (body.authType === 'user_http') {
+      throw new BadRequestException(
+        '`user_http` authentication is not supported by OpenAI at the moment. see OpenAI docs for details. Please use service_http!',
+      );
+    }
+
     // slugs must be lowercase!
     body.slug = body.slug.replaceAll('_', '-');
     body.slug = slugify(body.slug);
@@ -493,32 +500,20 @@ export class GptPluginService {
     let legalUrl = 'https://polyapi.io/legal';
 
     // default to user auth
-    let auth: PluginAuth = {
-      type: 'user_http',
+    const plugin = await this.getPlugin(slug, environment.id, { environment: true });
+    const auth: PluginAuth = {
+      type: plugin.authType,
       authorization_type: 'bearer',
     };
-    if (slug === 'staging') {
-      name = 'Poly API Staging';
-    } else if (slug === 'develop') {
-      name = 'Poly API Develop';
-    } else {
-      const plugin = await this.getPlugin(slug, environment.id, { environment: true });
-      if (plugin.authType === 'service_http') {
-        auth = {
-          type: plugin.authType,
-          authorization_type: 'bearer',
-          verification_tokens: {
-            openai: plugin.authToken,
-          },
-        };
-      }
-      name = plugin.name;
-      descMarket = plugin.descriptionForMarketplace;
-      descModel = plugin.descriptionForModel;
-      iconUrl = plugin.iconUrl;
-      contactEmail = plugin.contactEmail;
-      legalUrl = plugin.legalUrl;
+    if (plugin.authType === 'service_http') {
+      auth.verification_tokens = { openai: plugin.authToken };
     }
+    name = plugin.name;
+    descMarket = plugin.descriptionForMarketplace;
+    descModel = plugin.descriptionForModel;
+    iconUrl = plugin.iconUrl;
+    contactEmail = plugin.contactEmail;
+    legalUrl = plugin.legalUrl;
 
     return {
       schema_version: 'v1',

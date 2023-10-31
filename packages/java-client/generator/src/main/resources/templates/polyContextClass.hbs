@@ -1,0 +1,176 @@
+package {{packageName}};
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import org.json.JSONObject;
+import org.json.JSONException;
+import io.polyapi.client.api.*;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static io.polyapi.client.api.Utils.*;
+
+public class {{className}} {
+  private final ApiClient apiClient = ApiClient.getInstance();
+  private final WebSocketClient webSocketClient = WebSocketClient.getInstance();
+  private final VariableInjectManager variableInjectManager = VariableInjectManager.getInstance();
+  private final ObjectMapper objectMapper = ObjectMapper.getInstance();
+
+{{#each subContexts}}
+{{#if useStatic}}
+  public static {{className}} {{name}} = new {{className}}();
+{{else}}
+  public {{className}} {{name}} = new {{className}}();
+{{/if}}
+{{/each}}
+
+{{#each specifications}}
+  {{#ifIsType this "ApiFunctionSpecification"}}
+  public ApiFunctionResponse<{{{function.returnType.getInCodeType}}}> {{name}}({{{renderArguments function.arguments}}}) {
+    try {
+      var payloadForThePolyApiFunction = new JSONObject();
+      {{#each function.arguments}}
+      payloadForThePolyApiFunction.put("{{name}}", objectMapper.toJSONValue(variableInjectManager.getInjectedValueOrOriginal({{inCodeName}})));
+      {{/each}}
+      var response = apiClient.post("/functions/api/{{id}}/execute", payloadForThePolyApiFunction.toString());
+      var responseBody = response.getBody();
+      var typeRef = new TypeReference<ApiFunctionResponse<{{{function.returnType.getInCodeType}}}>>() {};
+      return objectMapper.readValue(responseBody, typeRef);
+    } catch (Exception e) {
+      throw new PolyRuntimeException(e);
+    }
+  }
+  {{/ifIsType}}
+  {{#ifIsType this "CustomFunctionSpecification"}}
+  public {{{function.returnType.getInCodeType}}} {{name}}({{{renderArguments function.arguments}}}) {
+    throw new UnsupportedOperationException("Javascript client functions cannot be used in the Java client.");
+  }
+  {{/ifIsType}}
+  {{#ifIsType this "ServerFunctionSpecification"}}
+  public {{{function.returnType.getInCodeType}}} {{name}}({{{renderArguments function.arguments}}}) {
+    try {
+      var payloadForThePolyServerFunction = new JSONObject();
+      {{#each function.arguments}}
+      payloadForThePolyServerFunction.put("{{name}}", objectMapper.toJSONValue(variableInjectManager.getInjectedValueOrOriginal({{inCodeName}})));
+      {{/each}}
+      var response = apiClient.post("/functions/server/{{id}}/execute", payloadForThePolyServerFunction.toString());
+      var responseBody = response.getBody();
+      if (responseBody == null) {
+        return null;
+      }
+      return objectMapper.readValue(responseBody, {{{function.returnType.getInCodeType}}}.class);
+    } catch (Exception e) {
+      throw new PolyRuntimeException(e);
+    }
+  }
+  {{/ifIsType}}
+  {{#ifIsType this "WebhookHandleSpecification"}}
+  public void {{name}}(WebhookEventConsumer<{{{function.arguments.0.type.spec.arguments.0.type.inCodeType}}}> callback) {
+    try {
+      webSocketClient.registerWebhookEventHandler("{{id}}", objects -> {
+        var data = (JSONObject) objects[0];
+        try {
+          callback.accept(
+            objectMapper.readValue(data.get("body").toString(), {{{function.arguments.0.type.spec.arguments.0.type.inCodeType}}}.class),
+            jsonObjectToMap((JSONObject) data.get("headers")),
+            jsonObjectToMap((JSONObject) data.get("params"))
+          );
+        } catch (Exception e) {
+          throw new PolyRuntimeException(e);
+        }
+      });
+    } catch (Exception e) {
+      throw new PolyRuntimeException(e);
+    }
+  }
+  {{/ifIsType}}
+  {{#ifIsType this "AuthFunctionSpecification"}}
+  {{#if subResource}}
+  public void {{name}}(String token) {
+    try {
+      var payload = new JSONObject();
+      payload.put("clientID", ClientInfo.CLIENT_ID);
+      payload.put("token", token);
+
+      apiClient.post("/auth-providers/{{id}}/{{subResource}}", payload.toString());
+    } catch (Exception e) {
+      throw new PolyRuntimeException(e);
+    }
+  }
+  {{else}}
+  public void getToken(String clientID, String clientSecret{{#if audienceRequired}}, audience{{/if}}, String[] scopes, AuthTokenEventConsumer callback) {
+    getToken(clientID, clientSecret{{#if audienceRequired}}, audience{{/if}}, scopes, callback, null);
+  }
+  public void getToken(String clientID, String clientSecret{{#if audienceRequired}}, audience{{/if}}, String[] scopes, AuthTokenEventConsumer callback, AuthTokenOptions options) {
+    var userId = options != null ? options.getUserId() : null;
+    var callbackUrl = options != null ? options.getCallbackUrl() : null;
+    var autoCloseOnUrl = options != null && options.getAutoCloseOnUrl() != null ? options.getAutoCloseOnUrl() : false;
+    var autoCloseOnToken = options != null && options.getAutoCloseOnToken() != null ? options.getAutoCloseOnToken() : true;
+    var timeout = options != null && options.getTimeout() != null ? options.getTimeout() : 120_000;
+    var eventsClientId = ClientInfo.CLIENT_ID;
+    var timer = new Timer();
+
+    try {
+      var payload = new JSONObject();
+      payload.put("eventsClientId", variableInjectManager.getInjectedValueOrOriginal(eventsClientId));
+      payload.put("clientId", variableInjectManager.getInjectedValueOrOriginal(clientID));
+      payload.put("clientSecret", variableInjectManager.getInjectedValueOrOriginal(clientSecret));
+      payload.put("scopes", scopes);
+      {{#if audienceRequired}}payload.put("audience", variableInjectManager.getInjectedValueOrOriginal(audience));{{/if}}
+      payload.put("userId", variableInjectManager.getInjectedValueOrOriginal(userId));
+      if (callbackUrl != null) {
+        payload.put("callbackUrl", variableInjectManager.getInjectedValueOrOriginal(callbackUrl));
+      }
+
+      var response = apiClient.post("/auth-providers/{{id}}/execute", payload.toString());
+      var responseBody = response.getBody();
+      var data = objectMapper.readValue(responseBody, GetAuthTokenResponse.class);
+
+      if (data.getToken() != null) {
+        callback.accept(data.getToken(), data.getUrl(), null);
+        return;
+      }
+      if (data.getUrl() != null && autoCloseOnUrl) {
+        callback.accept(null, data.getUrl(), null);
+        return;
+      }
+
+      webSocketClient.registerAuthFunctionEventHandler("{{id}}", (objects) -> {
+        var eventData = (JSONObject) objects[0];
+        try {
+          var event = objectMapper.readValue(eventData.toString(), GetAuthTokenResponse.class);
+          if (event.getToken() != null) {
+            callback.accept(event.getToken(), event.getUrl(), event.getError());
+            if (event.getToken() != null && autoCloseOnToken) {
+              webSocketClient.unregisterAuthFunctionEventHandler("{{id}}");
+            }
+          }
+        } catch (Exception e) {
+          throw new PolyRuntimeException(e);
+        }
+      });
+
+      callback.accept(data.getToken(), data.getUrl(), data.getError());
+
+      if (timeout > 0) {
+        timer.schedule(new TimerTask() {
+          @Override
+          public void run() {
+            try {
+              webSocketClient.unregisterAuthFunctionEventHandler("{{id}}");
+              callback.accept(null, null, "Timeout reached for auth function {{id}}");
+            } catch (JSONException ex) {
+              throw new PolyRuntimeException(ex);
+            }
+          }
+        }, timeout);
+      }
+    } catch (Exception e) {
+      throw new PolyRuntimeException(e);
+    }
+  }
+  {{/if}}
+  {{/ifIsType}}
+{{/each}}
+}

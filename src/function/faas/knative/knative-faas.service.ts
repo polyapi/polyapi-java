@@ -13,6 +13,7 @@ import { ExecuteFunctionResult, FaasService } from '../faas.service';
 import { CustomObjectsApi } from '@kubernetes/client-node';
 import { makeCustomObjectsApiClient } from 'kubernetes/client';
 import { ServerFunctionLimits } from '@poly/model';
+import { ServerFunctionDoesNotExists } from './errors/ServerFunctionDoesNotExist';
 
 // sleep function from SO
 // https://stackoverflow.com/a/39914235
@@ -85,6 +86,7 @@ export class KNativeFaasService implements FaasService {
     createFromScratch?: boolean,
     sleep?: boolean | null,
     sleepAfter?: number | null,
+    logsEnabled = false,
   ): Promise<void> {
     this.logger.debug(`Creating function ${id} for tenant ${tenantId} in environment ${environmentId}...`);
 
@@ -102,7 +104,7 @@ export class KNativeFaasService implements FaasService {
       this.logger.debug(`Writing function code to ${functionPath}/function/index.js`);
       await writeFile(`${functionPath}/function/index.js`, content);
 
-      await this.deploy(id, tenantId, environmentId, imageName, apiKey, limits, sleep, sleepAfter);
+      await this.deploy(id, tenantId, environmentId, imageName, apiKey, limits, sleep, sleepAfter, logsEnabled);
     };
 
     const additionalRequirements = this.filterPreinstalledNpmPackages(requirements);
@@ -128,11 +130,14 @@ export class KNativeFaasService implements FaasService {
     headers = {},
     maxRetryCount = 3,
   ): Promise<ExecuteFunctionResult> {
-    const functionUrl = await this.getFunctionUrl(id);
-
-    if (!functionUrl) {
-      this.logger.error(`Function ${id} does not exists.`);
-      throw new Error(`Function ${id} does not exists. Please, redeploy it again.`);
+    let functionUrl = '';
+    try {
+      functionUrl = await this.getFunctionUrl(id);
+    } catch (err) {
+      if (err instanceof ServerFunctionDoesNotExists) {
+        throw new Error(`Function ${id} does not exists. Please, redeploy it again.`);
+      }
+      throw err;
     }
 
     this.logger.debug(`Executing server function '${id}'...`);
@@ -260,6 +265,7 @@ export class KNativeFaasService implements FaasService {
     limits: ServerFunctionLimits,
     sleep?: boolean | null,
     sleepAfter?: number | null,
+    logsEnabled = false,
   ) {
     this.logger.debug(`Deleting function '${id}' before deploying to avoid conflicts...`);
     await this.deleteFunction(id, tenantId, environmentId, false);
@@ -300,6 +306,9 @@ export class KNativeFaasService implements FaasService {
       metadata: {
         name: this.getFunctionName(id),
         namespace: this.config.faasNamespace,
+        labels: {
+          logsEnabled: logsEnabled ? 'true' : 'false',
+        },
       },
       spec: {
         template: {
@@ -382,7 +391,10 @@ export class KNativeFaasService implements FaasService {
     return requirements.filter((requirement) => !this.config.faasPreinstalledNpmPackages.includes(requirement));
   }
 
-  private async getFunctionUrl(id: string): Promise<string | null> {
+  /**
+   * @throws {ServerFunctionDoesNotExists}
+   */
+  private async getFunctionUrl(id: string): Promise<string> {
     const name = this.getFunctionName(id);
 
     try {
@@ -399,12 +411,11 @@ export class KNativeFaasService implements FaasService {
     } catch (e) {
       if (e.body?.code === 404) {
         this.logger.debug(`Server function '${id}' doesn't exist.`);
-      } else {
-        this.logger.error(`Error while getting function: ${e.message}`, e);
+        throw new ServerFunctionDoesNotExists(e.message);
       }
+      this.logger.error(`Error while getting function: ${e.message}`, e);
+      throw e;
     }
-
-    return null;
   }
 
   private filterPassThroughHeaders(headers: Record<string, any>): Record<string, any> {

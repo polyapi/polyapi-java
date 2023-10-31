@@ -353,8 +353,8 @@ export class EventService {
 
       for (const path of paths) {
         const listeners = pathHandler[path]
-          .filter(data => data.type === undefined || data.type === event.type)
-          .filter(data => data.secret === undefined || data.secret === event.secret);
+          .filter(data => data.type == null || data.type === event.type)
+          .filter(data => data.secret == null || data.secret === event.secret);
 
         await Promise.all(listeners.map(async ({ authData, socket }) => {
           if (!await this.authService.hasEnvironmentEntityAccess(variable, authData, true)) {

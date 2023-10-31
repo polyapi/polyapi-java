@@ -18,3 +18,11 @@ export interface AuthRequest extends Request {
 export type WithEnvironment<T> = T & { environment: Environment };
 
 export type WithTenant<T> = T & { environment: Environment & { tenant: Tenant } };
+
+export type WithSecurityFunctions<T> = T & { customFunctions?: {
+  customFunction: {
+      id: string;
+      environmentId: string;
+  };
+  message: string | null;
+}[] };
