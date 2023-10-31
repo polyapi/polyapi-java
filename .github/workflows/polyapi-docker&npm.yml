@@ -33,7 +33,7 @@ jobs:
         yarn install
         yarn prisma generate --generator js --schema ./prisma/schema.prisma
         yarn build:minified
-        rm -rf ./src
+        rm -rf ./src ./packages
     - name: Obfuscate Python
       run: |
         pip3 install pyarmor==8.4.1
