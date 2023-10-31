@@ -1,24 +1,24 @@
 import { IsArray, IsIn, IsNotEmpty, IsNumber, IsObject, IsString, ValidateNested } from "class-validator";
-import { JobExecutionType } from "../../job";
+import { JobType, JobExecutionType } from "../../job";
 import { Type } from "class-transformer";
 import { ApiModelProperty } from "@nestjs/swagger/dist/decorators/api-model-property.decorator";
 
 
-class JobType {
+class BaseJobType {
     @ApiModelProperty({
       name: 'type',
     })
     @IsString()
-    @IsIn([JobExecutionType.INTERVAL, JobExecutionType.PERIODICALLY, JobExecutionType.ON_TIME])
-    type: JobExecutionType;
+    @IsIn([JobType.INTERVAL, JobType.PERIODICALLY, JobType.ON_TIME])
+    type: JobType;
 }
 
-class OnTime extends JobType {
+class OnTime extends BaseJobType {
     @IsString()
     @ApiModelProperty({
-      enum: [JobExecutionType.ON_TIME],
+      enum: [JobType.ON_TIME],
     })
-    type: JobExecutionType.ON_TIME;
+    type: JobType.ON_TIME;
 
     @IsString()
     @ApiModelProperty()
@@ -26,24 +26,24 @@ class OnTime extends JobType {
     value: Date;
 }
 
-class Periodically extends JobType {
+class Periodically extends BaseJobType {
     @IsString()
     @ApiModelProperty({
-      enum: [JobExecutionType.PERIODICALLY],
+      enum: [JobType.PERIODICALLY],
     })
-    type: JobExecutionType.PERIODICALLY;
+    type: JobType.PERIODICALLY;
 
     @IsString()
     @ApiModelProperty()
     value: string;
 }
 
-class Interval extends JobType {
+class Interval extends BaseJobType {
     @IsString()
     @ApiModelProperty({
-      enum: [JobExecutionType.INTERVAL],
+      enum: [JobType.INTERVAL],
     })
-    type: JobExecutionType.INTERVAL;
+    type: JobType.INTERVAL;
 
     @IsNumber()
     @ApiModelProperty()
@@ -74,7 +74,7 @@ export class CreateJob {
 
     @IsObject()
     @ValidateNested()
-    @Type(() => JobType, {
+    @Type(() => BaseJobType, {
       keepDiscriminatorProperty: true,
       discriminator: {
         property: 'type',
@@ -97,9 +97,9 @@ export class CreateJob {
 
     @IsArray()
     @ValidateNested({ each: true })
-    @Type()
-    functions: any[]
+    @Type(() => FunctionJob)
+    functions: FunctionJob[]
 
 
-    // executionType: 
+    executionType: JobExecutionType;
 }
