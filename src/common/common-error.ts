@@ -11,7 +11,7 @@ export class CommonError extends Error {
   }
 }
 
-export const checkPolyTrainingAssistantScriptVersion = (clientVersion: string | undefined, serverVersion: string): void => {
+export const checkPolyTrainingScriptVersion = (clientVersion: string | undefined, serverVersion: string): void => {
   if (!clientVersion) {
     return;
   }

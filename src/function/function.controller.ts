@@ -65,7 +65,7 @@ import { PerfLogType } from 'statistics/perf-log-type';
 import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 import { ConfigService } from 'config/config.service';
-import { checkPolyTrainingAssistantScriptVersion } from 'common/common-error';
+import { checkPolyTrainingScriptVersion } from 'common/common-error';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -118,7 +118,7 @@ export class FunctionController {
     } = data;
 
     const clientScriptVersion = req.headers[TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
-    checkPolyTrainingAssistantScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion);
+    checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion);
 
     const environmentId = req.user.environment.id;
 
@@ -209,7 +209,7 @@ export class FunctionController {
     } = data;
 
     const clientScriptVersion = req.headers[ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
-    checkPolyTrainingAssistantScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
+    checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
 
     const apiFunction = await this.service.findApiFunction(id);
     if (!apiFunction) {
