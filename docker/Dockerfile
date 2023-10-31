@@ -18,7 +18,6 @@ WORKDIR /poly/app
 ENV PRISMA_HOME_DIR=/poly/app/prisma
 RUN rm .env*
 RUN yarn install
-RUN yarn run prisma generate --generator js --schema ${PRISMA_HOME_DIR}/schema.prisma
 WORKDIR /poly/app/science
 RUN pip install -r ./requirements.txt --break-system-packages
 RUN prisma generate --generator py --schema ${PRISMA_HOME_DIR}/schema.prisma
