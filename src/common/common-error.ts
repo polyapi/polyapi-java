@@ -24,7 +24,7 @@ export const checkPolyTrainingAssistantScriptVersion = (clientVersion: string | 
   }
   const [clientMajor] = clientVersion.split('.');
   const [serverMajor] = serverVersion.split('.');
-  if (serverMajor > clientMajor) {
+  if (serverMajor !== clientMajor) {
     const scriptDownloadUrl = `${process.env.HOST_URL}/postman/scripts.zip`;
     throw new BadRequestException(`The Poly training code has been updated. Your training script needs to be upgraded to the latest version. Please download the latest script from ${scriptDownloadUrl} or contact support@polyapi.io if you need any assistance!`);
   }
