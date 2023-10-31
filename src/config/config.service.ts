@@ -99,6 +99,10 @@ export class ConfigService {
     return '0.1.0';
   }
 
+  get postmanTrainingAssistantScriptVersion(): string {
+    return '0.1.0';
+  }
+
   get faasPolyServerUrl(): string {
     return this.get('FAAS_POLY_SERVER_URL', this.hostUrl);
   }

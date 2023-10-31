@@ -21,6 +21,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
+import { ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER } from '@poly/common/utils';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
 import {
@@ -64,6 +65,7 @@ import { PerfLogType } from 'statistics/perf-log-type';
 import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
 import { ConfigService } from 'config/config.service';
+import { checkPolyTrainingAssistantScriptVersion } from 'common/common-error';
 
 @ApiSecurity('PolyApiKey')
 @Controller('functions')
@@ -116,13 +118,7 @@ export class FunctionController {
       scriptVersion,
     } = data;
 
-    if (scriptVersion && scriptVersion !== this.configService.postmanScriptVersion) {
-      throw new BadRequestException(`
-        The Poly training code has been upgraded.
-        Your training script needs to be updated.
-        Please contact support@polyapi.io if you need any assistance!
-      `);
-    }
+    checkPolyTrainingAssistantScriptVersion(scriptVersion, this.configService.postmanScriptVersion);
 
     const environmentId = req.user.environment.id;
 
@@ -211,6 +207,9 @@ export class FunctionController {
       returnTypeSchema,
       templateBody,
     } = data;
+
+    const clientScriptVersion = req.headers[ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
+    checkPolyTrainingAssistantScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
 
     const apiFunction = await this.service.findApiFunction(id);
     if (!apiFunction) {

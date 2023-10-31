@@ -1,5 +1,7 @@
 const postmanCollection = require('postman-collection');
 
+const scriptVersion = '0.1.0';
+
 const templateBodyParts = pm.request.body.raw.split('{');
 
 let shouldEncode = pm.request.url.getPath().match(/^\/functions\/api\/[-,0-9,a-z]{36}$/) !== null;
@@ -17,4 +19,9 @@ pm.request.update({
       }
     }
   })
+});
+
+pm.request.headers.add({
+  key: 'x-poly-training-assistant-version',
+  value: scriptVersion
 });
