@@ -1,0 +1,15 @@
+import { IsNumber, IsOptional } from 'class-validator';
+import { plainToClass } from 'class-transformer';
+import { validateObjectValue } from '../../utils';
+
+export class Jobs {
+  @IsOptional()
+  @IsNumber()
+  minimumIntervalTimePerExecution: number;
+}
+
+export const validate = (value: unknown) => {
+  const validationClass: any = plainToClass(Jobs, value);
+
+  validateObjectValue(validationClass, value);
+};

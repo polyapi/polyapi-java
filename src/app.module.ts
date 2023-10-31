@@ -37,6 +37,7 @@ import { StatisticsModule } from 'statistics/statistics.module';
 import { EmailModule } from 'email/email.module';
 import { TosModule } from 'tos/tos.module';
 import { HealthModule } from 'health/health.module';
+import { JobsModule } from './jobs/jobs.module';
 
 const isRedisAvailable = async (url: string): Promise<boolean> => {
   const redisOptions: RedisOptions = {
@@ -110,6 +111,7 @@ const logger = new Logger('AppModule');
     EmailModule,
     TosModule,
     HealthModule,
+    JobsModule,
   ],
   exports: [ConfigModule],
   controllers: [],

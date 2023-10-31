@@ -2546,15 +2546,15 @@ export class FunctionService implements OnModuleInit {
   }
 
   private async isApiFunctionAITrainingEnabled(environment: Environment) {
-    const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+    const trainingDataCfgVariable = await this.configVariableService.getEffectiveValue<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-    return trainingDataCfgVariable?.value.apiFunctions;
+    return trainingDataCfgVariable?.apiFunctions;
   }
 
   private async isCustomFunctionAITrainingEnabled(environment: Environment, serverFunction: boolean) {
-    const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+    const trainingDataCfgVariable = await this.configVariableService.getEffectiveValue<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-    return (trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction);
+    return (trainingDataCfgVariable?.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.serverFunctions && serverFunction);
   }
 
   private async getResponseType(response: any, payload: string | null): Promise<string> {

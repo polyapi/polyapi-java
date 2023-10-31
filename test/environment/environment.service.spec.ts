@@ -14,7 +14,7 @@ describe('EnvironmentService', () => {
     tenantId: 'tenantId12345',
     subdomain: 'subdomain12345',
     createdAt: new Date(),
-    logsDefault: false
+    logsDefault: false,
   };
 
   let service: EnvironmentService;
@@ -56,7 +56,7 @@ describe('EnvironmentService', () => {
         id: testEnvironment.id,
         name: testEnvironment.name,
         subdomain: testEnvironment.subdomain,
-        logsDefault: testEnvironment.logsDefault
+        logsDefault: testEnvironment.logsDefault,
       });
     });
   });

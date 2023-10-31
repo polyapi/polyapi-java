@@ -18,6 +18,7 @@ export enum ConfigVariableName {
   PublicVisibility = 'PublicVisibility',
   DefaultTier = 'DefaultTier',
   DefaultTos = 'DefaultTos',
+  Jobs= 'Jobs'
 }
 
 export class TrainingDataGeneration {

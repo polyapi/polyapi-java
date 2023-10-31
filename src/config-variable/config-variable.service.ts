@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigVariable } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import { ConfigVariableDto, ConfigVariableName, DefaultTierValue, DefaultTosValue, PublicVisibilityValue, TrainingDataGeneration } from '@poly/model';
+import { ConfigVariableDto, ConfigVariableName, DefaultTierValue, DefaultTosValue, Jobs, PublicVisibilityValue, TrainingDataGeneration } from '@poly/model';
 import {
   ConfigVariableStrategy,
   DefaultConfigVariableStrategy,
@@ -9,6 +9,7 @@ import {
   PublicVisibilityStrategy,
   DefaultTierStrategy,
   DefaultTosStrategy,
+  JobsStrategy,
 } from './strategy';
 import { CommonService } from 'common/common.service';
 
@@ -22,6 +23,7 @@ export class ConfigVariableService {
   private readonly publicVisibilityStrategy: ConfigVariableStrategy<PublicVisibilityValue>;
   private readonly defaultTierVisibilityStrategy: ConfigVariableStrategy<DefaultTierValue>;
   private readonly defaultTosStrategy: ConfigVariableStrategy<DefaultTosValue>;
+  private readonly JobsStrategy: ConfigVariableStrategy<Jobs>;
 
   constructor(prisma: PrismaService, commonService: CommonService) {
     this.prisma = prisma;
@@ -31,6 +33,7 @@ export class ConfigVariableService {
     this.publicVisibilityStrategy = new PublicVisibilityStrategy(prisma, commonService);
     this.defaultTierVisibilityStrategy = new DefaultTierStrategy(prisma, commonService);
     this.defaultTosStrategy = new DefaultTosStrategy(prisma, commonService);
+    this.JobsStrategy = new JobsStrategy(prisma, commonService);
   }
 
   toDto(data: ConfigVariable): ConfigVariableDto {
@@ -70,19 +73,11 @@ export class ConfigVariableService {
         return this.defaultTierVisibilityStrategy as ConfigVariableStrategy<T>;
       case ConfigVariableName.DefaultTos:
         return this.defaultTosStrategy as ConfigVariableStrategy<T>;
+      case ConfigVariableName.Jobs:
+        return this.JobsStrategy as ConfigVariableStrategy<T>;
       default:
         return this.defaultConfigVariableStrategy as ConfigVariableStrategy<T>;
     }
-  }
-
-  async getOneParsed<T>(
-    name: string,
-    tenantId: string | null = null,
-    environmentId: string | null = null,
-  ) {
-    const configVariable = await this.getOne(name, tenantId, environmentId);
-
-    return configVariable ? this.commonService.getConfigVariableWithParsedValue<T>(configVariable) : null;
   }
 
   async getOne(
