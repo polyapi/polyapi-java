@@ -31,8 +31,9 @@ jobs:
     - name: Obfuscate Javascript
       run: |
         yarn install
-        yarn build
-        # TODO now do rm -rf to src?
+        yarn prisma generate --generator js --schema ./prisma/schema.prisma
+        yarn build:minified
+        rm -rf ./src
     - name: Obfuscate Python
       run: |
         pip3 install pyarmor==8.4.1
