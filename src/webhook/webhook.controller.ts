@@ -37,7 +37,6 @@ import {
 import { AuthRequest } from 'common/types';
 import { AuthService } from 'auth/auth.service';
 import { CommonService } from 'common/common.service';
-import { checkPolyTrainingScriptVersion } from 'common/common-error';
 import { TriggerResponse } from 'trigger/trigger.service';
 import { EnvironmentService } from 'environment/environment.service';
 import { PerfLogInfoProvider } from 'statistics/perf-log-info-provider';
@@ -146,7 +145,7 @@ export class WebhookController {
     } = createWebhookHandle;
 
     const clientScriptVersion = req.headers[ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
-    checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
+    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
 
     await this.authService.checkPermissions(req.user, Permission.ManageWebhooks);
 
@@ -205,7 +204,7 @@ export class WebhookController {
     } = updateWebhookHandleDto;
 
     const clientScriptVersion = req.headers[ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
-    checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
+    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
 
     this.commonService.checkVisibilityAllowed(req.user.tenant, visibility);
 

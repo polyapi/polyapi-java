@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import semver from 'semver';
 import { InputData, jsonInputForTargetLanguage, quicktype } from 'quicktype-core';
 import jsonpath from 'jsonpath';
 import { validator } from '@exodus/schemasafe';
@@ -34,6 +35,24 @@ export class CommonService {
     private readonly config: ConfigService,
   ) {
   }
+
+  checkPolyTrainingScriptVersion(clientVersion: string | undefined, serverVersion: string): void {
+    if (!clientVersion) {
+      return;
+    }
+    if (!semver.valid(clientVersion)) {
+      throw new BadRequestException(`Improper formatting of the script version, as sent by the client: ${clientVersion}. Should follow semantic versioning.`);
+    }
+    if (!semver.valid(serverVersion)) {
+      throw new InternalServerErrorException('Improper formatting of the script version on the server');
+    }
+    if (semver.major(clientVersion) !== semver.major(serverVersion)) {
+      const scriptDownloadUrl = `${process.env.HOST_URL}/postman/scripts.zip`;
+      throw new BadRequestException(
+        `The Poly training code has been updated. Your training script needs to be upgraded to the latest version. Please download the latest script from ${scriptDownloadUrl} or contact support@polyapi.io if you need any assistance!`,
+      );
+    }
+  };
 
   async getJsonSchema(typeName: string, content: any): Promise<Record<string, any> | null> {
     if (!content) {

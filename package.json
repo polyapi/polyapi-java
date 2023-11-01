@@ -70,6 +70,7 @@
     "quicktype-core": "^23.0.7",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
+    "semver": "^7.5.4",
     "swagger-stats": "^0.99.7",
     "typescript-json-schema": "^0.58.1"
   },
@@ -140,7 +141,10 @@
       "^@poly/common/(.+)$": "<rootDir>/packages/common/src/$1"
     },
     "verbose": true,
-    "reporters": ["default", "jest-summary-reporter"]
+    "reporters": [
+      "default",
+      "jest-summary-reporter"
+    ]
   },
   "engines": {
     "node": ">=18.0.0"
