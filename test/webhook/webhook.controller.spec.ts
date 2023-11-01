@@ -56,7 +56,7 @@ describe('WebhookController', () => {
         },
         {
           provide: ConfigService,
-          useValue: configServiceMock
+          useValue: configServiceMock,
         },
       ],
       controllers: [WebhookController],
