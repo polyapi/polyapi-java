@@ -9,7 +9,7 @@ class Options {
       name: 'type',
     })
     @IsString()
-    @IsIn([JobType.INTERVAL, JobType.PERIODICALLY, JobType.ON_TIME])
+    @IsIn([JobType.INTERVAL, JobType.PERIODICAL, JobType.ON_TIME])
     type: JobType;
 }
 
@@ -29,9 +29,9 @@ export class OnTime extends Options {
 export class Periodically extends Options {
     @IsString()
     @ApiModelProperty({
-      enum: [JobType.PERIODICALLY],
+      enum: [JobType.PERIODICAL],
     })
-    type: JobType.PERIODICALLY;
+    type: JobType.PERIODICAL;
 
     @IsString()
     @ApiModelProperty()

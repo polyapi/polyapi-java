@@ -444,8 +444,7 @@ model Job {
   id                  String @id @default(uuid())
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   name                String
-  type           String // interval, on time or periodicity
-  value               String // Depends on execution value
+  schedule            String
   functions           String
   executionType       String // Parallel or sequential
   executions          JobExecutions[]

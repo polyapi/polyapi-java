@@ -1,11 +1,11 @@
 export enum JobType {
-    PERIODICALLY = 'periodically',
+    PERIODICAL = 'periodical',
     INTERVAL = 'interval',
     ON_TIME = 'on_time'
 }
 
 
 export enum JobExecutionType {
-    SECUENTIAL = 'secuential',
+    SEQUENTIAL = 'sequential',
     PARALLEL = 'parallel'
 }
