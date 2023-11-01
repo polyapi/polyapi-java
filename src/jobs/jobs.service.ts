@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { FunctionJob, Interval, JobDto, JobExecutionType, JobType, OnTime, Periodically } from '@poly/model';
+import { FunctionJob, Interval, JobDto, FunctionsExecutionType, ScheduleType, OnTime, Periodical } from '@poly/model';
 import { Job } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 
@@ -12,32 +12,20 @@ export class JobsService {
   public toJobDto(job: Job): JobDto {
     return {
       id: job.id,
-      executionType: job.executionType as JobExecutionType,
+      functionsExecutionType: job.functionsExecutionType as FunctionsExecutionType,
       functions: JSON.parse(job.functions) as FunctionJob[],
       name: job.name,
-      type: job.type as JobType,
-      value: job.value,
+      schedule: JSON.parse(job.schedule) as Periodical | OnTime | Interval
     };
   }
 
-  async createJob(name: string, scheduleConfig: Interval | Periodically | OnTime, functions: FunctionJob[], executionType: JobExecutionType) {
-    let value = '';
-
-    if (scheduleConfig.type === JobType.INTERVAL) {
-      value = JSON.stringify(scheduleConfig.value);
-    } else if (scheduleConfig.type === JobType.ON_TIME) {
-      value = scheduleConfig.value.toISOString();
-    } else {
-      value = scheduleConfig.value;
-    }
-
+  async createJob(name: string, schedule: Interval | Periodical | OnTime, functions: FunctionJob[], functionsExecutionType: FunctionsExecutionType) {
     const job = await this.prisma.job.create({
       data: {
         name,
-        type: scheduleConfig.type,
-        value,
+        schedule: JSON.stringify(schedule),
         functions: JSON.stringify(functions),
-        executionType,
+        functionsExecutionType,
       },
     });
 

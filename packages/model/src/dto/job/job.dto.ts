@@ -1,5 +1,5 @@
-import { JobExecutionType, JobType } from "../../job";
-import { FunctionJob } from "./create-job.dto";
+import { FunctionsExecutionType, ScheduleType } from "../../job";
+import { FunctionJob, Interval, OnTime, Periodical } from "./create-job.dto";
 
 export type JobDto = {
 
@@ -7,11 +7,9 @@ export type JobDto = {
 
     name: string;
 
-    type: JobType
-
-    value: string | number | Date;
+    schedule: Periodical | OnTime | Interval;
 
     functions: FunctionJob[]
 
-    executionType: JobExecutionType;
+    functionsExecutionType: FunctionsExecutionType;
 }

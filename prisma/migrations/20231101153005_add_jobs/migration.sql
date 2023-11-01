@@ -1,26 +1,23 @@
-/*
-  Warnings:
-
-  - You are about to drop the `Job` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropForeignKey
-ALTER TABLE "job_executions" DROP CONSTRAINT "job_executions_job_id_fkey";
-
--- DropTable
-DROP TABLE "Job";
-
 -- CreateTable
 CREATE TABLE "job" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "value" TEXT NOT NULL,
+    "schedule" TEXT NOT NULL,
     "functions" TEXT NOT NULL,
-    "executionType" TEXT NOT NULL,
+    "functions_execution_type" TEXT NOT NULL,
 
     CONSTRAINT "job_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "job_executions" (
+    "id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "job_id" TEXT,
+    "results" TEXT NOT NULL,
+
+    CONSTRAINT "job_executions_pkey" PRIMARY KEY ("id")
 );
 
 -- AddForeignKey

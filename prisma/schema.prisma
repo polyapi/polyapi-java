@@ -429,11 +429,11 @@ model PerfLog {
 }
 
 model CustomFunctionWebhookHandle {
-  id                  String @id @default(uuid())
+  id                  String         @id @default(uuid())
   createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   webhookHandle       WebhookHandle  @relation(fields: [webhook_handle_id], references: [id], onDelete: Cascade)
   customFunction      CustomFunction @relation(fields: [custom_function_id], references: [id], onDelete: Cascade)
-  custom_function_id  String @map("function_id")
+  custom_function_id  String         @map("function_id")
   webhook_handle_id   String
   message             String?
 
@@ -441,13 +441,13 @@ model CustomFunctionWebhookHandle {
 }
 
 model Job {
-  id                  String @id @default(uuid())
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  name                String
-  schedule            String
-  functions           String
-  executionType       String // Parallel or sequential
-  executions          JobExecutions[]
+  id                          String @id @default(uuid())
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  name                        String
+  schedule                    String
+  functions                   String
+  functionsExecutionType      String @map("functions_execution_type")
+  executions                  JobExecutions[]
 
   @@map("job")
 }

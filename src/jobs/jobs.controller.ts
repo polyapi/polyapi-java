@@ -16,7 +16,7 @@ export class JobsController {
   @UseGuards(PolyAuthGuard)
   async createJob(@Req() req: AuthRequest, @Body() data: CreateJob) {
     const {
-      scheduleConfig,
+      schedule: scheduleConfig,
       executionType,
       functions,
       name,

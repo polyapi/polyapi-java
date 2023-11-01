@@ -1,5 +1,5 @@
 import { IsArray, IsEnum, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
-import { JobType, JobExecutionType } from "../../job";
+import { ScheduleType, FunctionsExecutionType } from "../../job";
 import { Type } from "class-transformer";
 import { ApiModelProperty } from "@nestjs/swagger/dist/decorators/api-model-property.decorator";
 
@@ -9,16 +9,16 @@ class Options {
       name: 'type',
     })
     @IsString()
-    @IsIn([JobType.INTERVAL, JobType.PERIODICAL, JobType.ON_TIME])
-    type: JobType;
+    @IsIn([ScheduleType.INTERVAL, ScheduleType.PERIODICAL, ScheduleType.ON_TIME])
+    type: ScheduleType;
 }
 
 export class OnTime extends Options {
     @IsString()
     @ApiModelProperty({
-      enum: [JobType.ON_TIME],
+      enum: [ScheduleType.ON_TIME],
     })
-    type: JobType.ON_TIME;
+    type: ScheduleType.ON_TIME;
 
     @IsString()
     @ApiModelProperty()
@@ -26,12 +26,12 @@ export class OnTime extends Options {
     value: Date;
 }
 
-export class Periodically extends Options {
+export class Periodical extends Options {
     @IsString()
     @ApiModelProperty({
-      enum: [JobType.PERIODICAL],
+      enum: [ScheduleType.PERIODICAL],
     })
-    type: JobType.PERIODICAL;
+    type: ScheduleType.PERIODICAL;
 
     @IsString()
     @ApiModelProperty()
@@ -41,9 +41,9 @@ export class Periodically extends Options {
 export class Interval extends Options {
     @IsString()
     @ApiModelProperty({
-      enum: [JobType.INTERVAL],
+      enum: [ScheduleType.INTERVAL],
     })
-    type: JobType.INTERVAL;
+    type: ScheduleType.INTERVAL;
 
     @IsNumber()
     @ApiModelProperty()
@@ -87,7 +87,7 @@ export class CreateJob {
             value: Interval,
             name: 'interval',
           }, {
-            value: Periodically,
+            value: Periodical,
             name: 'periodically',
           }, {
             value: OnTime,
@@ -96,7 +96,7 @@ export class CreateJob {
         ],
       },
     })
-    scheduleConfig: Interval | Periodically | OnTime;
+    schedule: Interval | Periodical | OnTime;
 
 
     @IsArray()
@@ -104,6 +104,6 @@ export class CreateJob {
     @Type(() => FunctionJob)
     functions: FunctionJob[]
 
-    @IsEnum(JobExecutionType)
-    executionType: JobExecutionType;
+    @IsEnum(FunctionsExecutionType)
+    executionType: FunctionsExecutionType;
 }
