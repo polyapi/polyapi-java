@@ -355,7 +355,7 @@ def strip_type_and_info(messages: List[MessageDict]) -> List[MessageDict]:
 
 
 def get_tenant_openai_key(*, user_id: Optional[str] = None, application_id: Optional[str] = None, tenant_id: Optional[str] = None) -> Optional[str]:
-    log(f"trying to get open_ai key for user {user_id}, app {application_id}, tenant {tenant_id}...")
+    # log(f"trying to get open_ai key for user {user_id}, app {application_id}, tenant {tenant_id}...")
     db = get_client()
     if tenant_id:
         pass
