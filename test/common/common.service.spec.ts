@@ -22,6 +22,39 @@ describe('CommonService', () => {
     commonService = moduleRef.get<CommonService>(CommonService);
   });
 
+  describe('checkPolyTrainingScriptVersion', () => {
+    it('should throw when server script is not valid semver', () => {
+      const clientVersion = '1.1.0';
+      const serverVersion = '1.1.';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
+    });
+    it('should throw when client script is not valid semver', () => {
+      const clientVersion = '1.1.';
+      const serverVersion = '1.1.0';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
+    });
+    it('should throw when major versions differ', () => {
+      const clientVersion = '0.1.0';
+      const serverVersion = '1.1.0';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
+    });
+    it('should not throw when the client version is not present (undefined)', () => {
+      const clientVersion = undefined;
+      const serverVersion = '0.1.0';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
+    });
+    it('should not throw when the minor versions differ', () => {
+      const clientVersion = '0.1.0';
+      const serverVersion = '0.2.0';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
+    });
+    it('should not throw when the patches differ', () => {
+      const clientVersion = '0.1.0';
+      const serverVersion = '0.1.3';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
+    });
+  });
+
   describe('trimDownObject', () => {
     it('should return an array with first item on root level', async () => {
       const obj = ['Tom', 'Jerry', 'Garfield'];
