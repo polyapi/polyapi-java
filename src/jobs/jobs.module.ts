@@ -3,10 +3,11 @@ import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
 import { FunctionModule } from 'function/function.module';
 import { PrismaModule } from 'prisma/prisma.module';
+import { ConfigVariableModule } from 'config-variable/config-variable.module';
 
 @Module({
   controllers: [JobsController],
   providers: [JobsService],
-  imports: [FunctionModule, PrismaModule],
+  imports: [FunctionModule, PrismaModule, ConfigVariableModule],
 })
 export class JobsModule {}

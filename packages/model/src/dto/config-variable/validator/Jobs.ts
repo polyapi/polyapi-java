@@ -3,9 +3,8 @@ import { plainToClass } from 'class-transformer';
 import { validateObjectValue } from '../../utils';
 
 export class Jobs {
-  @IsOptional()
   @IsNumber()
-  minimumIntervalTimePerExecution: number;
+  minimumIntervalTimeBetweenExecutions: number;
 }
 
 export const validate = (value: unknown) => {

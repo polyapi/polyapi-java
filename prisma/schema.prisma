@@ -444,16 +444,19 @@ model Job {
   id                          String @id @default(uuid())
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   name                        String
-  schedule                    String
+  scheduleType                String @map("schedule_type")
+  scheduleOnTimeValue         DateTime? @map("schedule_one_time_value")
+  schedulePeriodicalValue     String? @map("schedule_periodical_value")
+  scheduleIntervalValue       Int? @map("schedule_interval_value")
   functions                   String
   functionsExecutionType      String @map("functions_execution_type")
-  executions                  JobExecutions[]
+  executions                  JobExecution[]
 
-  @@map("job")
+  @@map("jobs")
 }
 
 
-model JobExecutions {
+model JobExecution {
   id                  String @id @default(uuid())
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   job                 Job? @relation(fields: [jobId], references: [id], onDelete: SetNull)

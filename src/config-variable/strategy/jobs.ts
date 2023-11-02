@@ -18,7 +18,7 @@ export class JobsStrategy extends ConfigVariableStrategy<Jobs> {
       const lastVariable = this.commonService.getConfigVariableWithParsedValue<Jobs>(value);
       const currentVariable = this.commonService.getConfigVariableWithParsedValue<Jobs>(configVariable);
 
-      if (currentVariable.value.minimumIntervalTimePerExecution > lastVariable.value.minimumIntervalTimePerExecution) {
+      if (currentVariable.value.minimumIntervalTimeBetweenExecutions > lastVariable.value.minimumIntervalTimeBetweenExecutions) {
         value = {
           ...value,
           value: configVariable.value,
@@ -41,8 +41,8 @@ export class JobsStrategy extends ConfigVariableStrategy<Jobs> {
 
       const parsedConfigVariable = this.commonService.getConfigVariableWithParsedValue<Jobs>(configVariable).value;
 
-      if (newValue.minimumIntervalTimePerExecution < parsedConfigVariable.minimumIntervalTimePerExecution) {
-        throw new BadRequestException(`Current job limit (${newValue.minimumIntervalTimePerExecution} minutes) cannot be lower than ${parsedConfigVariable.minimumIntervalTimePerExecution} minutes.`);
+      if (newValue.minimumIntervalTimeBetweenExecutions < parsedConfigVariable.minimumIntervalTimeBetweenExecutions) {
+        throw new BadRequestException(`Current job limit (${newValue.minimumIntervalTimeBetweenExecutions} minutes) cannot be lower than ${parsedConfigVariable.minimumIntervalTimeBetweenExecutions} minutes.`);
       }
     }
 
@@ -82,7 +82,7 @@ export class JobsStrategy extends ConfigVariableStrategy<Jobs> {
       }
     }
 
-    if (newValue.minimumIntervalTimePerExecution < 5) {
+    if (newValue.minimumIntervalTimeBetweenExecutions < 5) {
       throw new BadRequestException('Value cannot be less than 5 minutes.');
     }
 

@@ -1,10 +1,12 @@
-import { IsArray, IsEnum, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsDate, IsDateString, IsEnum, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Validate, ValidateNested, ValidationArguments } from "class-validator";
 import { ScheduleType, FunctionsExecutionType } from "../../job";
 import { Type } from "class-transformer";
 import { ApiModelProperty } from "@nestjs/swagger/dist/decorators/api-model-property.decorator";
+import { CronExpression } from '../validators';
 
+const dateErrMsg = (validationArgs: ValidationArguments) => `${validationArgs.property} must be a valid ISO 8601 date string`;
 
-class Options {
+class ScheduleBase {
     @ApiModelProperty({
       name: 'type',
     })
@@ -13,20 +15,22 @@ class Options {
     type: ScheduleType;
 }
 
-export class OnTime extends Options {
+class OnTime extends ScheduleBase {
     @IsString()
     @ApiModelProperty({
       enum: [ScheduleType.ON_TIME],
     })
     type: ScheduleType.ON_TIME;
 
-    @IsString()
+    @IsDate({
+      message: dateErrMsg
+    })
     @ApiModelProperty()
     @Type(() => Date)
     value: Date;
 }
 
-export class Periodical extends Options {
+class Periodical extends ScheduleBase {
     @IsString()
     @ApiModelProperty({
       enum: [ScheduleType.PERIODICAL],
@@ -34,11 +38,13 @@ export class Periodical extends Options {
     type: ScheduleType.PERIODICAL;
 
     @IsString()
+    @IsNotEmpty()
+    @Validate(CronExpression)
     @ApiModelProperty()
     value: string;
 }
 
-export class Interval extends Options {
+class Interval extends ScheduleBase {
     @IsString()
     @ApiModelProperty({
       enum: [ScheduleType.INTERVAL],
@@ -78,20 +84,20 @@ export class CreateJob {
 
     @IsObject()
     @ValidateNested()
-    @Type(() => Options, {
+    @Type(() => ScheduleBase, {
       keepDiscriminatorProperty: true,
       discriminator: {
         property: 'type',
         subTypes: [
           {
             value: Interval,
-            name: 'interval',
+            name: ScheduleType.INTERVAL,
           }, {
             value: Periodical,
-            name: 'periodically',
+            name: ScheduleType.PERIODICAL,
           }, {
             value: OnTime,
-            name: 'ontime',
+            name: ScheduleType.ON_TIME,
           },
         ],
       },
