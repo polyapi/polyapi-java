@@ -46,7 +46,7 @@ export class CommonService {
     if (!semver.valid(serverVersion)) {
       throw new InternalServerErrorException('Improper formatting of the script version on the server');
     }
-    if (semver.major(clientVersion) !== semver.major(serverVersion)) {
+    if (semver.major(clientVersion) !== semver.major(serverVersion) || semver.minor(clientVersion) !== semver.minor(serverVersion)) {
       const scriptDownloadUrl = `${process.env.HOST_URL}/postman/scripts.zip`;
       throw new BadRequestException(
         `The Poly training code has been updated. Your training script needs to be upgraded to the latest version. Please download the latest script from ${scriptDownloadUrl} or contact support@polyapi.io if you need any assistance!`,

@@ -38,17 +38,22 @@ describe('CommonService', () => {
       const serverVersion = '1.1.0';
       expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
     });
-    it('should not throw when the client version is not present (undefined)', () => {
+    it('should NOT throw when the client version is not present (undefined)', () => {
       const clientVersion = undefined;
       const serverVersion = '0.1.0';
       expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
     });
-    it('should not throw when the minor versions differ', () => {
+    it('should throw when the minor versions differ', () => {
+      const clientVersion = '1.1.0';
+      const serverVersion = '1.2.0';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
+    });
+    it('should throw when the minor versions differ and the major is 0', () => {
       const clientVersion = '0.1.0';
       const serverVersion = '0.2.0';
-      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
     });
-    it('should not throw when the patches differ', () => {
+    it('should NOT throw when the patches differ', () => {
       const clientVersion = '0.1.0';
       const serverVersion = '0.1.3';
       expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
