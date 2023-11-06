@@ -1504,6 +1504,7 @@ export class FunctionService implements OnModuleInit {
         await this.limitService.getTenantServerFunctionLimits(customFunction.environment.tenantId),
         sleep ?? customFunction.sleep,
         sleepAfter ?? customFunction.sleepAfter,
+        logsEnabled,
       );
     }
 
@@ -1803,6 +1804,7 @@ export class FunctionService implements OnModuleInit {
         JSON.parse(serverFunction.requirements || '[]'),
         apiKey,
         await this.limitService.getTenantServerFunctionLimits(serverFunction.environment.tenantId),
+        serverFunction.logsEnabled,
       );
     }
   }

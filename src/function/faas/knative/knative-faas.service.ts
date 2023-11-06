@@ -188,10 +188,11 @@ export class KNativeFaasService implements FaasService {
     limits: ServerFunctionLimits,
     sleep?: boolean | null,
     sleepAfter?: number | null,
+    logsEnabled = false,
   ): Promise<void> {
     this.logger.debug(`Updating server function '${id}'...`);
 
-    return this.createFunction(id, tenantId, environmentId, name, code, requirements, apiKey, limits, undefined, sleep, sleepAfter);
+    return this.createFunction(id, tenantId, environmentId, name, code, requirements, apiKey, limits, undefined, sleep, sleepAfter, logsEnabled);
   }
 
   async deleteFunction(id: string, tenantId: string, environmentId: string, cleanPath = true): Promise<void> {
