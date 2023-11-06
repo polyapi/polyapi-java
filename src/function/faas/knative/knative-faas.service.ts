@@ -307,14 +307,14 @@ export class KNativeFaasService implements FaasService {
       metadata: {
         name: this.getFunctionName(id),
         namespace: this.config.faasNamespace,
-        labels: {
-          logsEnabled: logsEnabled ? 'true' : 'false',
-        },
       },
       spec: {
         template: {
           metadata: {
             annotations: getAnnotations(),
+            labels: {
+              logsEnabled: logsEnabled ? 'true' : 'false',
+            },
           },
           spec: {
             timeoutSeconds: limits.time,
