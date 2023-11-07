@@ -313,7 +313,7 @@ export class KNativeFaasService implements FaasService {
           metadata: {
             annotations: getAnnotations(),
             labels: {
-              logsEnabled: logsEnabled ? 'true' : 'false',
+              logging: logsEnabled ? 'enabled' : 'disabled',
             },
           },
           spec: {
