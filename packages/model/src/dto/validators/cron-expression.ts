@@ -9,7 +9,7 @@ export class CronExpression implements ValidatorConstraintInterface {
       return false;
     }
 
-    return cronValidator.isValidCron(value);
+    return cronValidator.isValidCron(value, { seconds: true });
 
   }
 

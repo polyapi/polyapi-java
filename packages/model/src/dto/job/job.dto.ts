@@ -1,4 +1,4 @@
-import { FunctionsExecutionType, ScheduleType } from "../../job";
+import { FunctionsExecutionType, JobStatus, ScheduleType } from "../../job";
 import { FunctionJob } from "./create-job.dto";
 
 
@@ -32,4 +32,8 @@ export type JobDto = {
     functionsExecutionType: FunctionsExecutionType;
 
     nextExecutionAt: Date;
+
+    environmentId: string;
+
+    status: JobStatus;
 }

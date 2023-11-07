@@ -65,6 +65,8 @@ async function bootstrap() {
 
   const config = app.get(ConfigService);
 
+  app.enableShutdownHooks();
+
   const prismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
 

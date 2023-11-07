@@ -9,6 +9,8 @@ CREATE TABLE "jobs" (
     "schedule_interval_value" INTEGER,
     "functions" TEXT NOT NULL,
     "functions_execution_type" TEXT NOT NULL,
+    "environment_id" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
 
     CONSTRAINT "jobs_pkey" PRIMARY KEY ("id")
 );
@@ -17,11 +19,17 @@ CREATE TABLE "jobs" (
 CREATE TABLE "job_executions" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "job_id" TEXT,
+    "job_id" TEXT NOT NULL,
     "results" TEXT NOT NULL,
+    "execution_duration" DOUBLE PRECISION NOT NULL,
+    "functions" TEXT NOT NULL,
+    "functions_execution_type" TEXT NOT NULL,
 
     CONSTRAINT "job_executions_pkey" PRIMARY KEY ("id")
 );
 
 -- AddForeignKey
-ALTER TABLE "job_executions" ADD CONSTRAINT "job_executions_job_id_fkey" FOREIGN KEY ("job_id") REFERENCES "jobs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "jobs" ADD CONSTRAINT "jobs_environment_id_fkey" FOREIGN KEY ("environment_id") REFERENCES "environment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "job_executions" ADD CONSTRAINT "job_executions_job_id_fkey" FOREIGN KEY ("job_id") REFERENCES "jobs"("id") ON DELETE CASCADE ON UPDATE CASCADE;

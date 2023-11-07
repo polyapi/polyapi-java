@@ -1,6 +1,6 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Patch, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { AuthRequest } from 'common/types';
-import { ConfigVariableName, CreateJob, Jobs, Schedule, ScheduleType, Visibility } from '@poly/model';
+import { ConfigVariableName, CreateJobDto, JobStatus, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
 import { Environment } from '@prisma/client';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -18,41 +18,82 @@ export class JobsController {
   @Post('')
   @UseGuards(PolyAuthGuard)
   @UsePipes(new ValidationPipe({ transform: true }))
-  async createJob(@Req() req: AuthRequest, @Body() data: CreateJob) {
+  async createJob(@Req() req: AuthRequest, @Body() data: CreateJobDto) {
     const {
       schedule,
       executionType,
       functions,
       name,
+      status = JobStatus.ENABLED,
     } = data;
 
+    // await this.checkSchedule(req.user.environment, schedule);
     await this.checkFunctions(req.user.environment, data.functions);
 
-    await this.checkSchedule(req.user.environment, schedule);
-
     return this.service.toJobDto(
-      await this.service.createJob(name, schedule, functions, executionType),
+      await this.service.createJob(req.user.environment, name, schedule, functions, executionType, status),
     );
   }
 
-    @Get('')
-  async getJobs() {}
+  @Get('')
+  @UseGuards(PolyAuthGuard)
+  async getJobs(@Req() req: AuthRequest) {
+    return (await this.service.getJobs(req.user.environment)).map((job) => this.service.toJobDto(job));
+  }
 
   @Patch(':id')
-    async updateJob() {}
+  @UseGuards(PolyAuthGuard)
+  async updateJob(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateJobDto) {
+    const {
+      schedule,
+      executionType,
+      functions,
+      name,
+      status,
+    } = data;
+    // await this.checkSchedule(req.user.environment, schedule);
+    await this.checkFunctions(req.user.environment, data.functions);
+
+    const job = await this.findJob(req.user.environment, id);
+
+    return this.service.toJobDto(await this.service.updateJob(job, name, schedule, functions, executionType, status));
+  }
 
   @Get(':id')
-  async getJob() {}
+  @UseGuards(PolyAuthGuard)
+  async getJob(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.service.toJobDto((await this.findJob(req.user.environment, id)));
+  }
+
+  @Delete(':id')
+  @UseGuards(PolyAuthGuard)
+  async deleteJob(@Req() req: AuthRequest, @Param('id') id: string) {
+    const job = await this.findJob(req.user.environment, id);
+
+    await this.service.deleteJob(job);
+  }
+
+  @Get(':id/executions')
+  @UseGuards(PolyAuthGuard)
+  async getJobExecutions(@Req() req: AuthRequest, @Param('id') id: string) {
+    const job = await this.findJob(req.user.environment, id);
+
+    return (await this.service.getExecutions(job)).map(execution => this.service.toExecutionDto(execution));
+  }
+
+  @Get(':job/executions/:id')
+  @UseGuards(PolyAuthGuard)
+  async getJobExecution(@Req() req: AuthRequest, @Param('job') jobId: string, @Param('id') id: string) {
+    await this.findJob(req.user.environment, jobId);
+
+    return this.service.toExecutionDto(await this.findExecution(id));
+  }
 
   private async checkFunctions(environment: Environment, functions: { id: string }[] = []) {
-    const serverFunctions = await this.functionService.getServerFunctions(environment.id, undefined, undefined, functions.map(({ id }) => id));
+    const [, notFoundFunctions] = await this.service.getJobFunctions(environment, functions);
 
-    if (serverFunctions.length !== functions.length) {
-      for (const securityFunction of functions) {
-        if (!serverFunctions.find(serverFunction => serverFunction.id === securityFunction.id || serverFunction.visibility === Visibility.Tenant)) {
-          throw new BadRequestException(`Server function with id = ${securityFunction.id} not found`);
-        }
-      }
+    if (notFoundFunctions.length) {
+      throw new BadRequestException(`Functions with ids ${notFoundFunctions.join(', ')} not found`);
     }
   }
 
@@ -84,5 +125,31 @@ export class JobsController {
         throw new InvalidIntervalTimeException(minimumIntervalTimeBetweenExecutions);
       }
     }
+
+    if (schedule.type === ScheduleType.ON_TIME) {
+      if (schedule.value < new Date()) {
+        throw new BadRequestException('Job will not be executed since you passed an old date.');
+      }
+    }
+  }
+
+  private async findJob(environment: Environment, id: string) {
+    const job = await this.service.getJob(environment, id);
+
+    if (!job) {
+      throw new NotFoundException('Job not found.');
+    }
+
+    return job;
+  }
+
+  private async findExecution(id: string) {
+    const execution = await this.service.getExecution(id);
+
+    if (!execution) {
+      throw new NotFoundException('Job not found.');
+    }
+
+    return execution;
   }
 }

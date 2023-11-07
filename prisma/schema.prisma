@@ -91,6 +91,7 @@ model Environment {
   variables       Variable[]
   webhookHandles  WebhookHandle[]
   logsDefault     Boolean          @default(false) @map("logs_default")
+  jobs            Job[]
 
   @@map("environment")
 }
@@ -451,17 +452,24 @@ model Job {
   functions                   String
   functionsExecutionType      String @map("functions_execution_type")
   executions                  JobExecution[]
+  environment                 Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environmentId               String @map("environment_id")
+  status                      String
 
   @@map("jobs")
 }
 
 
 model JobExecution {
-  id                  String @id @default(uuid())
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  job                 Job? @relation(fields: [jobId], references: [id], onDelete: SetNull)
-  jobId               String? @map("job_id")
-  results             String
+  id                      String @id @default(uuid())
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  job                     Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId                   String @map("job_id")
+  results                 String
+  duration                Float
+  functions               String
+  type                    String
 
+  // TODO: save functions, functions execution type and job message/code, pausar job si falla muchas veces.
   @@map("job_executions")
 }

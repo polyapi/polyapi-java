@@ -9,3 +9,8 @@ export enum FunctionsExecutionType {
     SEQUENTIAL = 'sequential',
     PARALLEL = 'parallel'
 }
+
+export enum JobStatus {
+    ENABLED = 'enabled',
+    DISABLED = 'disabled'
+};
