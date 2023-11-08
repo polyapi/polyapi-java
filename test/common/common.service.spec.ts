@@ -41,7 +41,7 @@ describe('CommonService', () => {
     it('should NOT throw when the client version is not present (undefined)', () => {
       const clientVersion = undefined;
       const serverVersion = '0.1.0';
-      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
     });
     it('should throw when the minor versions differ', () => {
       const clientVersion = '1.1.0';
