@@ -1,6 +1,5 @@
-import { FunctionsExecutionType, JobStatus, ScheduleType } from "../../job";
-import { FunctionJob } from "./create-job.dto";
-
+import { FunctionsExecutionType, JobStatus, ScheduleType } from '../../job';
+import { FunctionJob } from './create-job.dto';
 
 export type Periodical = {
     type: ScheduleType.PERIODICAL;

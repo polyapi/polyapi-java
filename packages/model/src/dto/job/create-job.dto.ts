@@ -1,13 +1,12 @@
-import { IsArray, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
-import { ScheduleType, FunctionsExecutionType, JobStatus } from "../../job";
-import { Type } from "class-transformer";
+import { IsArray, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ScheduleType, FunctionsExecutionType, JobStatus } from '../../job';
+import { Type } from 'class-transformer';
 
-import { OnTime, Periodical, Interval, FunctionJob, ScheduleBase} from './utils';
+import { OnTime, Periodical, Interval, FunctionJob, ScheduleBase } from './utils';
 
-export { FunctionJob } from './utils'
+export { FunctionJob } from './utils';
 
 export class CreateJobDto {
-
     @IsString()
     @IsNotEmpty()
     name: string;
@@ -34,11 +33,10 @@ export class CreateJobDto {
     })
     schedule: Interval | Periodical | OnTime;
 
-
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => FunctionJob)
-    functions: FunctionJob[]
+    functions: FunctionJob[];
 
     @IsEnum(FunctionsExecutionType)
     executionType: FunctionsExecutionType;

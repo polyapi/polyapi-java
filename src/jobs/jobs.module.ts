@@ -5,10 +5,18 @@ import { FunctionModule } from 'function/function.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { HttpModule } from '@nestjs/axios';
+import { BullModule } from '@nestjs/bull';
+import { CommonModule } from 'common/common.module';
+import { QUEUE_NAME } from './constants';
 
 @Module({
   controllers: [JobsController],
   providers: [JobsService],
-  imports: [FunctionModule, PrismaModule, ConfigVariableModule, FunctionModule, HttpModule],
+  imports: [
+    FunctionModule, PrismaModule, ConfigVariableModule, FunctionModule, HttpModule, BullModule.registerQueue({
+      name: QUEUE_NAME,
+    }),
+    CommonModule,
+  ],
 })
 export class JobsModule {}

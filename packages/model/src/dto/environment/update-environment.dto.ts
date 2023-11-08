@@ -8,5 +8,4 @@ export class UpdateEnvironmentDto {
   @IsOptional()
   @IsBoolean()
   logsDefault?: boolean;
-
 }

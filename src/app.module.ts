@@ -38,6 +38,7 @@ import { EmailModule } from 'email/email.module';
 import { TosModule } from 'tos/tos.module';
 import { HealthModule } from 'health/health.module';
 import { JobsModule } from './jobs/jobs.module';
+import { BullModule } from '@nestjs/bull';
 
 const isRedisAvailable = async (url: string): Promise<boolean> => {
   const redisOptions: RedisOptions = {
@@ -112,6 +113,19 @@ const logger = new Logger('AppModule');
     TosModule,
     HealthModule,
     JobsModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        console.log('redis host: ', configService.redisUrl.split('redis://')[1].split(':')[0]);
+        return {
+          redis: {
+            host: configService.redisUrl.split('redis://')[1].split(':')[0],
+
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
   ],
   exports: [ConfigModule],
   controllers: [],

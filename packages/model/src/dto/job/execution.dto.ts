@@ -1,6 +1,6 @@
-import { FunctionsExecutionType } from "../../job";
+import { FunctionsExecutionType } from '../../job';
 
-export type ExecutionDto =  {
+export type ExecutionDto = {
     id: string;
     createdAt: Date;
     jobId: string;

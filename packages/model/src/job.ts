@@ -4,7 +4,6 @@ export enum ScheduleType {
     ON_TIME = 'on_time'
 }
 
-
 export enum FunctionsExecutionType {
     SEQUENTIAL = 'sequential',
     PARALLEL = 'parallel'

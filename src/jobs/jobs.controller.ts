@@ -41,7 +41,7 @@ export class JobsController {
     return (await this.service.getJobs(req.user.environment)).map((job) => this.service.toJobDto(job));
   }
 
-  @Patch(':id')
+  /* @Patch(':id')
   @UseGuards(PolyAuthGuard)
   async updateJob(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateJobDto) {
     const {
@@ -57,7 +57,7 @@ export class JobsController {
     const job = await this.findJob(req.user.environment, id);
 
     return this.service.toJobDto(await this.service.updateJob(job, name, schedule, functions, executionType, status));
-  }
+  } */
 
   @Get(':id')
   @UseGuards(PolyAuthGuard)

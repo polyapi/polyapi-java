@@ -230,4 +230,8 @@ export class ConfigService {
   get apiKeyHashPepper(): string {
     return this.get('API_KEY_HASH_PEPPER', '');
   }
+
+  get jobQueueName(): string {
+    return this.get('JOB_QUEUE_NAME', 'jobs');
+  }
 }

@@ -1,8 +1,8 @@
-import { IsArray, IsEnum, IsObject, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsEnum, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 
-import { Type } from "class-transformer";
-import { ScheduleBase, Interval, Periodical, OnTime, FunctionJob } from "./utils";
-import { FunctionsExecutionType, JobStatus, ScheduleType } from "../../job";
+import { Type } from 'class-transformer';
+import { ScheduleBase, Interval, Periodical, OnTime, FunctionJob } from './utils';
+import { FunctionsExecutionType, JobStatus, ScheduleType } from '../../job';
 
 export class UpdateJobDto {
     @IsString()
@@ -36,7 +36,7 @@ export class UpdateJobDto {
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => FunctionJob)
-    functions: FunctionJob[]
+    functions: FunctionJob[];
 
     @IsOptional()
     @IsEnum(FunctionsExecutionType)
@@ -44,5 +44,5 @@ export class UpdateJobDto {
 
     @IsOptional()
     @IsEnum(JobStatus)
-    status: JobStatus
+    status: JobStatus;
 }

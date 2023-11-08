@@ -1,256 +1,154 @@
-import { Injectable, OnModuleInit, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto, Jobs } from '@poly/model';
 import { CustomFunction, Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import * as cronParser from 'cron-parser';
-import { SchedulerRegistry } from '@nestjs/schedule';
 import dayjs from 'dayjs';
-import { CronJob } from 'cron';
 import { FunctionService } from 'function/function.service';
-import { delay } from '@poly/common/utils';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
+import Bull, { Queue } from 'bull';
+import { CommonService } from 'common/common.service';
+import { QUEUE_NAME, JOB_PREFIX } from './constants';
 
 type ServerFunctionResult = Awaited<ReturnType<FunctionService['executeServerFunction']>>;
 
+@Processor(QUEUE_NAME)
 @Injectable()
-export class JobsService implements OnModuleInit, OnModuleDestroy {
+export class JobsService implements OnModuleDestroy {
   private readonly logger = new Logger(JobsService.name);
 
-  private moduleDestroyLock: Record<string, Promise<void> | undefined> = {};
-
-  constructor(private readonly prisma: PrismaService, private readonly schedulerRegistry: SchedulerRegistry, private readonly functionService: FunctionService, private readonly httpService: HttpService) {
+  constructor(private readonly prisma: PrismaService, private readonly functionService: FunctionService, @InjectQueue(QUEUE_NAME) private readonly queue: Queue, private readonly httpService: HttpService, private readonly commonService: CommonService) {
 
   }
 
   onModuleDestroy() {
-    return this.waitUntilRunningJobsFinish();
+    this.logger.debug('Waiting for in-progress jobs to finish before shutting down...');
+    return this.queue.close();
   }
 
-  onModuleInit() {
-    this.registerRuntimeJobs();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private throwMissingScheduleType(schedule: never): never {
+    throw new Error('Missing schedule type');
   }
 
-  private async waitUntilRunningJobsFinish() {
-    // Clean current incoming jobs.
-    for (const intervalId of this.schedulerRegistry.getIntervals()) {
-      this.schedulerRegistry.deleteInterval(intervalId);
-    }
-
-    for (const timeoutId of this.schedulerRegistry.getTimeouts()) {
-      this.schedulerRegistry.deleteTimeout(timeoutId);
-    }
-
-    for (const [cronName] of Object.entries(this.schedulerRegistry.getCronJobs())) {
-      this.schedulerRegistry.deleteCronJob(cronName);
-    }
-
-    const moduleDestroyLock = Object.entries(this.moduleDestroyLock);
-
-    if (moduleDestroyLock.length) {
-      this.logger.debug(`Waiting for ${moduleDestroyLock.length} jobs to finish before shutting down...`);
-    }
-
-    // Wait for current running jobs to finish.
-    for (const [runtimeJobId, jobProcess] of moduleDestroyLock) {
-      this.logger.debug(`Waiting for runtime job ${runtimeJobId}...`);
-      await jobProcess;
-    }
-
-    if (moduleDestroyLock.length) {
-      this.logger.debug('All pending jobs have been finished.');
-    }
-  }
-
-  private async registerRuntimeJobs() {
-    try {
-      this.logger.debug('Adding jobs into scheduler registry.');
-
-      const jobs = await this.prisma.job.findMany({
-        where: {
-          AND: [
-            {
-              status: JobStatus.ENABLED,
-            },
-            {
-              OR: [
-                {
-                  scheduleType: {
-                    not: {
-                      equals: ScheduleType.ON_TIME,
-                    },
-                  },
-                }, {
-                  scheduleType: ScheduleType.ON_TIME,
-                  scheduleOnTimeValue: {
-                    gte: new Date(),
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      });
-
-      let intervalCount = 0;
-      let onTimeCount = 0;
-      let periodicalCount = 0;
-      for (const job of jobs) {
-        switch ((job.scheduleType as ScheduleType)) {
-          case ScheduleType.INTERVAL:
-            intervalCount++;
-            break;
-
-          case ScheduleType.ON_TIME:
-            onTimeCount++;
-            break;
-
-          case ScheduleType.PERIODICAL:
-            periodicalCount++;
-            break;
-        }
-
-        this.addRuntimeJob(job);
-      }
-
-      this.logger.debug(`Added ${intervalCount} interval jobs, ${onTimeCount} on time jobs and ${periodicalCount} periodical jobs to scheduler registry. Total: ${intervalCount + onTimeCount + periodicalCount}`);
-    } catch (err) {
-      this.logger.error('Failed to register runtime jobs', err);
-    }
-  }
-
-  private addRuntimeJob(job: Job) {
+  private async addJobToQueue(job: Job): Promise<Bull.Job<Job>> {
     const schedule = this.getScheduleInfo(job);
 
-    const runtimeJobIdentifier = this.getRuntimeJobIdentifier(job.id);
+    const options: Bull.JobOptions = {
+      jobId: job.id,
+      removeOnComplete: true,
+      removeOnFail: true,
+    };
+
+    let result: Bull.Job<Job> | null = null;
 
     switch (schedule.type) {
       case ScheduleType.INTERVAL: {
-        const interval = setInterval(() => this.trackAndExecuteJob(job.id), schedule.value * 60 * 1000);
-
-        this.schedulerRegistry.addInterval(runtimeJobIdentifier, interval);
-
+        result = await this.queue.add(JOB_PREFIX, job, {
+          ...options,
+          repeat: {
+            every: schedule.value * 60 * 1000, // ms,
+          },
+        });
         break;
       }
 
       case ScheduleType.ON_TIME: {
         const difference = dayjs(new Date()).diff(dayjs(schedule.value));
 
-        const timeout = setTimeout(() => this.trackAndExecuteJob(job.id), difference);
+        if (difference > 0) {
+          result = await this.queue.add(JOB_PREFIX, job, {
+            ...options,
+            delay: difference,
+          });
+        }
+        break;
+      }
 
-        this.schedulerRegistry.addTimeout(runtimeJobIdentifier, timeout);
+      case ScheduleType.PERIODICAL: {
+        result = await this.queue.add(JOB_PREFIX, job, {
+          ...options,
+          repeat: {
+            cron: schedule.value,
+          },
+
+        });
+        break;
+      }
+
+      default:
+        this.throwMissingScheduleType(schedule);
+    }
+
+    this.logger.debug(`Added job "${job.name}" with id "${job.id}" to queue.`);
+
+    return result as Exclude<typeof result, null>;
+  }
+
+  private async removeJobFromQueue(job: Job) {
+    const schedule = this.getScheduleInfo(job);
+
+    switch (schedule.type) {
+      case ScheduleType.INTERVAL: {
+        await this.queue.removeRepeatable(JOB_PREFIX, {
+          every: schedule.value * 60 * 1000,
+          jobId: job.id,
+        });
 
         break;
       }
 
       case ScheduleType.PERIODICAL: {
-        const cronJob = new CronJob(schedule.value, () => this.trackAndExecuteJob(job.id));
+        await this.queue.removeRepeatable(JOB_PREFIX, {
+          cron: schedule.value,
+          jobId: job.id,
+        });
 
-        this.schedulerRegistry.addCronJob(runtimeJobIdentifier, cronJob);
-
-        cronJob.start();
         break;
       }
+
+      case ScheduleType.ON_TIME: {
+        const queueJob = await this.queue.getJob(job.id);
+
+        await queueJob?.remove();
+        break;
+      }
+
+      default:
+        this.throwMissingScheduleType(schedule);
     }
+
+    this.logger.debug(`Removed job "${job.name}" with id "${job.id}" from queue.`);
   }
 
-  private deleteRuntimeJob(job: Job) {
-    const schedule = this.getScheduleInfo(job);
-
-    const runtimeJobIdentifier = this.getRuntimeJobIdentifier(job.id);
-
-    if (schedule.type === ScheduleType.INTERVAL) {
-      this.schedulerRegistry.deleteInterval(runtimeJobIdentifier);
-    }
-
-    if (schedule.type === ScheduleType.ON_TIME) {
-      this.schedulerRegistry.deleteTimeout(runtimeJobIdentifier);
-    }
-
-    if (schedule.type === ScheduleType.PERIODICAL) {
-      this.schedulerRegistry.deleteCronJob(runtimeJobIdentifier);
-    }
-
-    this.logger.debug(`Removed runtime job "${runtimeJobIdentifier}"`);
+  private getJobFromQueue(job: Job) {
+    return this.queue.getJob(job.id);
   }
 
-  private getRuntimeJob(job: Job) {
-    const schedule = this.getScheduleInfo(job);
-
-    const runtimeJobIdentifier = this.getRuntimeJobIdentifier(job.id);
+  @Process(JOB_PREFIX)
+  private async processJob(queueJob: Bull.Job<Job>) {
+    const job = queueJob.data;
 
     try {
-      if (schedule.type === ScheduleType.INTERVAL) {
-        return this.schedulerRegistry.getInterval(runtimeJobIdentifier);
-      }
-
-      if (schedule.type === ScheduleType.ON_TIME) {
-        return this.schedulerRegistry.getTimeout(runtimeJobIdentifier);
-      }
-
-      if (schedule.type === ScheduleType.PERIODICAL) {
-        return this.schedulerRegistry.getCronJob(runtimeJobIdentifier);
-      }
-    } catch (err) {
-      return null;
-    }
-  }
-
-  private getRuntimeJobIdentifier(id: string) {
-    return `poly-job-${id}`;
-  }
-
-  private trackAndExecuteJob(id: string) {
-    const runtimeJobId = this.getRuntimeJobIdentifier(id);
-
-    /*
-      eslint-disable no-async-promise-executor
-    */
-    this.moduleDestroyLock[runtimeJobId] = new Promise(async resolve => {
-      try {
-        const timeoutInMinutes = 12000; // 1000 * 60 * 5;
-
-        const value = await Promise.race([
-          new Promise<string>(async resolve => {
-            await delay(timeoutInMinutes);
-            resolve('timeout');
-          }), this.executeJob(id),
-        ]);
-
-        if (value === 'timeout') {
-          this.logger.debug(`Job running time was greater than ${timeoutInMinutes} minutes, release module destroy lock.`);
-        }
-      } catch (err) {
-        // Do nothing here.
-      }
-      resolve();
-    });
-  }
-  /*
-    eslint-enable no-async-promise-executor
-  */
-
-  private async executeJob(id: string) {
-    try {
-      const job = await this.prisma.job.findFirst({
+      const environment = await this.prisma.environment.findFirst({
         where: {
-          id,
-        },
-        include: {
-          environment: true,
+          id: job.environmentId,
         },
       });
 
-      if (!job) {
-        return this.logger.error(`Job with id ${id} not found`);
+      if (!environment) {
+        throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
       }
-      this.logger.debug(`Executing job ${job?.name} with environment "${job?.environmentId}" and id "${id}"`);
+
+      this.logger.debug(`Executing job ${job.name} with environment "${job.environmentId}" and id "${job.id}"`);
 
       const executionStart = Date.now();
 
       const functions = JSON.parse(job.functions) as FunctionJob[];
 
-      const [customFunctions, notFoundFunctions] = await this.getJobFunctions(job.environment, functions);
+      const [customFunctions, notFoundFunctions] = await this.getJobFunctions(environment, functions);
 
       if (notFoundFunctions.length) {
         return this.logger.error(`Job won't be executed since functions ${notFoundFunctions.join(', ')} are not found.`);
@@ -323,31 +221,44 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
         }
       } */
 
+      /* 
       const response = await lastValueFrom(
         this.httpService
           .get('http://localhost:3000/delay'),
-      );
+      ); */
 
       const executionDuration = ((Date.now() - executionStart) / 1000);
 
-      this.logger.debug(`Job "${job?.name}" with id "${id}" executed. Duration: ${executionDuration} seconds.`);
+      this.logger.debug(`Job "${job?.name}" with id "${job.id}" executed. Duration: ${executionDuration} seconds.`);
 
       try {
-        return await this.prisma.jobExecution.create({
-          data: {
-            jobId: id,
-            duration: executionDuration,
-            results: JSON.stringify(results),
-            functions: JSON.stringify(functions),
-            type: job.functionsExecutionType,
-          },
+        await this.prisma.$transaction(async trx => {
+          // Check if job still exists, if not, avoid saving execution info.
+          const savedJob = await trx.job.findFirst({
+            where: {
+              id: job.id,
+            },
+          });
+          if (savedJob) {
+            return this.prisma.jobExecution.create({
+              data: {
+                jobId: job.id,
+                duration: executionDuration,
+                results: JSON.stringify(results),
+                functions: JSON.stringify(functions),
+                type: job.functionsExecutionType,
+              },
+            });
+          }
         });
       } catch (err) {
         this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}"`, err);
       }
     } catch (err) {
-      this.logger.error(`Failed to execute job with id "${id}" failed`, err);
+      this.logger.error(`Failed to execute job with id "${job.id}" failed`, err);
     }
+
+    console.log('job: ', queueJob.id, queueJob.opts.repeat);
   }
 
   private getScheduleInfo(job: Job): Schedule {
@@ -457,8 +368,7 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
       });
 
       if (status === JobStatus.ENABLED) {
-        this.addRuntimeJob(createdJob);
-        this.logger.debug(`Added new runtime job for job "${createdJob.name}" with id "${createdJob.id}"`);
+        await this.addJobToQueue(createdJob);
       }
 
       this.logger.debug(`Saved ${schedule.type} job "${createdJob.name}" with id "${createdJob.id}"`);
@@ -482,16 +392,18 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
 
     try {
       return await this.prisma.$transaction(async trx => {
+        const disableJob = job.status === JobStatus.ENABLED && status === JobStatus.DISABLED;
+
         const enableJobAgain = job.status === JobStatus.DISABLED && status === JobStatus.ENABLED;
 
         const oldJobSchedule = this.getScheduleInfo(job);
 
         const scheduleChanged = schedule && (schedule.type !== oldJobSchedule.type || (schedule.type === oldJobSchedule.type && schedule.value !== oldJobSchedule.value));
 
-        const shouldRemoveRuntimeJob = !!(scheduleChanged || status === JobStatus.DISABLED);
+        const shouldRemoveRuntimeJob = !!(scheduleChanged || disableJob);
 
-        if (this.getRuntimeJob(job) && shouldRemoveRuntimeJob) {
-          this.deleteRuntimeJob(job);
+        if (shouldRemoveRuntimeJob) {
+          await this.removeJobFromQueue(job);
         }
 
         const updatedJob = await trx.job.update({
@@ -509,8 +421,7 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
         });
 
         if ((shouldRemoveRuntimeJob && status !== JobStatus.DISABLED) || enableJobAgain) {
-          this.addRuntimeJob(updatedJob);
-          this.logger.debug(`Added new runtime job for job "${job.name}" with id "${job.id}"`);
+          await this.addJobToQueue(updatedJob);
         }
 
         this.logger.debug(`Updated job "${updatedJob.name}" with id "${updatedJob.id}"`);
@@ -518,10 +429,20 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
         return updatedJob;
       });
     } catch (err) {
+      
       this.logger.error(`Err updating job "${job.name}" with id "${job.id}"`, err);
-      if (!this.getRuntimeJob(job)) {
+
+      const oldSchedule = this.getScheduleInfo(job);
+
+      // if(oldSchedule.type === )
+
+      const repeatableJobs = await this.queue.getRepeatableJobs();
+
+      // for(const repeata)
+
+      if (!this.getJobFromQueue(job)) {
         this.logger.debug('Restoring old runtime job...');
-        this.addRuntimeJob(job);
+        this.addJobToQueue(job);
       }
 
       throw err;
@@ -555,9 +476,7 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.deleteRuntimeJob(job);
-
-      this.logger.debug(`Deleted job "${job.name}" with id "${job.id}"`);
+      await this.removeJobFromQueue(job);
     });
   }
 
