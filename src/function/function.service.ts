@@ -1402,6 +1402,8 @@ export class FunctionService implements OnModuleInit {
           apiKey,
           await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
           createFromScratch,
+          customFunction.sleep,
+          customFunction.sleepAfter,
           logsEnabled,
         );
 
