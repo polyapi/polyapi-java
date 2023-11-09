@@ -31,7 +31,7 @@ export class JobsController {
     // await this.checkSchedule(req.user.environment, schedule);
     await this.checkFunctions(req.user.environment, data.functions);
 
-    const functionsJob = this.processFunctionJob(functions);
+    const functionsJob = this.processJobFunctions(functions);
 
     return this.service.toJobDto(
       await this.service.createJob(req.user.environment, name, schedule, functionsJob, executionType, status),
@@ -58,7 +58,7 @@ export class JobsController {
     await this.checkFunctions(req.user.environment, data.functions);
 
     const job = await this.findJob(req.user.environment, id);
-    const functionsJob = this.processFunctionJob(functions);
+    const functionsJob = this.processJobFunctions(functions);
 
     return this.service.toJobDto(await this.service.updateJob(job, name, schedule, functionsJob, executionType, status));
   }
@@ -157,7 +157,7 @@ export class JobsController {
     return execution;
   }
 
-  private processFunctionJob(functionsJob: CreateFunctionJob[]): FunctionJob[] {
+  private processJobFunctions(functionsJob: CreateFunctionJob[]): FunctionJob[] {
     return functionsJob.map(functionJob => ({
       ...functionJob,
       eventPayload: functionJob.eventPayload || {},

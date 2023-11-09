@@ -58,7 +58,7 @@ export class JobsService implements OnModuleDestroy {
       }
 
       case ScheduleType.ON_TIME: {
-        const difference = dayjs(new Date()).diff(dayjs(schedule.value));
+        const difference = dayjs(dayjs(schedule.value)).diff();
 
         if (difference > 0) {
           result = await this.queue.add(JOB_PREFIX, job, {
@@ -235,11 +235,11 @@ export class JobsService implements OnModuleDestroy {
     name: JOB_PREFIX,
   })
 
-  private getQueueJobDuration(queueJob: Bull.Job): number | null {
+  private getQueueJobDurationInSeconds(processedOn?: number, finishedOn?: number): number | null {
     let duration: number | null = null;
 
-    if (queueJob.finishedOn && queueJob.processedOn) {
-      duration = queueJob.finishedOn - queueJob.processedOn;
+    if (finishedOn && processedOn) {
+      duration = (finishedOn - processedOn) / 1000;
     }
 
     return duration;
@@ -248,12 +248,12 @@ export class JobsService implements OnModuleDestroy {
   private async onQueueCompleted(queueJob: Bull.Job<Job>, results: JobFunctionCallResult[]) {
     const job = queueJob.data as Job;
 
-    const duration = this.getQueueJobDuration(queueJob);
+    const duration = this.getQueueJobDurationInSeconds(queueJob.processedOn, queueJob.finishedOn);
 
-    this.logger.debug(`Job "${job.name}" with id "${job.id}" processed in ${duration ? `${duration / 1000} seconds` : ''}`);
+    this.logger.debug(`Job "${job.name}" with id "${job.id}" processed in ${duration ? `${duration} seconds` : ''}`);
     this.logger.debug('Results: ', results);
 
-    await this.saveExecutionDetails(job, JobExecutionStatus.FINISHED, results, duration);
+    await this.saveExecutionDetails(job, JobExecutionStatus.FINISHED, results, queueJob.processedOn, queueJob.finishedOn);
   }
 
   @OnQueueFailed({
@@ -262,16 +262,14 @@ export class JobsService implements OnModuleDestroy {
   private async onQueueFailed(queueJob: Bull.Job<Job>, reason) {
     const job = queueJob.data as Job;
 
-    const duration = this.getQueueJobDuration(queueJob);
-
     const errMessage = typeof reason === 'string' ? reason : reason?.message;
 
     this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}", reason: ${errMessage}`);
 
-    await this.saveExecutionDetails(job, JobExecutionStatus.JOB_ERROR, [], duration);
+    await this.saveExecutionDetails(job, JobExecutionStatus.JOB_ERROR, [], queueJob.processedOn, queueJob.finishedOn);
   }
 
-  private async saveExecutionDetails(job: Job, status: JobExecutionStatus, results: JobFunctionCallResult[], duration: number | null = null) {
+  private async saveExecutionDetails(job: Job, status: JobExecutionStatus, results: JobFunctionCallResult[], processedOn?: number, finishedOn?: number) {
     try {
       await this.prisma.$transaction(async trx => {
         // Check if job still exists, if not, avoid saving execution info.
@@ -284,11 +282,12 @@ export class JobsService implements OnModuleDestroy {
           return this.prisma.jobExecution.create({
             data: {
               jobId: job.id,
-              duration,
               results: JSON.stringify(results),
               functions: job.functions,
               type: job.functionsExecutionType,
               status,
+              processedOn,
+              finishedOn,
             },
           });
         }
@@ -345,10 +344,11 @@ export class JobsService implements OnModuleDestroy {
       createdAt: execution.createdAt,
       jobId: execution.jobId,
       results: JSON.parse(execution.results),
-      duration: execution.duration ? execution.duration / 1000 : null,
+      duration: this.getQueueJobDurationInSeconds(execution.processedOn || undefined, execution.finishedOn || undefined),
       functions: JSON.parse(execution.functions),
       type: execution.type as FunctionsExecutionType,
       status: execution.status as JobExecutionStatus,
+      processedOn: execution.processedOn,
     };
   }
 

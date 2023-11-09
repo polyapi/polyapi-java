@@ -466,11 +466,11 @@ model JobExecution {
   job                     Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId                   String @map("job_id")
   results                 String
-  duration                Float?
+  processedOn             Float? @map("processed_on")
+  finishedOn              Float? @map("finished_on")
   functions               String
   type                    String
   status                  String
 
-  // TODO: save functions, functions execution type and job message/code, pausar job si falla muchas veces.
   @@map("job_executions")
 }
