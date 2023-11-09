@@ -10,3 +10,4 @@
 !.vscode/extensions.json
 
 **/target
+**/pom.xml.versionsBackup

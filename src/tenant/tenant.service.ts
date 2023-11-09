@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
-import { PrismaService, PrismaTransaction } from 'prisma/prisma.service';
+import { PrismaService, PrismaTransaction } from 'prisma-module/prisma.service';
 import { LimitTier, Tenant, TenantAgreement, TenantSignUp, Tos } from '@prisma/client';
 import { ConfigService } from 'config/config.service';
 import { EnvironmentService } from 'environment/environment.service';
@@ -31,7 +31,7 @@ type CreateTenantOptions = {
   userName?: string;
   userRole?: Role;
   userApiKey?: string;
-}
+};
 
 @Injectable()
 export class TenantService implements OnModuleInit {
@@ -49,14 +49,13 @@ export class TenantService implements OnModuleInit {
     private readonly commonService: CommonService,
     private readonly secretService: SecretService,
     private readonly configVariableService: ConfigVariableService,
-  ) {
-  }
+  ) {}
 
   async onModuleInit() {
-    return this.checkPolyTenant();
+    return this.checkPolyAndUserTenant();
   }
 
-  private async checkPolyTenant() {
+  private async checkPolyAndUserTenant() {
     const tenant = await this.findByName(this.config.polyTenantName);
     if (!tenant) {
       await this.create(this.config.polyTenantName, null, true, null, null, true, {
@@ -64,6 +63,12 @@ export class TenantService implements OnModuleInit {
         userName: this.config.polyAdminUserName,
         userRole: Role.SuperAdmin,
         userApiKey: this.config.polySuperAdminUserKey,
+      });
+      await this.create('default', null, true, null, null, true, {
+        teamName: 'default',
+        userName: 'User Super Admin',
+        userRole: Role.SuperAdmin,
+        userApiKey: this.config.polySuperAdminUserKey + 'd',
       });
     }
   }
@@ -80,7 +85,7 @@ export class TenantService implements OnModuleInit {
     };
   }
 
-  toDtoWithAdminApiKey(tenant: Tenant, apiKey: string): TenantDto & {adminApiKey: string} {
+  toDtoWithAdminApiKey(tenant: Tenant, apiKey: string): TenantDto & { adminApiKey: string } {
     return {
       ...this.toDto(tenant),
       adminApiKey: apiKey,
@@ -119,13 +124,13 @@ export class TenantService implements OnModuleInit {
       throw new Error(`Tenant ${tenant.id} not found`);
     }
 
-    const toEnvironmentFullDto = environment => ({
+    const toEnvironmentFullDto = (environment) => ({
       ...this.environmentService.toDto(environment),
-      apiKeys: environment.apiKeys.map(apiKey => this.authService.toApiKeyDto(apiKey)),
+      apiKeys: environment.apiKeys.map((apiKey) => this.authService.toApiKeyDto(apiKey)),
     });
-    const toTeamFullDto = team => ({
+    const toTeamFullDto = (team) => ({
       ...this.teamService.toTeamDto(team),
-      members: team.teamMembers.map(member => this.teamService.toMemberDto(member)),
+      members: team.teamMembers.map((member) => this.teamService.toMemberDto(member)),
     });
     return {
       id: fullTenant.id,
@@ -135,9 +140,9 @@ export class TenantService implements OnModuleInit {
       publicNamespace: tenant.publicNamespace,
       tierId: fullTenant.limitTierId,
       enabled: fullTenant.enabled,
-      users: fullTenant.users.map(user => this.userService.toUserDto(user)),
+      users: fullTenant.users.map((user) => this.userService.toUserDto(user)),
       environments: fullTenant.environments.map(toEnvironmentFullDto),
-      applications: fullTenant.applications.map(application => this.applicationService.toApplicationDto(application)),
+      applications: fullTenant.applications.map((application) => this.applicationService.toApplicationDto(application)),
       teams: fullTenant.teams.map(toTeamFullDto),
     };
   }
@@ -167,13 +172,7 @@ export class TenantService implements OnModuleInit {
     tenant: Tenant;
     apiKey: string;
   }> {
-    const {
-      environmentName,
-      teamName,
-      userName,
-      userRole,
-      userApiKey,
-    } = options;
+    const { environmentName, teamName, userName, userRole, userApiKey } = options;
     const tenant = await tx.tenant.create({
       data: {
         name,
@@ -266,21 +265,33 @@ export class TenantService implements OnModuleInit {
     enabled = true,
     options: CreateTenantOptions = {},
   ) {
-    return this.prisma.$transaction(async tx => {
-      try {
-        return await this.createTenantRecord(tx, name, email, publicVisibilityAllowed, publicNamespace, limitTierId, enabled, options);
-      } catch (error) {
-        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
-          throw new ConflictException('Tenant with this name already exists');
+    return this.prisma.$transaction(
+      async (tx) => {
+        try {
+          return await this.createTenantRecord(
+            tx,
+            name,
+            email,
+            publicVisibilityAllowed,
+            publicNamespace,
+            limitTierId,
+            enabled,
+            options,
+          );
+        } catch (error) {
+          if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
+            throw new ConflictException('Tenant with this name already exists');
+          }
+          if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
+            throw new ConflictException('Tenant with this email already exists');
+          }
+          throw error;
         }
-        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
-          throw new ConflictException('Tenant with this email already exists');
-        }
-        throw error;
-      }
-    }, {
-      timeout: 10_000,
-    });
+      },
+      {
+        timeout: 10_000,
+      },
+    );
   }
 
   async update(
@@ -438,74 +449,77 @@ export class TenantService implements OnModuleInit {
       throw new ConflictException({ code: 'EXPIRED_VERIFICATION_CODE' });
     }
 
-    return this.prisma.$transaction(async tx => {
-      let apiKey: string | null = null;
-      let tenant: Tenant | null = null;
+    return this.prisma.$transaction(
+      async (tx) => {
+        let apiKey: string | null = null;
+        let tenant: Tenant | null = null;
 
-      try {
-        const result = await this.createTenantRecord(
-          tx,
-          tenantSignUp.name,
-          tenantSignUp.email,
-          false,
-          null,
-          tier?.id,
-        );
+        try {
+          const result = await this.createTenantRecord(
+            tx,
+            tenantSignUp.name,
+            tenantSignUp.email,
+            false,
+            null,
+            tier?.id,
+          );
 
-        apiKey = result.apiKey;
-        tenant = result.tenant;
-      } catch (error) {
-        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
-          throw new ConflictException({
-            code: 'TENANT_ALREADY_EXISTS',
-          });
-        } else if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
-          throw new ConflictException({
-            code: 'EMAIL_ALREADY_EXISTS',
-          });
+          apiKey = result.apiKey;
+          tenant = result.tenant;
+        } catch (error) {
+          if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'name')) {
+            throw new ConflictException({
+              code: 'TENANT_ALREADY_EXISTS',
+            });
+          } else if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'email')) {
+            throw new ConflictException({
+              code: 'EMAIL_ALREADY_EXISTS',
+            });
+          }
+
+          throw error;
         }
 
-        throw error;
-      }
+        if (!defaultTos) {
+          this.logger.debug('Default tos record not configured.');
+        } else {
+          const defaultTosRecord = await tx.tos.findFirst({
+            where: {
+              id: defaultTos.id,
+            },
+          });
 
-      if (!defaultTos) {
-        this.logger.debug('Default tos record not configured.');
-      } else {
-        const defaultTosRecord = await tx.tos.findFirst({
+          if (!defaultTosRecord) {
+            this.logger.debug('Default tos record not found.');
+          } else {
+            await tx.tenantAgreement.create({
+              data: {
+                tosId: defaultTosRecord.id,
+                email: tenantSignUp.email,
+                tenantId: tenant.id,
+              },
+            });
+          }
+        }
+
+        await tx.tenantSignUp.delete({
           where: {
-            id: defaultTos.id,
+            email,
           },
         });
 
-        if (!defaultTosRecord) {
-          this.logger.debug('Default tos record not found.');
-        } else {
-          await tx.tenantAgreement.create({
-            data: {
-              tosId: defaultTosRecord.id,
-              email: tenantSignUp.email,
-              tenantId: tenant.id,
-            },
-          });
-        }
-      }
+        await this.emailService.sendWelcomeToPolyEmail(tenantSignUp, apiKey, tenant);
 
-      await tx.tenantSignUp.delete({
-        where: {
-          email,
-        },
-      });
-
-      await this.emailService.sendWelcomeToPolyEmail(tenantSignUp, apiKey, tenant);
-
-      return {
-        apiKey,
-        apiBaseUrl: this.config.hostUrl,
-        tenantId: tenant.id,
-      };
-    }, {
-      timeout: 10_000,
-    });
+        return {
+          apiKey,
+          apiBaseUrl: this.config.hostUrl,
+          tenantId: tenant.id,
+        };
+      },
+      {
+        timeout: 10_000,
+      },
+    );
   }
 
   async resendVerificationCode(email: string) {
@@ -548,14 +562,14 @@ export class TenantService implements OnModuleInit {
       return true;
     }
 
-    return !await this.prisma.tenant.findFirst({
+    return !(await this.prisma.tenant.findFirst({
       where: {
         publicNamespace,
         id: {
           notIn: excludedTenantIds,
         },
       },
-    });
+    }));
   }
 
   async verifyAvailability(email: string, tenantName: string) {
@@ -588,7 +602,11 @@ export class TenantService implements OnModuleInit {
   }
 
   async getDefaultLimitTier(): Promise<LimitTier | null> {
-    const defaultTier = await this.configVariableService.getEffectiveValue<DefaultTierValue>(ConfigVariableName.DefaultTier, null, null);
+    const defaultTier = await this.configVariableService.getEffectiveValue<DefaultTierValue>(
+      ConfigVariableName.DefaultTier,
+      null,
+      null,
+    );
     if (!defaultTier?.tierId) {
       return null;
     }
@@ -601,44 +619,47 @@ export class TenantService implements OnModuleInit {
   }
 
   private async updateAndResendVerificationCode(email: string, name: string | null = null): Promise<TenantSignUp> {
-    const result = await this.prisma.$transaction(async tx => {
-      const tenantSignUp = await tx.tenantSignUp.findFirst({
-        where: {
-          email,
-        },
-      });
-
-      if (!tenantSignUp) {
-        throw new NotFoundException('Tenant sign up not found.');
-      }
-
-      const verificationCode = this.createSignUpVerificationCode();
-
-      try {
-        const tenantSignUp = await tx.tenantSignUp.update({
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const tenantSignUp = await tx.tenantSignUp.findFirst({
           where: {
             email,
           },
-          data: {
-            verificationCode,
-            expiresAt: getOneDayLaterDate(),
-            name: name || undefined,
-          },
         });
 
-        await this.emailService.sendSignUpVerificationCode(tenantSignUp);
-
-        return tenantSignUp;
-      } catch (error) {
-        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'verification_code')) {
-          this.logger.debug(`Duplicated verification code "${verificationCode}", retrying...`);
-          return false;
+        if (!tenantSignUp) {
+          throw new NotFoundException('Tenant sign up not found.');
         }
-        throw error;
-      }
-    }, {
-      timeout: 10_000,
-    });
+
+        const verificationCode = this.createSignUpVerificationCode();
+
+        try {
+          const tenantSignUp = await tx.tenantSignUp.update({
+            where: {
+              email,
+            },
+            data: {
+              verificationCode,
+              expiresAt: getOneDayLaterDate(),
+              name: name || undefined,
+            },
+          });
+
+          await this.emailService.sendSignUpVerificationCode(tenantSignUp);
+
+          return tenantSignUp;
+        } catch (error) {
+          if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'verification_code')) {
+            this.logger.debug(`Duplicated verification code "${verificationCode}", retrying...`);
+            return false;
+          }
+          throw error;
+        }
+      },
+      {
+        timeout: 10_000,
+      },
+    );
 
     if (!result) {
       return this.updateAndResendVerificationCode(email);
@@ -658,30 +679,33 @@ export class TenantService implements OnModuleInit {
   private async createSignUpRecord(email: string, name: string | null): Promise<TenantSignUp> {
     const verificationCode = this.createSignUpVerificationCode();
 
-    const result = await this.prisma.$transaction(async tx => {
-      try {
-        const tenantSignUp = await tx.tenantSignUp.create({
-          data: {
-            email,
-            verificationCode,
-            name,
-            expiresAt: getOneDayLaterDate(),
-          },
-        });
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        try {
+          const tenantSignUp = await tx.tenantSignUp.create({
+            data: {
+              email,
+              verificationCode,
+              name,
+              expiresAt: getOneDayLaterDate(),
+            },
+          });
 
-        await this.emailService.sendSignUpVerificationCode(tenantSignUp);
+          await this.emailService.sendSignUpVerificationCode(tenantSignUp);
 
-        return tenantSignUp;
-      } catch (error) {
-        if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'verification_code')) {
-          this.logger.debug(`Duplicated verification code "${verificationCode}", retrying...`);
-          return false;
+          return tenantSignUp;
+        } catch (error) {
+          if (this.commonService.isPrismaUniqueConstraintFailedError(error, 'verification_code')) {
+            this.logger.debug(`Duplicated verification code "${verificationCode}", retrying...`);
+            return false;
+          }
+          throw error;
         }
-        throw error;
-      }
-    }, {
-      timeout: 10_000,
-    });
+      },
+      {
+        timeout: 10_000,
+      },
+    );
 
     if (!result) {
       return this.createSignUpRecord(email, name);

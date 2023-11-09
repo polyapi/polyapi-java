@@ -4,7 +4,7 @@ import _ from 'lodash';
 import convert from '@openapi-contrib/json-schema-to-openapi-schema';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AiService } from 'ai/ai.service';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import {
   ApiFunctionSpecification,
   CreatePluginDto,
@@ -407,7 +407,7 @@ export class GptPluginService {
     // user_http is not working atm
     if (body.authType === 'user_http') {
       throw new BadRequestException(
-        '`user_http` authentication is not working at the moment. see OpenAI docs for details. Please consider using service_http or oauth',
+        '`user_http` authentication is not supported by OpenAI at the moment. see OpenAI docs for details. Please use service_http!',
       );
     }
 

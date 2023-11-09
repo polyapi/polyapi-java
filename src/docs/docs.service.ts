@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DocSection } from '@prisma/client';
 import { AiService } from 'ai/ai.service';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 
 export type DocUpdateT = {
   id?: string;

@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { AuthData } from 'common/types';
 import { ApiKeyDto, Permission, Permissions, Role, Visibility } from '@poly/model';
 import { ApiKey, Application, Environment, Tenant, User } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { ConfigService } from 'config/config.service';
 
 type ApiKeyWithUser = ApiKey & { user: User | null };
@@ -54,7 +54,9 @@ export class AuthService {
   }
 
   async findApiKeyByKey(plainTextKey: string, includeEnvironment = false, includeApplication = false, includeUser = false) {
+    // console.log(`TODO delete me searching for key ${plainTextKey}`);
     const hashedKey = await this.hashApiKey(plainTextKey);
+    // console.log(`here is hashed ${hashedKey}`);
 
     return this.prisma.apiKey.findFirst({
       where: {
@@ -264,6 +266,7 @@ export class AuthService {
 
   async getAuthData(key: string): Promise<AuthData | null> {
     const apiKey = await this.findApiKeyByKey(key, true, true, true);
+    // console.log(`found api key ${apiKey}`);
     if (!apiKey) {
       return null;
     }

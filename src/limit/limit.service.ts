@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { LimitTier, Tenant } from '@prisma/client';
 import { StatisticsService } from 'statistics/statistics.service';
 import { ServerFunctionLimits, TierDto } from '@poly/model';

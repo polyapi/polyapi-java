@@ -7,8 +7,9 @@
     "paths": {
       "*": ["./src/*", "./test/*"],
       "@poly/model": ["./packages/model/src"],
-      "@poly/common/*": ["./packages/common/src/*"],
-    }
+      "@poly/common/*": ["./packages/common/src/*"]
+    },
+    "baseUrl": "."
   },
   "references": [
     {

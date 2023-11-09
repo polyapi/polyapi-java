@@ -1,5 +1,5 @@
 import { getFnMock, TypedMock } from '../utils/test-utils';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 
 type PrismaEntities = 'apiFunction' | 'webhookHandle' | 'variable' | 'environment' | 'tenant' | 'conversation';
 

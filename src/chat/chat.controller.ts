@@ -9,7 +9,6 @@ import {
   InternalServerErrorException,
   Param,
   Get,
-  Header,
   Query,
   MessageEvent,
   BadRequestException,
@@ -142,7 +141,6 @@ export class ChatController {
   }
 
   @UseGuards(PolyAuthGuard)
-  @Header('content-type', 'text/plain')
   @Get('/conversations/:conversationId')
   public async conversationsDetail(
     @Req() req: AuthRequest,

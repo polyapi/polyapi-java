@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Environment, Tenant, Variable } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import {
   ConfigVariableName,
   ContextVariableValues,

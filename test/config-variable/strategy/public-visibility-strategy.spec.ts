@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { PublicVisibilityStrategy } from 'config-variable/strategy/public-visibility-strategy';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { CommonService } from 'common/common.service';
 
 describe('PublicVisibilityStrategy', () => {

@@ -6,6 +6,9 @@ export const INSTANCE_URL_MAP = {
   local: 'localhost:8000',
 };
 
+export const ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER = 'x-poly-training-assistant-version';
+export const TRAINING_SCRIPT_VERSION_HEADER = 'x-poly-training-script-version';
+
 export const getInstanceUrl = (instance = 'local') => {
   if (typeof INSTANCE_URL_MAP[instance] === 'undefined') {
     return instance;

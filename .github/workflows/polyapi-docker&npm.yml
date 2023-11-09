@@ -17,18 +17,29 @@ jobs:
       IMAGE: ghcr.io/polyapi/polyapi-dev
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
         python-version: "3.11"
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+    - name: Obfuscate Javascript
+      run: |
+        yarn install
+        yarn prisma generate --generator js --schema ./prisma/schema.prisma
+        yarn build:minified
+        rm -rf ./src ./packages ./test
     - name: Obfuscate Python
       run: |
         pip3 install pyarmor==8.4.1
         cd science
         pyarmor gen -O app_o -r app
-        rm -rf app
+        rm -rf app tests
+        rm load_fixtures.py README.md
         mv app_o/* ./
         rmdir app_o
         cd ..
@@ -44,13 +55,6 @@ jobs:
         filters: |
           client:
             - 'packages/client/package.json'
-
-    - if: steps.changes.outputs.client == 'true'
-      name: Setup Node
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-        registry-url: 'https://registry.npmjs.org'
 
     - if: steps.changes.outputs.client == 'true'
       name: Publish package

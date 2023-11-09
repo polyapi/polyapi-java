@@ -7,6 +7,7 @@
     "url": "https://github.com/polyapi/poly-alpha"
   },
   "scripts": {
+    "build:minified": "nest build --webpackPath=\"./webpack.config.js\" --webpack",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -73,6 +74,7 @@
     "quicktype-core": "^23.0.7",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
+    "semver": "^7.5.4",
     "swagger-stats": "^0.99.7",
     "typescript-json-schema": "^0.58.1"
   },

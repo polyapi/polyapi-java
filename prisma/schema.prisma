@@ -116,6 +116,7 @@ model ApiKey {
   name          String
   environmentId String       @map("environment_id")
   key           String       @unique(map: "idx_25851_api_key_key_key")
+  keyHashed     Boolean      @default(true) @map("key_hashed")
   permissions   String       @default("{}")
   applicationId String?      @map("application_id")
   userId        String?      @map("user_id")

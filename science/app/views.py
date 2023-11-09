@@ -2,7 +2,7 @@
 import json
 from typing import Any, Dict, Generator, Optional, Union
 from flask import Blueprint, Response, request, jsonify
-from openai.error import OpenAIError, RateLimitError
+from openai.error import OpenAIError, RateLimitError, APIError
 from app.completion import general_question, get_completion_answer
 from app.constants import MessageType, PerfLogType
 from app.conversation import get_chat_conversation_lookback, get_recent_messages
@@ -97,11 +97,21 @@ def function_completion() -> Response:
         resp = help_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
     elif route == "tenant_documentation":
         resp = documentation_question(
-            user_id, conversation.id, question, prev_msgs, tenant_id=user.tenantId
+            user_id,
+            conversation.id,
+            question,
+            prev_msgs,
+            docs_tenant_id=user.tenantId,
+            openai_tenant_id=user.tenantId,
         )
     elif route == "poly_documentation":
         resp = documentation_question(
-            user_id, conversation.id, question, prev_msgs, tenant_id=user.tenantId
+            user_id,
+            conversation.id,
+            question,
+            prev_msgs,
+            docs_tenant_id=None,
+            openai_tenant_id=user.tenantId,
         )
     else:
         resp = "unexpected category: {route}"
@@ -246,6 +256,13 @@ def error():
     raise NotImplementedError("Intentional error successfully triggered!")
 
 
+@bp.route("/error-api")
+def error_api():
+    raise APIError(
+        "That model is currently overloaded with other requests. You can retry your request, or contact us through our help center at help.openai.com if the error persists. (Please include the request ID 1a63543dd9855ee708b9020f73d50a38 in your message."
+    )
+
+
 @bp.route("/error-rate-limit")
 def error_rate_limit():
     raise RateLimitError(
@@ -272,6 +289,7 @@ def handle_open_ai_error(e):
 
 @bp.errorhandler(400)
 def handle_400(e):
+    print(f"400 error desc from science server: {e.description}")
     return e.description, 400
 
 

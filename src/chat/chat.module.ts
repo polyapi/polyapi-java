@@ -4,7 +4,7 @@ import { ChatController } from 'chat/chat.controller';
 import { AiModule } from 'ai/ai.module';
 import { UserModule } from 'user/user.module';
 import { AuthModule } from 'auth/auth.module';
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { LimitModule } from 'limit/limit.module';
 import { StatisticsModule } from 'statistics/statistics.module';
 

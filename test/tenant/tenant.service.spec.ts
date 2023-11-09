@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { Tenant } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { EnvironmentService } from 'environment/environment.service';
 import {
   applicationServiceMock,

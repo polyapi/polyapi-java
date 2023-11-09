@@ -1,5 +1,5 @@
 # Java Client Library (beta)
-### v0.1.1
+### v0.1.5
 
 ## Introduction
 This is a Java client library for Poly API. It is generated from the [Poly specification](https://develop-k8s.polyapi.io/specs). It is based on its Typescript counterpart [polyapi](https://www.npmjs.com/package/polyapi)
@@ -11,68 +11,57 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
 
 ## Setting up project
 1. Create a new Java Maven project
-2. Download current library release from [here](https://develop-k8s.polyapi.io/java/poly-java-client-0.1.1.zip)
-3. Unzip the downloaded file to `repo` directory in your project's root directory (where the `pom.xml` file is located)
-4. Add the following to your project's `pom.xml` file to setup the local repository and add the dependency:
+4. Add the following to your project's `pom.xml` to add the dependencies:
 ```xml
-<repositories>
-  <repository>
-    <id>my-local-repo</id>
-    <url>file://${project.basedir}/repo</url>
-  </repository>
-</repositories>
-<pluginRepositories>
-<pluginRepository>
-  <id>my-local-repo</id>
-  <url>file://${project.basedir}/repo</url>
-</pluginRepository>
-</pluginRepositories>
+<properties>
+  <poly.version>0.1.5</poly.version>
+</properties>
 <dependencies>
   <dependency>
     <groupId>io.polyapi.client</groupId>
     <artifactId>library</artifactId>
-    <version>0.1.1</version>
+    <version>${poly.version}</version>
   </dependency>
 </dependencies>
 <build>
-<plugins>
-  <plugin>
-    <groupId>io.polyapi.client</groupId>
-    <artifactId>library</artifactId>
-    <version>0.1.1</version>
-    <executions>
-      <execution>
-        <phase>generate-sources</phase>
-        <goals>
-          <goal>generate-sources</goal>
-        </goals>
-        <configuration>
-          <apiBaseUrl>https://develop-k8s.polyapi.io</apiBaseUrl>
-          <apiKey>{API_KEY}</apiKey>
-        </configuration>
-      </execution>
-    </executions>
-  </plugin>
-  <plugin>
-    <groupId>org.codehaus.mojo</groupId>
-    <artifactId>build-helper-maven-plugin</artifactId>
-    <version>3.2.0</version>
-    <executions>
-      <execution>
-        <id>add-source</id>
-        <phase>generate-sources</phase>
-        <goals>
-          <goal>add-source</goal>
-        </goals>
-        <configuration>
-          <sources>
-            <source>target/generated-sources</source>
-          </sources>
-        </configuration>
-      </execution>
-    </executions>
-  </plugin>
-</plugins>
+  <plugins>
+    <plugin>
+      <groupId>io.polyapi.client</groupId>
+      <artifactId>library</artifactId>
+      <version>${poly.version}</version>
+      <executions>
+        <execution>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>generate-sources</goal>
+          </goals>
+          <configuration>
+            <apiBaseUrl>https://develop-k8s.polyapi.io</apiBaseUrl>
+            <apiKey>{API_KEY}</apiKey>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+    <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>build-helper-maven-plugin</artifactId>
+      <version>3.2.0</version>
+      <executions>
+        <execution>
+          <id>add-source</id>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>add-source</goal>
+          </goals>
+          <configuration>
+            <sources>
+              <source>target/generated-sources</source>
+            </sources>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
 </build>
 ```
 Make sure you replace `{API_KEY}` with valid API key to access the Poly API.
@@ -135,8 +124,6 @@ Vari.auth.clientId.onUpdate((event) -> {
 ```
 
 ## Limitations
-Currently, the library needs to be used locally. We are working on publishing it to Maven Central.
-
 Comparing to its Typescript counterpart, the Java library is still missing the following features:
 - Error handlers
 - Fetching multiple Poly Variables from context
@@ -144,5 +131,14 @@ Comparing to its Typescript counterpart, the Java library is still missing the f
 These features will be added in the future releases.
 
 ## Changelog
+### v0.1.5
+- Fixed issue with void return types
+### v0.1.4
+- Deployment setup update
+### v0.1.3
+- Storing Poly specs file into `target/.poly/specs.json`
+### v0.1.2
+- Using String as default class on `inject` secret variable function
+- Fixed Vari packaging causing variable classes overwriting each other 
 ### v0.1.1
 - Added initial support for injecting Poly Variables to Poly Functions

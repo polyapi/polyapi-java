@@ -13,7 +13,7 @@ export class LokiLogsService implements FaasLogsService {
 
   async getLogs(functionId: string, keyword: string): Promise<FunctionLog[]> {
     this.logger.debug(`Getting logs for function with id ${functionId}`);
-    const logQuery = `{pod=~"function-${functionId}.*"}`;
+    const logQuery = this.constructQuery(functionId, keyword);
     return await lastValueFrom(
       this.httpService
         .get(`${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}`)
@@ -25,8 +25,8 @@ export class LokiLogsService implements FaasLogsService {
             }
             return data;
           }),
-          map((logsData) => this.normalizeFaasLogs(logsData)),
-          map((normalizedLogs) => this.filterLogs(normalizedLogs, keyword)),
+          map((rawLogsData) => this.normalizeFaasLogs(rawLogsData)),
+          map((normalizedLogs) => this.sortLogsByNewestFirst(normalizedLogs)),
           catchError(this.processLogsRetrievalError()),
         ),
     );
@@ -42,15 +42,37 @@ export class LokiLogsService implements FaasLogsService {
     };
   }
 
-  private normalizeFaasLogs(logsData): FunctionLog[] {
-    const logValues = logsData.result.flatMap((res) => res.values) as Array<[string, string]>;
-    return logValues.map(([nanoSecondsTime, logText]) => ({
+  private normalizeFaasLogs(rawLogsData): FunctionLog[] {
+    const logValues = rawLogsData.result
+      .flatMap(({ values, stream }) => values.map((logEntry) => ([...logEntry, stream.stream]))) as Array<[string, string, string]>;
+    return logValues.map(([nanoSecondsTime, logText, stream]) => ({
       timestamp: getDateFromNanoseconds(+nanoSecondsTime),
       value: logText,
+      level: stream === 'stderr' ? 'Error/Warning' : 'Info',
     }));
   }
 
-  private filterLogs(normalizedLogs: FunctionLog[], keyword: string) {
-    return normalizedLogs.filter(logEntry => logEntry.value.includes(keyword));
+  private sortLogsByNewestFirst(logs: FunctionLog[]): FunctionLog[] {
+    /*
+      We do not include the sort direction in the query request to Loki because Loki
+      does a sorting of values within each of the stream groups
+      and we need to sort once all values have been aggregated
+    */
+    return logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  private constructQuery(functionId: string, keyword: string): string {
+    /*
+      The lines below correspond to Grafana's LogQL query language
+    */
+    const excludeByRegexOperator = '!~';
+    const excludeSystemLogsQuery = `${excludeByRegexOperator} "function-${functionId}-"`;
+    const includeByRegexOperator = '|~';
+    const makeCaseInsensitive = '(?i)';
+    const getKeywordQuery = (keyword: string) => `${includeByRegexOperator} "${makeCaseInsensitive}${keyword}"`;
+    const textContentQuery = keyword
+      ? `${getKeywordQuery(keyword)}`
+      : `${excludeSystemLogsQuery}`;
+    return `{pod=~"function-${functionId}.*",container="user-container"} ${textContentQuery}`;
   }
 }

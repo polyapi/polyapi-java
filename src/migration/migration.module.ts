@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MigrationService } from './migration.service';
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { FunctionModule } from 'function/function.module';
 import { AuthModule } from 'auth/auth.module';
 import { WebhookModule } from 'webhook/webhook.module';

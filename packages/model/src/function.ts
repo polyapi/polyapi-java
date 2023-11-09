@@ -66,4 +66,5 @@ export type ArgumentsMetadata = {
 export type FunctionLog = {
   timestamp: Date;
   value: string;
+  level: string;
 };

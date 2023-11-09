@@ -17,6 +17,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER } from '@poly/common/utils';
 import { ApiSecurity } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Environment, WebhookHandle } from '@prisma/client';
@@ -43,6 +44,7 @@ import { PerfLogInterceptor } from 'statistics/perf-log-interceptor';
 import { PerfLogType } from 'statistics/perf-log-type';
 import { PerfLog } from 'statistics/perf-log.decorator';
 import { FunctionService } from 'function/function.service';
+import { ConfigService } from 'config/config.service';
 
 @ApiSecurity('PolyApiKey')
 @Controller('webhooks')
@@ -57,6 +59,7 @@ export class WebhookController {
     private readonly environmentService: EnvironmentService,
     private readonly perfLogInfoProvider: PerfLogInfoProvider,
     private readonly functionService: FunctionService,
+    private readonly configService: ConfigService,
   ) {
   }
 
@@ -141,6 +144,9 @@ export class WebhookController {
       templateBody,
     } = createWebhookHandle;
 
+    const clientScriptVersion = req.headers[ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
+    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
+
     await this.authService.checkPermissions(req.user, Permission.ManageWebhooks);
 
     if (method && !subpath) {
@@ -196,6 +202,9 @@ export class WebhookController {
       enabled,
       templateBody,
     } = updateWebhookHandleDto;
+
+    const clientScriptVersion = req.headers[ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
+    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanTrainingAssistantScriptVersion);
 
     this.commonService.checkVisibilityAllowed(req.user.tenant, visibility);
 

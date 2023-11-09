@@ -27,16 +27,24 @@ public class {{className}} {
 
 {{#each specifications}}
   {{#ifIsType this "ApiFunctionSpecification"}}
+  {{#ifIsType function.returnType "VoidPropertyType"}}
+  public void {{name}}({{{renderArguments function.arguments}}}) {
+  {{else}}
   public ApiFunctionResponse<{{{function.returnType.getInCodeType}}}> {{name}}({{{renderArguments function.arguments}}}) {
+  {{/ifIsType}}
     try {
       var payloadForThePolyApiFunction = new JSONObject();
       {{#each function.arguments}}
       payloadForThePolyApiFunction.put("{{name}}", objectMapper.toJSONValue(variableInjectManager.getInjectedValueOrOriginal({{inCodeName}})));
       {{/each}}
+      {{#ifIsType function.returnType "VoidPropertyType"}}
+      apiClient.post("/functions/api/{{id}}/execute", payloadForThePolyApiFunction.toString());
+      {{else}}
       var response = apiClient.post("/functions/api/{{id}}/execute", payloadForThePolyApiFunction.toString());
       var responseBody = response.getBody();
       var typeRef = new TypeReference<ApiFunctionResponse<{{{function.returnType.getInCodeType}}}>>() {};
       return objectMapper.readValue(responseBody, typeRef);
+      {{/ifIsType}}
     } catch (Exception e) {
       throw new PolyRuntimeException(e);
     }

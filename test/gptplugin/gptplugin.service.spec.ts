@@ -1,5 +1,5 @@
 import { GptPluginService, PluginFunction } from 'gptplugin/gptplugin.service';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Environment } from '@prisma/client';
 import { Request } from 'express';

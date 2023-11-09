@@ -2,16 +2,12 @@ package io.polyapi.client.generator;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.codemodel.JCodeModel;
 import io.polyapi.client.model.property.ObjectPropertyType;
 import io.polyapi.client.model.specification.Specification;
-import io.polyapi.client.utils.StringUtils;
 
 abstract class SpecificationClassGenerator<T extends Specification> extends AbstractClassGenerator {
 
@@ -20,19 +16,6 @@ abstract class SpecificationClassGenerator<T extends Specification> extends Abst
 
   static boolean isArray(JsonNode schema) {
     return schema.get("type").textValue().equals("array");
-  }
-
-  protected List<Map<String, Object>> getSubContexts(LibraryTreeNode<T> node, String currentPackage) {
-    return node.getSubContexts().values().stream()
-      .map(subContext -> {
-        Map<String, Object> result = new HashMap<>();
-        var className = StringUtils.toPascalCase(subContext.getContext());
-        result.put("name", subContext.getContext());
-        result.put("className", node.isRoot() ? currentPackage + "." + className : currentPackage + "." + className.toLowerCase() + "." + className);
-        result.put("useStatic", node.isRoot());
-        return result;
-      })
-      .toList();
   }
 
   protected void saveCodeModelToFiles(JCodeModel codeModel) {

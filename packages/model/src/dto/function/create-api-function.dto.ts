@@ -48,7 +48,4 @@ export class CreateApiFunctionDto {
   @IsBoolean()
   enableRedirect: boolean;
 
-  @IsOptional()
-  @IsString()
-  scriptVersion?: string;
 }

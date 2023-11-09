@@ -16,7 +16,7 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, from, lastValueFrom, map } from 'rxjs';
 import mustache from 'mustache';
 import { ApiFunction, CustomFunction, Environment, Tenant } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import {
   ApiFunctionDetailsDto,
   ApiFunctionPublicDetailsDto,
@@ -1402,6 +1402,8 @@ export class FunctionService implements OnModuleInit {
           apiKey,
           await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
           createFromScratch,
+          customFunction.sleep,
+          customFunction.sleepAfter,
           logsEnabled,
         );
 
@@ -1504,6 +1506,7 @@ export class FunctionService implements OnModuleInit {
         await this.limitService.getTenantServerFunctionLimits(customFunction.environment.tenantId),
         sleep ?? customFunction.sleep,
         sleepAfter ?? customFunction.sleepAfter,
+        logsEnabled,
       );
     }
 
@@ -1803,6 +1806,7 @@ export class FunctionService implements OnModuleInit {
         JSON.parse(serverFunction.requirements || '[]'),
         apiKey,
         await this.limitService.getTenantServerFunctionLimits(serverFunction.environment.tenantId),
+        serverFunction.logsEnabled,
       );
     }
   }

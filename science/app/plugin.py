@@ -107,7 +107,7 @@ def get_plugin_chat(
     plugin_id: int,
     conversation_id: str,
     message: str,
-) -> List[MessageDict]:
+) -> Dict:
     """chat with a plugin"""
     db = get_client()
     db_api_key = db.apikey.find_unique(where={"id": api_key_id})
@@ -159,7 +159,17 @@ def get_plugin_chat(
             break
 
     store_messages(conversation_id, messages)
-    return messages
+    return {"conversationGuid": conversation_id, "messages": _serialize(messages)}
+
+
+def _serialize(messages: List[MessageDict]) -> List[Dict]:
+    rv = []
+    for message in messages:
+        rv.append({
+            'role': message['role'],
+            'content': message['content'],
+        })
+    return rv
 
 
 def _get_name_path_map(openapi: Dict) -> Dict:

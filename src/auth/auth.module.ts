@@ -1,4 +1,4 @@
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { forwardRef, Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { PolyAuthStrategy } from 'auth/poly-auth-strategy.service';

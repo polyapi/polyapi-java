@@ -355,6 +355,7 @@ def strip_type_and_info(messages: List[MessageDict]) -> List[MessageDict]:
 
 
 def get_tenant_openai_key(*, user_id: Optional[str] = None, application_id: Optional[str] = None, tenant_id: Optional[str] = None) -> Optional[str]:
+    # log(f"trying to get open_ai key for user {user_id}, app {application_id}, tenant {tenant_id}...")
     db = get_client()
     if tenant_id:
         pass
@@ -509,7 +510,7 @@ def extract_code(content: Optional[str]) -> Any:
 
 
 def redis_get(key: str) -> str:
-    redis_client = redis.Redis(os.environ.get("REDIS_URL", "localhost"))
+    redis_client = redis.Redis(os.environ.get("REDIS_URL", "localhost"), password=os.environ.get("REDIS_PASSWORD"))
     val = redis_client.get(key)
     if val:
         return val.decode()

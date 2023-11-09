@@ -13,9 +13,7 @@ def get_variable_value_from_vault(environment_id: str, variable_id: str) -> Opti
 
     headers = {"X-Vault-Token": vault_token}
     url = f"{vault_address}/v1/{environment_id}/data/{variable_id}"
-    # print(url)
     resp = requests.get(url, headers=headers)
-    # print(resp)
     if resp.status_code == 200:
         content = resp.json()
         value = content["data"]["data"]['value']

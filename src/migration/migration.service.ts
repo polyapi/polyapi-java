@@ -1,11 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { FunctionService } from 'function/function.service';
 import { MigrationContext } from 'migration/types';
 import { AuthService } from 'auth/auth.service';
 import { WebhookService } from 'webhook/webhook.service';
+
+import migrations from './migrations/index';
 
 @Injectable()
 export class MigrationService implements OnModuleInit {
@@ -31,9 +31,7 @@ export class MigrationService implements OnModuleInit {
 
   async executeMigrations() {
     this.logger.log('Executing migrations...');
-    const migrationFiles = fs.readdirSync(path.join(__dirname, 'migrations'))
-      .filter(file => file.endsWith('.js'))
-      .map(file => file.replace('.js', ''));
+
     const executedMigrations = await this.prisma.migration.findMany();
     let found = false;
     const migrationContext: MigrationContext = {
@@ -44,23 +42,32 @@ export class MigrationService implements OnModuleInit {
       loggerService: this.logger,
     };
 
-    migrationFiles.sort();
+    migrations.sort((a, b) => {
+      if (a.name < b.name) {
+        return -1;
+      }
+
+      if (a.name > b.name) {
+        return 1;
+      }
+
+      return 0;
+    });
 
     await this.prisma.$transaction(async (prisma) => {
-      for (const file of migrationFiles) {
-        if (executedMigrations.some(migration => migration.fileName === file)) {
+      for (const migration of migrations) {
+        if (executedMigrations.some(executedMigration => executedMigration.fileName === migration.name)) {
           continue;
         }
 
-        this.logger.log(`Executing migration ${file}...`);
-        const migration = await import(path.join(__dirname, 'migrations', file));
+        this.logger.log(`Executing migration ${migration.name}...`);
         await migration.run(migrationContext);
         await prisma.migration.create({
           data: {
-            fileName: file,
+            fileName: migration.name,
           },
         });
-        this.logger.log(`Finished migration ${file} successfully`);
+        this.logger.log(`Finished migration ${migration.name} successfully`);
         found = true;
       }
     }, {

@@ -1,6 +1,9 @@
 package io.polyapi.client.generator;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import io.polyapi.client.model.specification.ServerVariableSpecification;
 import io.polyapi.client.parser.SpecsParser;
@@ -14,8 +17,9 @@ public class CodeGenerator {
     var clientInfoClassGenerator = new ClientInfoClassGenerator();
     var polyContextClassGenerator = new PolyContextClassGenerator();
     var variContextClassGenerator = new VariContextClassGenerator();
+    var specsJSON = getSpecs(apiBaseUrl, apiKey);
+    var specifications = specsParser.parseSpecs(specsJSON);
 
-    var specifications = specsParser.parseSpecs(getSpecs(apiBaseUrl, apiKey));
     clientInfoClassGenerator.generate(apiBaseUrl, apiKey);
     polyContextClassGenerator.generate(specifications);
     variContextClassGenerator.generate(
@@ -24,6 +28,7 @@ public class CodeGenerator {
         .map(specification -> (ServerVariableSpecification) specification)
         .toList()
     );
+    saveSpecsToFile(specsJSON);
   }
 
   private static String getSpecs(String apiBaseUrl, String apiKey) throws IOException {
@@ -39,6 +44,22 @@ public class CodeGenerator {
       }
 
       return response.body().string();
+    }
+  }
+
+  private void saveSpecsToFile(String specsJSON) throws IOException {
+    var targetDir = new File("target/.poly");
+    if (!targetDir.exists()) {
+      boolean wasSuccessful = targetDir.mkdirs();
+      if (!wasSuccessful) {
+        throw new IOException("Could not create directory: " + targetDir.getAbsolutePath());
+      }
+    }
+    var file = new File(targetDir, "specs.json");
+    try (PrintWriter out = new PrintWriter(file)) {
+      out.println(specsJSON);
+    } catch (FileNotFoundException e) {
+      throw new RuntimeException(e);
     }
   }
 }

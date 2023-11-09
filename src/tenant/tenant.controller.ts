@@ -52,6 +52,7 @@ import {
   CreateTenantAgreement,
   TenantAgreementDto,
   ResendVerificationCodeDto,
+  ConfigVariableName,
 } from '@poly/model';
 import { EnvironmentService } from 'environment/environment.service';
 import { TeamService } from 'team/team.service';
@@ -755,7 +756,20 @@ export class TenantController {
   async signUp(
     @Body() data: CreateSignUpDto,
   ) {
-    return this.tenantService.toSignUpDto(await this.tenantService.signUp(data.email, (data.tenantName || '').trim() || null));
+    let allowSignup = 0;
+    try {
+      allowSignup = parseInt((await this.getConfigVariable(ConfigVariableName.AllowTenantSignup, null, null)).value);
+    } catch {
+      // no config variable defined, assume false
+    }
+
+    if (allowSignup) {
+      return this.tenantService.toSignUpDto(
+        await this.tenantService.signUp(data.email, (data.tenantName || '').trim() || null),
+      );
+    } else {
+      throw new BadRequestException('New tenant signup is not allowed in this instance.');
+    }
   }
 
   @ApiConflictResponse({

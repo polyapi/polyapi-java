@@ -3,6 +3,7 @@ package io.polyapi.client.generator;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.polyapi.client.model.property.FunctionPropertyType;
@@ -73,4 +74,16 @@ public class PolyContextClassGenerator extends SpecificationClassGenerator<Speci
     }
   }
 
+  private List<Map<String, Object>> getSubContexts(LibraryTreeNode<Specification> node, String currentPackage) {
+    return node.getSubContexts().values().stream()
+      .map(subContext -> {
+        Map<String, Object> result = new HashMap<>();
+        var className = StringUtils.toPascalCase(subContext.getContext());
+        result.put("name", subContext.getContext());
+        result.put("className", node.isRoot() ? currentPackage + "." + className : currentPackage + "." + className.toLowerCase() + "." + className);
+        result.put("useStatic", node.isRoot());
+        return result;
+      })
+      .toList();
+  }
 }

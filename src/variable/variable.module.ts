@@ -3,7 +3,7 @@ import { VariableController } from './variable.controller';
 import { SecretModule } from 'secret/secret.module';
 import { VariableService } from './variable.service';
 import { AuthModule } from 'auth/auth.module';
-import { PrismaModule } from 'prisma/prisma.module';
+import { PrismaModule } from 'prisma-module/prisma.module';
 import { CommonModule } from 'common/common.module';
 import { SpecsModule } from 'specs/specs.module';
 import { FunctionModule } from 'function/function.module';

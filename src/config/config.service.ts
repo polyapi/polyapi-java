@@ -99,6 +99,10 @@ export class ConfigService {
     return '0.1.0';
   }
 
+  get postmanTrainingAssistantScriptVersion(): string {
+    return '0.1.0';
+  }
+
   get faasPolyServerUrl(): string {
     return this.get('FAAS_POLY_SERVER_URL', this.hostUrl);
   }
@@ -165,6 +169,14 @@ export class ConfigService {
     } else {
       return 'redis://127.0.0.1:6379';
     }
+  }
+
+  get redisPassword(): string {
+    return this.get('REDIS_PASSWORD', '');
+  }
+
+  get redisUsername(): string {
+    return this.get('REDIS_USER');
   }
 
   get cacheTTL(): number {

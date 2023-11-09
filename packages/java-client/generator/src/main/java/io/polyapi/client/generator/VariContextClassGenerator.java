@@ -3,6 +3,7 @@ package io.polyapi.client.generator;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.polyapi.client.model.property.ObjectPropertyType;
@@ -35,7 +36,7 @@ public class VariContextClassGenerator extends SpecificationClassGenerator<Serve
     saveClassToFile(template.apply(context), node.isRoot() ? PACKAGE_NAME_BASE : currentPackage, className);
 
     for (Map.Entry<String, LibraryTreeNode<ServerVariableSpecification>> entry : node.getSubContexts().entrySet()) {
-      var subContextPackage = node.isRoot() ? currentPackage : currentPackage + "." + entry.getKey().toLowerCase();
+      var subContextPackage = currentPackage + "." + entry.getKey().toLowerCase();
       generateClassesFromTree(entry.getValue(), subContextPackage);
     }
   }
@@ -63,5 +64,18 @@ public class VariContextClassGenerator extends SpecificationClassGenerator<Serve
     context.put("typeName", specification.getVariable().getValueType().getInCodeType());
 
     saveClassToFile(template.apply(context), currentPackage, className);
+  }
+
+  private List<Map<String, Object>> getSubContexts(LibraryTreeNode<ServerVariableSpecification> node, String currentPackage) {
+    return node.getSubContexts().values().stream()
+      .map(subContext -> {
+        Map<String, Object> result = new HashMap<>();
+        var className = StringUtils.toPascalCase(subContext.getContext());
+        result.put("name", subContext.getContext());
+        result.put("className", currentPackage + "." + className.toLowerCase() + "." + className);
+        result.put("useStatic", node.isRoot());
+        return result;
+      })
+      .toList();
   }
 }

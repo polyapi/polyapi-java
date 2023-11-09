@@ -6,7 +6,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.gson.JsonObject;
 import io.polyapi.client.api.*;
 
 public class {{className}} {
@@ -30,11 +29,10 @@ public class {{className}} {
   }
 
   public VariableUpdateResponse<{{typeName}}> update({{typeName}} value) {
-    var payloadForThePolyApiFunction = new JsonObject();
-
-    payloadForThePolyApiFunction.addProperty("value", value.toString());
-
     try {
+      var payloadForThePolyApiFunction = new JSONObject();;
+      payloadForThePolyApiFunction.put("value", objectMapper.toJSONValue(value));
+
       var response = apiClient.patch("/variables/{{specification.id}}", payloadForThePolyApiFunction.toString());
       var typeRef = new TypeReference<VariableUpdateResponse.Data<{{typeName}}>>() {
       };
@@ -46,6 +44,14 @@ public class {{className}} {
   }
 
   {{#if specification.variable.secret}}
+  public String inject() {
+    return inject(null, String.class);
+  }
+
+  public String inject(String path) {
+    return inject(path, String.class);
+  }
+
   public <T> T inject(Class<T> clazz) {
     return inject(null, clazz);
   }
