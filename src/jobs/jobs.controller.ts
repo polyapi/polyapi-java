@@ -1,6 +1,6 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { AuthRequest } from 'common/types';
-import { ConfigVariableName, CreateJobDto, JobStatus, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
+import { ConfigVariableName, CreateJobDto, FunctionJob, JobStatus, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
 import { Environment } from '@prisma/client';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -8,6 +8,7 @@ import { JobsService } from './jobs.service';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import * as cronParser from 'cron-parser';
 import { InvalidIntervalTimeException } from './errors/http';
+import { CreateFunctionJob } from '../../packages/model/src/dto/job/utils';
 
 @Controller('jobs')
 export class JobsController {
@@ -27,11 +28,14 @@ export class JobsController {
       status = JobStatus.ENABLED,
     } = data;
 
+    
     // await this.checkSchedule(req.user.environment, schedule);
     await this.checkFunctions(req.user.environment, data.functions);
+    
+    const functionsJob = this.processFunctionJob(functions);
 
     return this.service.toJobDto(
-      await this.service.createJob(req.user.environment, name, schedule, functions, executionType, status),
+      await this.service.createJob(req.user.environment, name, schedule, functionsJob, executionType, status),
     );
   }
 
@@ -41,7 +45,7 @@ export class JobsController {
     return (await this.service.getJobs(req.user.environment)).map((job) => this.service.toJobDto(job));
   }
 
-  /* @Patch(':id')
+  @Patch(':id')
   @UseGuards(PolyAuthGuard)
   async updateJob(@Req() req: AuthRequest, @Param('id') id: string, @Body() data: UpdateJobDto) {
     const {
@@ -55,9 +59,10 @@ export class JobsController {
     await this.checkFunctions(req.user.environment, data.functions);
 
     const job = await this.findJob(req.user.environment, id);
+    const functionsJob = this.processFunctionJob(functions);
 
-    return this.service.toJobDto(await this.service.updateJob(job, name, schedule, functions, executionType, status));
-  } */
+    return this.service.toJobDto(await this.service.updateJob(job, name, schedule, functionsJob, executionType, status));
+  }
 
   @Get(':id')
   @UseGuards(PolyAuthGuard)
@@ -151,5 +156,15 @@ export class JobsController {
     }
 
     return execution;
+  }
+
+  private processFunctionJob(functionsJob: CreateFunctionJob[]): FunctionJob[] {
+
+    return functionsJob.map(functionJob => ({
+      ...functionJob,
+      eventPayload: functionJob.eventPayload || {},
+      headersPayload: functionJob.headersPayload || {},
+      paramsPayload: functionJob.paramsPayload || {},
+    }));
   }
 }

@@ -1,7 +1,7 @@
 import { IsArray, IsEnum, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 import { Type } from 'class-transformer';
-import { ScheduleBase, Interval, Periodical, OnTime, FunctionJob } from './utils';
+import { ScheduleBase, Interval, Periodical, OnTime, CreateFunctionJob } from './utils';
 import { FunctionsExecutionType, JobStatus, ScheduleType } from '../../job';
 
 export class UpdateJobDto {
@@ -35,8 +35,8 @@ export class UpdateJobDto {
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => FunctionJob)
-    functions: FunctionJob[];
+    @Type(() => CreateFunctionJob)
+    functions: CreateFunctionJob[];
 
     @IsOptional()
     @IsEnum(FunctionsExecutionType)

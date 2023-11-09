@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto, Jobs } from '@poly/model';
+import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto } from '@poly/model';
 import { CustomFunction, Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import * as cronParser from 'cron-parser';
@@ -123,13 +123,13 @@ export class JobsService implements OnModuleDestroy {
     this.logger.debug(`Removed job "${job.name}" with id "${job.id}" from queue.`);
   }
 
-  private getJobFromQueue(job: Job) {
-    return this.queue.getJob(job.id);
-  }
-
   @Process(JOB_PREFIX)
   private async processJob(queueJob: Bull.Job<Job>) {
+
+    
     const job = queueJob.data;
+
+    this.logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
 
     try {
       const environment = await this.prisma.environment.findFirst({
@@ -141,8 +141,6 @@ export class JobsService implements OnModuleDestroy {
       if (!environment) {
         throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
       }
-
-      this.logger.debug(`Executing job ${job.name} with environment "${job.environmentId}" and id "${job.id}"`);
 
       const executionStart = Date.now();
 
@@ -221,11 +219,11 @@ export class JobsService implements OnModuleDestroy {
         }
       } */
 
-      /* 
+      
       const response = await lastValueFrom(
         this.httpService
           .get('http://localhost:3000/delay'),
-      ); */
+      );
 
       const executionDuration = ((Date.now() - executionStart) / 1000);
 
@@ -257,8 +255,6 @@ export class JobsService implements OnModuleDestroy {
     } catch (err) {
       this.logger.error(`Failed to execute job with id "${job.id}" failed`, err);
     }
-
-    console.log('job: ', queueJob.id, queueJob.opts.repeat);
   }
 
   private getScheduleInfo(job: Job): Schedule {
@@ -429,20 +425,52 @@ export class JobsService implements OnModuleDestroy {
         return updatedJob;
       });
     } catch (err) {
-      
       this.logger.error(`Err updating job "${job.name}" with id "${job.id}"`, err);
+
+      // We need to restore job in bull if it was deleted in transaction and transaction threw an err after updating it in database.
 
       const oldSchedule = this.getScheduleInfo(job);
 
-      // if(oldSchedule.type === )
+      switch (oldSchedule.type) {
+        case ScheduleType.INTERVAL:
+        case ScheduleType.PERIODICAL: {
+          const repeatableJobs = await this.queue.getRepeatableJobs();
 
-      const repeatableJobs = await this.queue.getRepeatableJobs();
+          const repeatableJobInQueue = repeatableJobs.find(repeatableJob => {
+            const sameNameAndId = repeatableJob.name === JOB_PREFIX && repeatableJob.id === job.id;
 
-      // for(const repeata)
+            if (!sameNameAndId) {
+              return false;
+            }
 
-      if (!this.getJobFromQueue(job)) {
-        this.logger.debug('Restoring old runtime job...');
-        this.addJobToQueue(job);
+            if (oldSchedule?.type === ScheduleType.INTERVAL) {
+              return repeatableJob.every === oldSchedule.value;
+            } else {
+              return repeatableJob.cron === oldSchedule.value;
+            }
+          });
+
+          this.logger.debug('Job was deleted in transaction, restoring...');
+
+          if (!repeatableJobInQueue) {
+            await this.addJobToQueue(job);
+          }
+
+          break;
+        }
+
+        case ScheduleType.ON_TIME: {
+          const jobInQueue = await this.queue.getJob(job.id);
+
+          if (!jobInQueue) {
+            this.logger.debug('Job was deleted in transaction, restoring...');
+            await this.addJobToQueue(job);
+          }
+          break;
+        }
+
+        default:
+          this.throwMissingScheduleType(oldSchedule);
       }
 
       throw err;

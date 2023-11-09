@@ -1,5 +1,7 @@
 import { FunctionsExecutionType, JobStatus, ScheduleType } from '../../job';
-import { FunctionJob } from './create-job.dto';
+import { CreateFunctionJob as CreateFunctionJob } from './utils';
+
+export type FunctionJob = Required<CreateFunctionJob>;
 
 export type Periodical = {
     type: ScheduleType.PERIODICAL;

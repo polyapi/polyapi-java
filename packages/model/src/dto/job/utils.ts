@@ -56,20 +56,20 @@ export class Interval extends ScheduleBase {
     value: number;
 }
 
-export class FunctionJob {
+export class CreateFunctionJob {
     @IsString()
     @IsNotEmpty()
     id: string;
 
     @IsOptional()
     @IsObject()
-    eventPayload: object;
+    eventPayload?: object;
 
     @IsOptional()
     @IsObject()
-    headersPayload: object;
+    headersPayload?: object;
 
     @IsOptional()
     @IsObject()
-    paramsPayload: object;
+    paramsPayload?: object;
 }

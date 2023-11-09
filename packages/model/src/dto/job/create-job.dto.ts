@@ -2,9 +2,7 @@ import { IsArray, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNe
 import { ScheduleType, FunctionsExecutionType, JobStatus } from '../../job';
 import { Type } from 'class-transformer';
 
-import { OnTime, Periodical, Interval, FunctionJob, ScheduleBase } from './utils';
-
-export { FunctionJob } from './utils';
+import { OnTime, Periodical, Interval, CreateFunctionJob, ScheduleBase } from './utils';
 
 export class CreateJobDto {
     @IsString()
@@ -35,8 +33,8 @@ export class CreateJobDto {
 
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => FunctionJob)
-    functions: FunctionJob[];
+    @Type(() => CreateFunctionJob)
+    functions: CreateFunctionJob[];
 
     @IsEnum(FunctionsExecutionType)
     executionType: FunctionsExecutionType;
