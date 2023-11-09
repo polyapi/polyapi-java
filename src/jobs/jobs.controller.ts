@@ -28,10 +28,9 @@ export class JobsController {
       status = JobStatus.ENABLED,
     } = data;
 
-    
     // await this.checkSchedule(req.user.environment, schedule);
     await this.checkFunctions(req.user.environment, data.functions);
-    
+
     const functionsJob = this.processFunctionJob(functions);
 
     return this.service.toJobDto(
@@ -159,7 +158,6 @@ export class JobsController {
   }
 
   private processFunctionJob(functionsJob: CreateFunctionJob[]): FunctionJob[] {
-
     return functionsJob.map(functionJob => ({
       ...functionJob,
       eventPayload: functionJob.eventPayload || {},

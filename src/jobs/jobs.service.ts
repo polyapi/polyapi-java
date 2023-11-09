@@ -1,5 +1,5 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto } from '@poly/model';
+import { Injectable, Logger, OnModuleDestroy, UnauthorizedException } from '@nestjs/common';
+import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto, JobExecutionStatus } from '@poly/model';
 import { CustomFunction, Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import * as cronParser from 'cron-parser';
@@ -7,12 +7,14 @@ import dayjs from 'dayjs';
 import { FunctionService } from 'function/function.service';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { InjectQueue, Process, Processor } from '@nestjs/bull';
+import { InjectQueue, OnQueueCompleted, OnQueueFailed, OnQueueProgress, Process, Processor } from '@nestjs/bull';
 import Bull, { Queue } from 'bull';
 import { CommonService } from 'common/common.service';
 import { QUEUE_NAME, JOB_PREFIX } from './constants';
+import { type } from 'os';
 
 type ServerFunctionResult = Awaited<ReturnType<FunctionService['executeServerFunction']>>;
+type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatalErr: boolean };
 
 @Processor(QUEUE_NAME)
 @Injectable()
@@ -125,135 +127,174 @@ export class JobsService implements OnModuleDestroy {
 
   @Process(JOB_PREFIX)
   private async processJob(queueJob: Bull.Job<Job>) {
-
-    
     const job = queueJob.data;
 
     this.logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
 
-    try {
-      const environment = await this.prisma.environment.findFirst({
-        where: {
-          id: job.environmentId,
-        },
-      });
+    const environment = await this.prisma.environment.findFirst({
+      where: {
+        id: job.environmentId,
+      },
+    });
 
-      if (!environment) {
-        throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
-      }
+    if (!environment) {
+      throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
+    }
 
-      const executionStart = Date.now();
+    const executionStart = Date.now();
 
-      const functions = JSON.parse(job.functions) as FunctionJob[];
+    const functions = JSON.parse(job.functions) as FunctionJob[];
 
-      const [customFunctions, notFoundFunctions] = await this.getJobFunctions(environment, functions);
+    const [customFunctions, notFoundFunctions] = await this.getJobFunctions(environment, functions);
 
-      if (notFoundFunctions.length) {
-        return this.logger.error(`Job won't be executed since functions ${notFoundFunctions.join(', ')} are not found.`);
-      }
+    if (notFoundFunctions.length) {
+      throw new Error(`Job won't be executed since functions ${notFoundFunctions.join(', ')} are not found.`);
+    }
 
-      const parallelExecutions = job.functionsExecutionType === FunctionsExecutionType.SEQUENTIAL;
+    const parallelExecutions = job.functionsExecutionType === FunctionsExecutionType.SEQUENTIAL;
 
-      const executions: ReturnType<FunctionService['executeServerFunction']>[] = [];
+    const executions: ReturnType<FunctionService['executeServerFunction']>[] = [];
 
-      const results: { statusCode: number | undefined, id: string, fatalErr: boolean }[] = [];
+    const results: JobFunctionCallResult[] = [];
+    /*
+    for (const functionExecution of functions) {
+      const customFunction = customFunctions.find(customFunction => customFunction.id === functionExecution.id) as CustomFunction;
 
-      /*
-      for (const functionExecution of functions) {
-        const customFunction = customFunctions.find(customFunction => customFunction.id === functionExecution.id) as CustomFunction;
+      const args = [functionExecution.eventPayload || {}, functionExecution.headersPayload || {}, functionExecution.paramsPayload || {}];
 
-        const args = [functionExecution.eventPayload || {}, functionExecution.headersPayload || {}, functionExecution.paramsPayload || {}];
+      if (!parallelExecutions) {
+        let callResult: ServerFunctionResult | null = null;
 
-        if (!parallelExecutions) {
-          let callResult: ServerFunctionResult | null = null;
-
-          try {
-            callResult = await this.functionService.executeServerFunction(customFunction, job.environment, args);
-          } catch (err) {
-            results.push({
-              statusCode: undefined,
-              id: functionExecution.id,
-              fatalErr: true,
-            });
-            this.logger.error(`Fatal error executing server function "${functionExecution.id}". Stopped sequential execution of job "${job.name}" with id "${job.id}"`, err);
-            break;
-          }
-
+        try {
+          callResult = await this.functionService.executeServerFunction(customFunction, job.environment, args);
+        } catch (err) {
           results.push({
-            statusCode: callResult?.statusCode,
+            statusCode: undefined,
             id: functionExecution.id,
+            fatalErr: true,
+          });
+          this.logger.error(`Fatal error executing server function "${functionExecution.id}". Stopped sequential execution of job "${job.name}" with id "${job.id}"`, err);
+          break;
+        }
+
+        results.push({
+          statusCode: callResult?.statusCode,
+          id: functionExecution.id,
+          fatalErr: false,
+        });
+
+        if (!((callResult?.statusCode || 0) >= HttpStatus.OK && (callResult?.statusCode || 0) < HttpStatus.AMBIGUOUS)) {
+          this.logger.error(`Server function status code result is out of 200's range. Stopped sequential execution of job "${job.name}" with id "${job.id}"`, callResult);
+
+          break;
+        }
+      } else {
+        executions.push(this.functionService.executeServerFunction(customFunction, job.environment, args));
+      }
+    }
+
+    if (parallelExecutions) {
+      const parallelResults = await Promise.allSettled(executions);
+
+      for (let i = 0; i < parallelResults.length; i++) {
+        const result = parallelResults[i];
+
+        const id = functions[i].id;
+
+        if (result.status === 'fulfilled') {
+          results.push({
+            statusCode: result.value?.statusCode,
+            id,
             fatalErr: false,
           });
-
-          if (!((callResult?.statusCode || 0) >= HttpStatus.OK && (callResult?.statusCode || 0) < HttpStatus.AMBIGUOUS)) {
-            this.logger.error(`Server function status code result is out of 200's range. Stopped sequential execution of job "${job.name}" with id "${job.id}"`, callResult);
-
-            break;
-          }
         } else {
-          executions.push(this.functionService.executeServerFunction(customFunction, job.environment, args));
+          results.push({
+            id,
+            fatalErr: true,
+            statusCode: undefined,
+          });
         }
       }
+    } */
 
-      if (parallelExecutions) {
-        const parallelResults = await Promise.allSettled(executions);
+    /* const response = await lastValueFrom(
+      this.httpService
+        .get('http://localhost:3000/delay'),
+    ); */
 
-        for (let i = 0; i < parallelResults.length; i++) {
-          const result = parallelResults[i];
+    throw new UnauthorizedException('foo');
 
-          const id = functions[i].id;
+    // const executionDuration = ((Date.now() - executionStart) / 1000);
 
-          if (result.status === 'fulfilled') {
-            results.push({
-              statusCode: result.value?.statusCode,
-              id,
-              fatalErr: false,
-            });
-          } else {
-            results.push({
-              id,
-              fatalErr: true,
-              statusCode: undefined,
-            });
-          }
-        }
-      } */
+    // return results;
 
-      
-      const response = await lastValueFrom(
-        this.httpService
-          .get('http://localhost:3000/delay'),
-      );
+    // return {};
+  }
 
-      const executionDuration = ((Date.now() - executionStart) / 1000);
+  @OnQueueCompleted({
+    name: JOB_PREFIX,
+  })
 
-      this.logger.debug(`Job "${job?.name}" with id "${job.id}" executed. Duration: ${executionDuration} seconds.`);
+  private getQueueJobDuration(queueJob: Bull.Job): number | null {
+    let duration: number | null = null;
 
-      try {
-        await this.prisma.$transaction(async trx => {
-          // Check if job still exists, if not, avoid saving execution info.
-          const savedJob = await trx.job.findFirst({
-            where: {
-              id: job.id,
+    if (queueJob.finishedOn && queueJob.processedOn) {
+      duration = queueJob.finishedOn - queueJob.processedOn;
+    }
+
+    return duration;
+  }
+
+  private async onQueueCompleted(queueJob: Bull.Job<Job>, results: JobFunctionCallResult[]) {
+    const job = queueJob.data as Job;
+
+    const duration = this.getQueueJobDuration(queueJob);
+
+    this.logger.debug(`Job "${job.name}" with id "${job.id}" processed in ${duration ? `${duration / 1000} seconds` : ''}`);
+    this.logger.debug('Results: ', results);
+
+    await this.saveExecutionDetails(job, JobExecutionStatus.FINISHED, results, duration);
+  }
+
+  @OnQueueFailed({
+    name: JOB_PREFIX,
+  })
+  private async onQueueFailed(queueJob: Bull.Job<Job>, reason) {
+    const job = queueJob.data as Job;
+
+    const duration = this.getQueueJobDuration(queueJob);
+
+    const errMessage = typeof reason === 'string' ? reason : reason?.message;
+
+    this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}", reason: ${errMessage}`);
+
+    await this.saveExecutionDetails(job, JobExecutionStatus.JOB_ERROR, [], duration);
+  }
+
+  private async saveExecutionDetails(job: Job, status: JobExecutionStatus, results: JobFunctionCallResult[], duration: number | null = null) {
+    try {
+      await this.prisma.$transaction(async trx => {
+        // Check if job still exists, if not, avoid saving execution info.
+        const savedJob = await trx.job.findFirst({
+          where: {
+            id: job.id,
+          },
+        });
+        if (savedJob) {
+          return this.prisma.jobExecution.create({
+            data: {
+              jobId: job.id,
+              duration,
+              results: JSON.stringify(results),
+              functions: job.functions,
+              type: job.functionsExecutionType,
+              status,
             },
           });
-          if (savedJob) {
-            return this.prisma.jobExecution.create({
-              data: {
-                jobId: job.id,
-                duration: executionDuration,
-                results: JSON.stringify(results),
-                functions: JSON.stringify(functions),
-                type: job.functionsExecutionType,
-              },
-            });
-          }
-        });
-      } catch (err) {
-        this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}"`, err);
-      }
+        }
+      });
     } catch (err) {
-      this.logger.error(`Failed to execute job with id "${job.id}" failed`, err);
+      this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}"`, err);
     }
   }
 
@@ -304,9 +345,10 @@ export class JobsService implements OnModuleDestroy {
       createdAt: execution.createdAt,
       jobId: execution.jobId,
       results: JSON.parse(execution.results),
-      duration: execution.duration,
+      duration: execution.duration ? execution.duration / 1000 : null,
       functions: JSON.parse(execution.functions),
       type: execution.type as FunctionsExecutionType,
+      status: execution.status as JobExecutionStatus,
     };
   }
 

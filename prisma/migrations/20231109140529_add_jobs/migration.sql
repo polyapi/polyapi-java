@@ -21,9 +21,10 @@ CREATE TABLE "job_executions" (
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "job_id" TEXT NOT NULL,
     "results" TEXT NOT NULL,
-    "execution_duration" DOUBLE PRECISION NOT NULL,
+    "duration" DOUBLE PRECISION,
     "functions" TEXT NOT NULL,
-    "functions_execution_type" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
 
     CONSTRAINT "job_executions_pkey" PRIMARY KEY ("id")
 );
