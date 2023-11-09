@@ -2,16 +2,13 @@ import { Injectable, Logger, OnModuleDestroy, UnauthorizedException } from '@nes
 import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto, JobExecutionStatus } from '@poly/model';
 import { CustomFunction, Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import * as cronParser from 'cron-parser';
-import dayjs from 'dayjs';
 import { FunctionService } from 'function/function.service';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { InjectQueue, OnQueueCompleted, OnQueueFailed, OnQueueProgress, Process, Processor } from '@nestjs/bull';
+import { InjectQueue, OnQueueCompleted, OnQueueFailed, Process, Processor } from '@nestjs/bull';
 import Bull, { Queue } from 'bull';
 import { CommonService } from 'common/common.service';
 import { QUEUE_NAME, JOB_PREFIX } from './constants';
-import { type } from 'os';
 
 type ServerFunctionResult = Awaited<ReturnType<FunctionService['executeServerFunction']>>;
 type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatalErr: boolean };
@@ -58,7 +55,7 @@ export class JobsService implements OnModuleDestroy {
       }
 
       case ScheduleType.ON_TIME: {
-        const difference = dayjs(dayjs(schedule.value)).diff();
+        const difference = schedule.value.getTime() - new Date().getTime();
 
         if (difference > 0) {
           result = await this.queue.add(JOB_PREFIX, job, {
@@ -316,6 +313,26 @@ export class JobsService implements OnModuleDestroy {
         );
   }
 
+  private async getRepeatableJobFromQueue(job: Job) {
+    const schedule = this.getScheduleInfo(job);
+
+    const repeatableJobs = await this.queue.getRepeatableJobs();
+
+    return repeatableJobs.find(repeatableJob => {
+      const sameNameAndId = repeatableJob.name === JOB_PREFIX && repeatableJob.id === job.id;
+
+      if (!sameNameAndId) {
+        return false;
+      }
+
+      if (schedule?.type === ScheduleType.INTERVAL) {
+        return repeatableJob.every === schedule.value * 60 * 1000;
+      } else {
+        return repeatableJob.cron === schedule.value;
+      }
+    });
+  }
+
   /**
    * Get custom functions for job execution.
    * Second element from array are not found functions.
@@ -348,25 +365,38 @@ export class JobsService implements OnModuleDestroy {
       functions: JSON.parse(execution.functions),
       type: execution.type as FunctionsExecutionType,
       status: execution.status as JobExecutionStatus,
-      processedOn: execution.processedOn,
+      processedOn: execution.processedOn ? new Date(execution.processedOn) : null,
     };
   }
 
-  public toJobDto(job: Job): JobDto {
-    let nextExecutionAt: Date | null = new Date();
+  public async toJobDto(job: Job): Promise<JobDto> {
+    let nextExecutionAt: Date | null = null;
 
     const schedule: Schedule = this.getScheduleInfo(job);
 
-    if (schedule.type === ScheduleType.PERIODICAL) {
-      nextExecutionAt = cronParser.parseExpression(schedule.value).next().toDate();
-    }
+    switch (schedule.type) {
+      case ScheduleType.ON_TIME: {
+        const queueJob = await this.queue.getJob(job.id);
 
-    if (schedule.type === ScheduleType.ON_TIME) {
-      nextExecutionAt = new Date(schedule.value);
-    }
+        if (queueJob) {
+          nextExecutionAt = new Date(queueJob.timestamp + (queueJob.opts.delay as number));
+        }
+        break;
+      }
 
-    if (schedule.type === ScheduleType.INTERVAL) {
-      nextExecutionAt = dayjs(nextExecutionAt).add(schedule.value, 'minutes').toDate();
+      case ScheduleType.INTERVAL:
+      case ScheduleType.PERIODICAL: {
+        const repeatableJob = await this.getRepeatableJobFromQueue(job);
+
+        if (repeatableJob) {
+          nextExecutionAt = new Date(repeatableJob.next);
+        }
+
+        break;
+      }
+
+      default:
+        this.throwMissingScheduleType(schedule);
     }
 
     return {
@@ -476,21 +506,7 @@ export class JobsService implements OnModuleDestroy {
       switch (oldSchedule.type) {
         case ScheduleType.INTERVAL:
         case ScheduleType.PERIODICAL: {
-          const repeatableJobs = await this.queue.getRepeatableJobs();
-
-          const repeatableJobInQueue = repeatableJobs.find(repeatableJob => {
-            const sameNameAndId = repeatableJob.name === JOB_PREFIX && repeatableJob.id === job.id;
-
-            if (!sameNameAndId) {
-              return false;
-            }
-
-            if (oldSchedule?.type === ScheduleType.INTERVAL) {
-              return repeatableJob.every === oldSchedule.value;
-            } else {
-              return repeatableJob.cron === oldSchedule.value;
-            }
-          });
+          const repeatableJobInQueue = await this.getRepeatableJobFromQueue(job);
 
           this.logger.debug('Job was deleted in transaction, restoring...');
 
@@ -523,6 +539,9 @@ export class JobsService implements OnModuleDestroy {
     const jobs = await this.prisma.job.findMany({
       where: {
         environmentId: environment.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 

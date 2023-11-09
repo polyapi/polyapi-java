@@ -41,7 +41,9 @@ export class JobsController {
   @Get('')
   @UseGuards(PolyAuthGuard)
   async getJobs(@Req() req: AuthRequest) {
-    return (await this.service.getJobs(req.user.environment)).map((job) => this.service.toJobDto(job));
+    const jobs = await this.service.getJobs(req.user.environment);
+
+    return Promise.all(jobs.map(job => this.service.toJobDto(job)));
   }
 
   @Patch(':id')

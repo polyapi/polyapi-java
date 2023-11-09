@@ -14,7 +14,6 @@ export enum JobStatus {
     DISABLED = 'disabled'
 };
 
-
 export enum JobExecutionStatus {
     FINISHED = 'finished',
     JOB_ERROR = 'job_error'

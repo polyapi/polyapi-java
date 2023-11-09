@@ -1,5 +1,5 @@
 import { FunctionsExecutionType, JobStatus, ScheduleType } from '../../job';
-import { CreateFunctionJob as CreateFunctionJob } from './utils';
+import { CreateFunctionJob } from './utils';
 
 export type FunctionJob = Required<CreateFunctionJob>;
 
@@ -32,7 +32,7 @@ export type JobDto = {
 
     functionsExecutionType: FunctionsExecutionType;
 
-    nextExecutionAt: Date;
+    nextExecutionAt: Date | null;
 
     environmentId: string;
 
