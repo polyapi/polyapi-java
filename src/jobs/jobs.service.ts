@@ -128,14 +128,24 @@ export class JobsService implements OnModuleDestroy {
 
     this.logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
 
-    const environment = await this.prisma.environment.findFirst({
-      where: {
-        id: job.environmentId,
-      },
-    });
+    const [environment, jobStillExist] = await Promise.all([
+      this.prisma.environment.findFirst({
+        where: {
+          id: job.environmentId,
+        },
+      }), this.prisma.job.findFirst({
+        where: {
+          id: job.id,
+        },
+      }),
+    ]);
 
     if (!environment) {
       throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
+    }
+
+    if (!jobStillExist) {
+      // TODO: remove job from bull.
     }
 
     const executionStart = Date.now();
