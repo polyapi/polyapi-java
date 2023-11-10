@@ -472,6 +472,7 @@ model JobExecution {
   functions               String
   type                    String
   status                  String
+  schedule                String
 
   @@map("job_executions")
 }

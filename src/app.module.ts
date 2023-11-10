@@ -102,7 +102,6 @@ const logger = new Logger('AppModule');
         return {
           redis: {
             host: configService.redisUrl.split('redis://')[1].split(':')[0],
-
           },
         };
       },

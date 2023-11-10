@@ -26,6 +26,7 @@ CREATE TABLE "job_executions" (
     "functions" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "status" TEXT NOT NULL,
+    "schedule" TEXT NOT NULL,
 
     CONSTRAINT "job_executions_pkey" PRIMARY KEY ("id")
 );

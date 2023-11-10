@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, UnauthorizedException } from '@nestjs/common';
 import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto, JobExecutionStatus } from '@poly/model';
 import { CustomFunction, Environment, Job, JobExecution } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from 'prisma-module/prisma.service';
 import { FunctionService } from 'function/function.service';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
@@ -285,6 +285,7 @@ export class JobsService implements OnModuleDestroy {
               status,
               processedOn,
               finishedOn,
+              schedule: JSON.stringify(this.getScheduleInfo(job)),
             },
           });
         }
@@ -366,6 +367,7 @@ export class JobsService implements OnModuleDestroy {
       type: execution.type as FunctionsExecutionType,
       status: execution.status as JobExecutionStatus,
       processedOn: execution.processedOn ? new Date(execution.processedOn) : null,
+      schedule: JSON.parse(execution.schedule) as Schedule,
     };
   }
 
@@ -573,6 +575,9 @@ export class JobsService implements OnModuleDestroy {
     return this.prisma.jobExecution.findMany({
       where: {
         jobId: job.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }

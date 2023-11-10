@@ -1,4 +1,5 @@
 import { FunctionsExecutionType, JobExecutionStatus } from '../../job';
+import { Schedule } from './job.dto';
 
 export type ExecutionDto = {
     id: string;
@@ -10,4 +11,5 @@ export type ExecutionDto = {
     functions: { id: string; headersPayload: object; eventPayload: object; paramsPayload: object}[]
     type: FunctionsExecutionType
     status: JobExecutionStatus
+    schedule: Schedule
 }

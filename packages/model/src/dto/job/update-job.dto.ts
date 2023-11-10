@@ -7,7 +7,7 @@ import { FunctionsExecutionType, JobStatus, ScheduleType } from '../../job';
 export class UpdateJobDto {
     @IsString()
     @IsOptional()
-    name: string;
+    name?: string;
 
     @IsOptional()
     @IsObject()
@@ -30,19 +30,19 @@ export class UpdateJobDto {
         ],
       },
     })
-    schedule: Interval | Periodical | OnTime;
+    schedule?: Interval | Periodical | OnTime;
 
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateFunctionJob)
-    functions: CreateFunctionJob[];
+    functions?: CreateFunctionJob[];
 
     @IsOptional()
     @IsEnum(FunctionsExecutionType)
-    executionType: FunctionsExecutionType;
+    executionType?: FunctionsExecutionType;
 
     @IsOptional()
     @IsEnum(JobStatus)
-    status: JobStatus;
+    status?: JobStatus;
 }

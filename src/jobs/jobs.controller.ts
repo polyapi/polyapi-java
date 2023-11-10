@@ -60,7 +60,7 @@ export class JobsController {
     await this.checkFunctions(req.user.environment, data.functions);
 
     const job = await this.findJob(req.user.environment, id);
-    const functionsJob = this.processJobFunctions(functions);
+    const functionsJob = functions ? this.processJobFunctions(functions) : functions;
 
     return this.service.toJobDto(await this.service.updateJob(job, name, schedule, functionsJob, executionType, status));
   }
