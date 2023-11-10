@@ -1732,13 +1732,7 @@ export class FunctionService implements OnModuleInit {
 
     const functionArguments = JSON.parse(customFunction.arguments || '[]');
 
-    console.log('args before parsing: ', JSON.stringify(args));
-
-    console.log('function arguments: ', JSON.stringify(functionArguments));
-
-    const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => args[arg.key]);
-
-    console.log('args after parsing: ', JSON.stringify(argumentsList));
+    const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => typeof args[arg.key] === 'undefined' ? '$poly-undefined-value' : args[arg.key]);
 
     try {
       const result = await this.faasService.executeFunction(customFunction.id, executionEnvironment.tenantId, executionEnvironment.id, argumentsList, headers);
