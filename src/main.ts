@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
+import { INestApplication, LogLevel, Logger, ValidationPipe } from '@nestjs/common';
 import swStats from 'swagger-stats';
 import { AppModule } from 'app.module';
 import { PrismaService } from 'prisma-module/prisma.service';
@@ -55,7 +55,11 @@ const initSwagger = (app: INestApplication) => {
 
 // eslint-disable-next-line func-style
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: process.env.LOG_LEVELS
+      ? (process.env.LOG_LEVELS.split(',') as LogLevel[])
+      : ['log', 'warn', 'error'],
+  });
 
   app.useGlobalPipes(new ValidationPipe({
     transform: false,
