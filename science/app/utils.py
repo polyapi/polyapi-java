@@ -67,50 +67,37 @@ def _process_schema_property(property: Dict) -> str:
 
 def _process_property_spec(arg: PropertySpecification, *, include_argument_schema=True) -> str:
     kind = arg["type"]["kind"]
+    name = arg["name"]
+    description = arg.get("description", "")
     if kind == "void":
-        # seems weird to have a void argument...
-        rv = f"{arg['name']}"
+        rv = name
     elif kind == "primitive":
-        rv = f"{arg['name']}: {arg['type']['type']}"
+        rv = f"{name}: {arg['type']['type']}"
     elif kind == "array":
-        # assume to be object if no explicit type provided
         item_type = arg["type"]["items"].get("type", "object")
-        rv = "{name}: [{item_type}, {item_type}, ...]".format(
-            name=arg["name"], item_type=item_type
-        )
+        rv = f"{name}: [{item_type}]"
     elif kind == "object":
-        arg_type = arg["type"]
         if not include_argument_schema:
-            rv = "{name}: object".format(name=arg["name"])
-        elif arg_type.get("properties"):
-            properties = [_process_property_spec(p) for p in arg["type"]["properties"]]
-            sub_props = "\n".join(properties)
-            sub_props = "{\n" + sub_props + "\n}"
-            rv = "{name}: {sub_props}".format(name=arg["name"], sub_props=sub_props)
-        elif arg_type.get("schema"):
-            schema = jsonref.loads(json.dumps(arg_type['schema']))
-            sub_props = _process_schema_property(schema)
-            sub_props = sub_props.rstrip(",")
-            rv = f"{arg['name']}: {sub_props}"
+            rv = f"{name}: object"
         else:
-            log(f"WARNING: object with no properties in args - {arg}")
-            rv = "{name}: object".format(name=arg["name"])
+            properties = arg["type"].get("properties", {})
+            sub_props = ", ".join([_process_property_spec(p) for p in properties])
+            rv = f"{name}: {{{sub_props}}}"
     elif kind == "function":
         if include_argument_schema:
             function_spec = json.dumps(arg.get("type", {}).get("spec", "function"))
-            rv = f"{arg['name']}: {function_spec}"
+            rv = f"{name}: {function_spec}"
         else:
-            rv = f"{arg['name']}: {kind}"
+            rv = f"{name}: {kind}"
     elif kind == "plain":
-        rv = f"{arg['name']}: {arg['type']['value']}"
+        rv = f"{name}: {arg['type']['value']}"
     else:
         raise NotImplementedError("unrecognized kind")
 
-    rv += ","
-    if arg.get("description"):
-        rv += f"  // {arg['description']}"
+    if description:
+        rv += f"  // {description}"
 
-    return rv
+    return rv + ","
 
 
 def func_args(spec: SpecificationDto, *, include_argument_schema=True) -> List[str]:
