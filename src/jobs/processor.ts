@@ -7,17 +7,53 @@ import { FunctionJob, FunctionsExecutionType } from '@poly/model';
 import { FunctionService } from 'function/function.service';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import { ConsoleLogger, Logger } from '@nestjs/common';
 
 type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatalErr: boolean };
 type ServerFunctionResult = Awaited<ReturnType<FunctionService['executeServerFunction']>>;
 
+/* eslint-disable no-dupe-class-members, @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function  */
+class ProcessorLogger extends ConsoleLogger {
+  log(message: any, context?: string | undefined): void;
+  log(message: any, ...optionalParams: any[]): void;
+  log(message: unknown, context?: unknown, ...rest: unknown[]): void {}
+
+  verbose(message: any, context?: string | undefined): void;
+  verbose(message: any, ...optionalParams: any[]): void;
+  verbose(message: unknown, context?: unknown, ...rest: unknown[]): void {}
+
+  error(message: any, stack?: string | undefined, context?: string | undefined): void;
+  error(message: any, ...optionalParams: any[]): void;
+  error(message: unknown, stack?: unknown, context?: unknown, ...rest: unknown[]): void {
+    if (this.isProcessorLogger()) {
+      return super.error(message, context, ...rest);
+    }
+  }
+
+  debug(message: any, context?: string | undefined): void;
+  debug(message: any, ...optionalParams: any[]): void;
+  debug(message: unknown, context?: unknown, ...rest: unknown[]): void {
+    if (this.isProcessorLogger()) {
+      return super.debug(message, ...rest);
+    }
+  }
+
+  isProcessorLogger() {
+    return this.context === 'Processor';
+  }
+}
+
+/* eslint-enable  no-dupe-class-members */
+
 export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
   try {
     const job = queueJob.data;
+
+    const logger = new ProcessorLogger('Processor');
     logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
 
     const app = await NestFactory.createApplicationContext(AppModule, {
-      logger,
+      logger: new ProcessorLogger(),
     });
 
     const prisma = app.get(PrismaService);
