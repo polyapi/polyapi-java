@@ -265,6 +265,7 @@ export class JobsService implements OnModuleDestroy {
   @Cron('0 */10 * * * *')
   private async restoreOrphanJobs() {
     try {
+      this.logger.debug('Checking orphan jobs...');
       const [queueJobs, repeatableJobs] = await Promise.all([
         this.queue.getJobs(['delayed', 'active', 'waiting', 'completed', 'failed', 'paused']),
         this.queue.getRepeatableJobs(),
@@ -312,6 +313,8 @@ export class JobsService implements OnModuleDestroy {
 
       if ((repeatableJobsRestored + singleJobsRestored) > 0) {
         this.logger.debug(`Restored ${repeatableJobsRestored} repeatable jobs and ${singleJobsRestored} single jobs into the queue`);
+      } else {
+        this.logger.debug('No orphan jobs found.');
       }
     } catch (err) {
       this.logger.error('Failed to run "restoreOrphanJobs" cron.', err);
