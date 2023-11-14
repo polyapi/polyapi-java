@@ -57,7 +57,7 @@ describe('LokiLogsService', () => {
       await service.getLogs(functionId, testKeyword);
       expect(httpGetSpy).toHaveBeenCalledTimes(1);
       const expectedLokiQuery = encodeURIComponent(
-        `{pod=~"function-${functionId}.*",container="user-container"} !~ "function-${functionId}-" |~ "(?i)${testKeyword}"`,
+        `{pod=~"function-${functionId}.*",container="user-container"} !~ "${service['getSystemLogsQueryRegex'](functionId)}" |~ "(?i)${testKeyword}"`,
       );
       const expectedUrl = `${lokiUrl}/loki/api/v1/query_range?query=${expectedLokiQuery}`;
       expect(httpGetSpy).toHaveBeenCalledWith(expectedUrl);
@@ -66,7 +66,7 @@ describe('LokiLogsService', () => {
       await service.getLogs(functionId, '');
       expect(httpGetSpy).toHaveBeenCalledTimes(1);
       const expectedLokiQuery = encodeURIComponent(
-        `{pod=~"function-${functionId}.*",container="user-container"} !~ "function-${functionId}-"`,
+        `{pod=~"function-${functionId}.*",container="user-container"} !~ "${service['getSystemLogsQueryRegex'](functionId)}"`,
       );
       const expectedUrl = `${lokiUrl}/loki/api/v1/query_range?query=${expectedLokiQuery}`;
       expect(httpGetSpy).toHaveBeenCalledWith(expectedUrl);

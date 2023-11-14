@@ -15,13 +15,7 @@ export const LOKI_MOCK_RESPONSE = {
             '/var/log/pods/development_function-9a41e1e3-19bc-40b1-b80c-18dc58861123-00001-deploy4cw9k_e21ac1b8-57fd-41de-a4d7-66e4a65c6bdf/user-container/0.log',
           job: 'development/function-9a41e1e3-19bc-40b1-b80c-18dc58861123-00001',
         },
-        values: [
-          ['1698665789556966712', ''],
-          ['1698665789556962942', '> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js'],
-          ['1698665789556957502', '> http-handler@0.1.0 start'],
-          ['1698665789556927682', ''],
-          ['1698665788288398736', 'Cached Poly library found, reusing...'],
-        ],
+        values: [],
       },
       {
         stream: {
@@ -57,11 +51,6 @@ export const LOKI_MOCK_RESPONSE = {
           ['1698665969302802602', 'This is an INFO log in the greeter function'],
           ['1698665969302739081', 'This is an INFO log in the greeter function'],
           ['1698665969302494458', 'This should be the same line in the greeter function'],
-          ['1698665968648194147', ''],
-          ['1698665968648191377', '> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js'],
-          ['1698665968648186667', '> http-handler@0.1.0 start'],
-          ['1698665968648137597', ''],
-          ['1698665967719887717', 'Cached Poly library found, reusing...'],
         ],
       },
     ],
