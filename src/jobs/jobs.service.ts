@@ -1,16 +1,15 @@
-import { Injectable, Logger, OnModuleDestroy, UnauthorizedException } from '@nestjs/common';
-import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, Visibility, JobStatus, ExecutionDto, JobExecutionStatus } from '@poly/model';
-import { CustomFunction, Environment, Job, JobExecution } from '@prisma/client';
+import { HttpStatus, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, JobStatus, ExecutionDto, JobExecutionStatus, Jobs } from '@poly/model';
+import { Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma-module/prisma.service';
 import { FunctionService } from 'function/function.service';
-import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { InjectQueue, OnQueueCompleted, OnQueueFailed, Process, Processor } from '@nestjs/bull';
+import { InjectQueue, OnQueueCompleted, OnQueueFailed, Processor } from '@nestjs/bull';
 import Bull, { Queue } from 'bull';
 import { CommonService } from 'common/common.service';
-import { QUEUE_NAME, JOB_PREFIX } from './constants';
+import { QUEUE_NAME, JOB_PREFIX, JOB_DOES_NOT_EXIST_ANYMORE } from './constants';
+import { Cron } from '@nestjs/schedule';
 
-type ServerFunctionResult = Awaited<ReturnType<FunctionService['executeServerFunction']>>;
 type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatalErr: boolean };
 
 @Processor(QUEUE_NAME)
@@ -18,7 +17,7 @@ type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatal
 export class JobsService implements OnModuleDestroy {
   private readonly logger = new Logger(JobsService.name);
 
-  constructor(private readonly prisma: PrismaService, private readonly functionService: FunctionService, @InjectQueue(QUEUE_NAME) private readonly queue: Queue, private readonly httpService: HttpService, private readonly commonService: CommonService) {
+  constructor(private readonly prisma: PrismaService, private readonly functionService: FunctionService, @InjectQueue(QUEUE_NAME) private readonly queue: Queue<Job>, private readonly httpService: HttpService, private readonly commonService: CommonService) {
 
   }
 
@@ -31,8 +30,6 @@ export class JobsService implements OnModuleDestroy {
   private throwMissingScheduleType(schedule: never): never {
     throw new Error('Missing schedule type');
   }
-
-  // TODO: CHEQUEAR SI EL SUBPROCESO ESTA ESUCHANDO HANDLERS TAMBIEN.
 
   private async addJobToQueue(job: Job): Promise<Bull.Job<Job>> {
     const schedule = this.getScheduleInfo(job);
@@ -124,120 +121,6 @@ export class JobsService implements OnModuleDestroy {
     this.logger.debug(`Removed job "${job.name}" with id "${job.id}" from queue.`);
   }
 
-  // @Process(JOB_PREFIX)
-  private async processJob(queueJob: Bull.Job<Job>) {
-    const job = queueJob.data;
-
-    this.logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
-
-    const [environment, jobStillExist] = await Promise.all([
-      this.prisma.environment.findFirst({
-        where: {
-          id: job.environmentId,
-        },
-      }), this.prisma.job.findFirst({
-        where: {
-          id: job.id,
-        },
-      }),
-    ]);
-
-    if (!environment) {
-      throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
-    }
-
-    if (!jobStillExist) {
-      // TODO: remove job from bull.
-    }
-
-    const executionStart = Date.now();
-
-    const functions = JSON.parse(job.functions) as FunctionJob[];
-
-    const [customFunctions, notFoundFunctions] = await this.functionService.retrieveFunctions(environment, functions);
-
-    if (notFoundFunctions.length) {
-      throw new Error(`Job won't be executed since functions ${notFoundFunctions.join(', ')} are not found.`);
-    }
-
-    const parallelExecutions = job.functionsExecutionType === FunctionsExecutionType.SEQUENTIAL;
-
-    const executions: ReturnType<FunctionService['executeServerFunction']>[] = [];
-
-    const results: JobFunctionCallResult[] = [];
-    /*
-    for (const functionExecution of functions) {
-      const customFunction = customFunctions.find(customFunction => customFunction.id === functionExecution.id) as CustomFunction;
-
-      const args = [functionExecution.eventPayload || {}, functionExecution.headersPayload || {}, functionExecution.paramsPayload || {}];
-
-      if (!parallelExecutions) {
-        let callResult: ServerFunctionResult | null = null;
-
-        try {
-          callResult = await this.functionService.executeServerFunction(customFunction, job.environment, args);
-        } catch (err) {
-          results.push({
-            statusCode: undefined,
-            id: functionExecution.id,
-            fatalErr: true,
-          });
-          this.logger.error(`Fatal error executing server function "${functionExecution.id}". Stopped sequential execution of job "${job.name}" with id "${job.id}"`, err);
-          break;
-        }
-
-        results.push({
-          statusCode: callResult?.statusCode,
-          id: functionExecution.id,
-          fatalErr: false,
-        });
-
-        if (!((callResult?.statusCode || 0) >= HttpStatus.OK && (callResult?.statusCode || 0) < HttpStatus.AMBIGUOUS)) {
-          this.logger.error(`Server function status code result is out of 200's range. Stopped sequential execution of job "${job.name}" with id "${job.id}"`, callResult);
-
-          break;
-        }
-      } else {
-        executions.push(this.functionService.executeServerFunction(customFunction, job.environment, args));
-      }
-    }
-
-    if (parallelExecutions) {
-      const parallelResults = await Promise.allSettled(executions);
-
-      for (let i = 0; i < parallelResults.length; i++) {
-        const result = parallelResults[i];
-
-        const id = functions[i].id;
-
-        if (result.status === 'fulfilled') {
-          results.push({
-            statusCode: result.value?.statusCode,
-            id,
-            fatalErr: false,
-          });
-        } else {
-          results.push({
-            id,
-            fatalErr: true,
-            statusCode: undefined,
-          });
-        }
-      }
-    } */
-
-    const response = await lastValueFrom(
-      this.httpService
-        .get('http://localhost:3000/delay'),
-    );
-
-    // const executionDuration = ((Date.now() - executionStart) / 1000);
-
-    // return results;
-
-    // return {};
-  }
-
   private getQueueJobDurationInSeconds(processedOn?: number, finishedOn?: number): number | null {
     let duration: number | null = null;
 
@@ -251,28 +134,58 @@ export class JobsService implements OnModuleDestroy {
   @OnQueueCompleted({
     name: JOB_PREFIX,
   })
-  private async onQueueCompleted(queueJob: Bull.Job<Job>, results: JobFunctionCallResult[]) {
-    const job = queueJob.data as Job;
+  private async onQueueCompleted(queueJob: Bull.Job<Job>, results: JobFunctionCallResult[] | typeof JOB_DOES_NOT_EXIST_ANYMORE) {
+    try {
+      if (results === JOB_DOES_NOT_EXIST_ANYMORE) {
+        await this.removeJobFromQueue(queueJob.data);
+        return;
+      }
 
-    const duration = this.getQueueJobDurationInSeconds(queueJob.processedOn, queueJob.finishedOn);
+      const job = queueJob.data as Job;
 
-    this.logger.debug(`Job "${job.name}" with id "${job.id}" processed in ${duration ? `${duration} seconds` : ''}`);
-    this.logger.debug('Results: ', results);
+      const duration = this.getQueueJobDurationInSeconds(queueJob.processedOn, queueJob.finishedOn);
 
-    await this.saveExecutionDetails(job, JobExecutionStatus.FINISHED, results, queueJob.processedOn, queueJob.finishedOn);
+      this.logger.debug(`Job "${job.name}" with id "${job.id}" processed in ${duration ? `${duration} seconds` : ''}`);
+      this.logger.debug('Results: ', results);
+
+      const executionStatus: JobExecutionStatus = results.find(result => result.fatalErr || !((result?.statusCode || 0) >= HttpStatus.OK && (result?.statusCode || 0) < HttpStatus.AMBIGUOUS)) ? JobExecutionStatus.WITH_CALL_ERROR : JobExecutionStatus.FINISHED;
+
+      await this.saveExecutionDetails(job, executionStatus, results, queueJob.processedOn, queueJob.finishedOn);
+    } catch (err) {
+      this.logger.error('Error listening to "OnQueueCompleted" event.', err);
+    }
   }
 
   @OnQueueFailed({
     name: JOB_PREFIX,
   })
   private async onQueueFailed(queueJob: Bull.Job<Job>, reason) {
-    const job = queueJob.data as Job;
+    try {
+      const job = queueJob.data as Job;
 
-    const errMessage = typeof reason === 'string' ? reason : reason?.message;
+      const errMessage = typeof reason === 'string' ? reason : reason?.message;
 
-    this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}", reason: ${errMessage}`);
+      this.logger.error(`Failed to save execution record from job "${job.name}" with id "${job.id}", reason: ${errMessage}`);
 
-    await this.saveExecutionDetails(job, JobExecutionStatus.JOB_ERROR, [], queueJob.processedOn, queueJob.finishedOn);
+      const executions = await this.prisma.jobExecution.findMany({
+        where: {
+          jobId: queueJob.data.id,
+        },
+        orderBy: {
+          processedOn: 'desc',
+        },
+        take: 3,
+      });
+
+      if (executions.length === 3 && executions.every(execution => execution.status === JobExecutionStatus.JOB_ERROR)) {
+        this.logger.error(`Last 3 executions have "${JobExecutionStatus.JOB_ERROR}" status, disabling job...`);
+        await this.updateJob(job, undefined, undefined, undefined, undefined, JobStatus.DISABLED);
+      }
+
+      await this.saveExecutionDetails(job, JobExecutionStatus.JOB_ERROR, [], queueJob.processedOn, queueJob.finishedOn);
+    } catch (err) {
+      this.logger.error('Error listening to "OnQueueFailed" event.', err);
+    }
   }
 
   private async saveExecutionDetails(job: Job, status: JobExecutionStatus, results: JobFunctionCallResult[], processedOn?: number, finishedOn?: number) {
@@ -322,30 +235,80 @@ export class JobsService implements OnModuleDestroy {
         );
   }
 
-  private async getRepeatableJobFromQueue(job: Job) {
+  private matchRepeatableJob(repeatableJob: Bull.JobInformation, job: Job) {
     const schedule = this.getScheduleInfo(job);
+    const sameNameAndId = repeatableJob.name === JOB_PREFIX && repeatableJob.id === job.id;
 
+    if (!sameNameAndId) {
+      return false;
+    }
+
+    if (schedule?.type === ScheduleType.INTERVAL) {
+      return repeatableJob.every === schedule.value * 60 * 1000;
+    } else {
+      return repeatableJob.cron === schedule.value;
+    }
+  }
+
+  private async getRepeatableJobFromQueue(job: Job) {
     const repeatableJobs = await this.queue.getRepeatableJobs();
 
-    return repeatableJobs.find(repeatableJob => {
-      const sameNameAndId = repeatableJob.name === JOB_PREFIX && repeatableJob.id === job.id;
+    return repeatableJobs.find(repeatableJob => this.matchRepeatableJob(repeatableJob, job));
+  }
 
-      if (!sameNameAndId) {
-        return false;
+  @Cron('0 */10 * * * *')
+  private async restoreOrphanJobs() {
+    try {
+      const [queueJobs, repeatableJobs] = await Promise.all([
+        this.queue.getJobs(['delayed', 'active', 'waiting', 'completed', 'failed', 'paused']),
+        this.queue.getRepeatableJobs(),
+      ]);
+
+      const jobs = await this.prisma.job.findMany({
+        where: {
+          status: JobStatus.ENABLED,
+        },
+      });
+
+      let repeatableJobsRestored = 0;
+      let singleJobsRestored = 0;
+
+      for (const job of jobs) {
+        const schedule = this.getScheduleInfo(job);
+
+        if (schedule.type === ScheduleType.INTERVAL || schedule.type === ScheduleType.PERIODICAL) {
+          // Repeatable jobs
+          const foundRepeatable = repeatableJobs.find((repeatableJob) => this.matchRepeatableJob(repeatableJob, job));
+
+          if (!foundRepeatable) {
+            this.logger.debug(`job "${job.name}" with id "${job.id}" not found in queue. Restoring...`);
+            await this.addJobToQueue(job);
+            repeatableJobsRestored++;
+          }
+        } else {
+          // Single job
+
+          const foundJob = queueJobs.find(queueJob => queueJob.data.id === job.id);
+
+          if (!foundJob) {
+            this.logger.debug(`job "${job.name}" with id "${job.id}" not found in queue. Restoring...`);
+            await this.addJobToQueue(job);
+            singleJobsRestored++;
+          }
+        }
       }
 
-      if (schedule?.type === ScheduleType.INTERVAL) {
-        return repeatableJob.every === schedule.value * 60 * 1000;
-      } else {
-        return repeatableJob.cron === schedule.value;
+      if ((repeatableJobsRestored + singleJobsRestored) > 0) {
+        this.logger.debug(`Restored ${repeatableJobsRestored} repeatable jobs and ${singleJobsRestored} single jobs into the queue`);
       }
-    });
+    } catch (err) {
+      this.logger.error('Failed to run "restoreOrphanJobs" cron.', err);
+    }
   }
 
   public toExecutionDto(execution: JobExecution): ExecutionDto {
     return {
       id: execution.id,
-      createdAt: execution.createdAt,
       jobId: execution.jobId,
       results: JSON.parse(execution.results),
       duration: this.getQueueJobDurationInSeconds(execution.processedOn ? execution.processedOn.getTime() : undefined, execution.finishedOn ? execution.finishedOn.getTime() : undefined),
@@ -353,6 +316,7 @@ export class JobsService implements OnModuleDestroy {
       type: execution.type as FunctionsExecutionType,
       status: execution.status as JobExecutionStatus,
       processedOn: execution.processedOn ? new Date(execution.processedOn) : null,
+      finishedOn: execution.finishedOn ? new Date(execution.finishedOn) : null,
       schedule: JSON.parse(execution.schedule) as Schedule,
     };
   }

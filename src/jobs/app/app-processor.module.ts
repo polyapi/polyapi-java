@@ -5,7 +5,6 @@ import { redisStore } from 'cache-manager-redis-store';
 import { FunctionModule } from 'function/function.module';
 import { PrismaModule } from 'prisma-module/prisma.module';
 
-import { JobsModule } from 'jobs/jobs.module';
 import { ConfigService } from 'config/config.service';
 import { HttpModule } from '@nestjs/axios';
 
@@ -36,5 +35,5 @@ import { HttpModule } from '@nestjs/axios';
   controllers: [],
   providers: [],
 })
-export class AppModule {
+export class AppProcessorModule {
 }

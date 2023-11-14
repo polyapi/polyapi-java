@@ -16,5 +16,6 @@ export enum JobStatus {
 
 export enum JobExecutionStatus {
     FINISHED = 'finished',
-    JOB_ERROR = 'job_error'
+    JOB_ERROR = 'job_error',
+    WITH_CALL_ERROR = 'with_call_error'
 };

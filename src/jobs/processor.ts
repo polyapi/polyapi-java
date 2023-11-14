@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app/app.module';
+import { AppProcessorModule } from './app/app-processor.module';
 import Bull, { DoneCallback } from 'bull';
 import { PrismaService } from 'prisma-module/prisma.service';
 import { Job } from '@prisma/client';
@@ -8,22 +8,17 @@ import { FunctionService } from 'function/function.service';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { ConsoleLogger, Logger } from '@nestjs/common';
+import { JOB_DOES_NOT_EXIST_ANYMORE } from './constants';
 
 type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatalErr: boolean };
 type ServerFunctionResult = Awaited<ReturnType<FunctionService['executeServerFunction']>>;
 
 /* eslint-disable no-dupe-class-members, @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function  */
 class ProcessorLogger extends ConsoleLogger {
-  log(message: any, context?: string | undefined): void;
-  log(message: any, ...optionalParams: any[]): void;
   log(message: unknown, context?: unknown, ...rest: unknown[]): void {}
 
-  verbose(message: any, context?: string | undefined): void;
-  verbose(message: any, ...optionalParams: any[]): void;
   verbose(message: unknown, context?: unknown, ...rest: unknown[]): void {}
 
-  error(message: any, stack?: string | undefined, context?: string | undefined): void;
-  error(message: any, ...optionalParams: any[]): void;
   error(message: unknown, stack?: unknown, context?: unknown, ...rest: unknown[]): void {
     if (this.isProcessorLogger()) {
       return super.error(message, context, ...rest);
@@ -43,22 +38,25 @@ class ProcessorLogger extends ConsoleLogger {
   }
 }
 
-/* eslint-enable  no-dupe-class-members */
+/* eslint-enable  no-dupe-class-members, @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function */
+
+const logger = new ProcessorLogger('Processor');
+
+const appProcessorPromise = NestFactory.createApplicationContext(AppProcessorModule, {
+  logger: new ProcessorLogger(),
+});
 
 export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
   try {
     const job = queueJob.data;
 
-    const logger = new ProcessorLogger('Processor');
     logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
 
-    const app = await NestFactory.createApplicationContext(AppModule, {
-      logger: new ProcessorLogger(),
-    });
+    const appProcessor = await appProcessorPromise;
 
-    const prisma = app.get(PrismaService);
-    const functionService = app.get(FunctionService);
-    const httpService = app.get(HttpService);
+    const prisma = appProcessor.get(PrismaService);
+    const functionService = appProcessor.get(FunctionService);
+    const httpService = appProcessor.get(HttpService);
 
     const [environment, jobStillExist] = await Promise.all([
       prisma.environment.findFirst({
@@ -77,7 +75,8 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
     }
 
     if (!jobStillExist) {
-      // TODO: remove job from bull.
+      logger.error('Job does not exist anymore in our database, execution skipped.');
+      return cb(null, JOB_DOES_NOT_EXIST_ANYMORE);
     }
 
     const functions = JSON.parse(job.functions) as FunctionJob[];
