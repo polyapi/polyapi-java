@@ -217,22 +217,28 @@ export class JobsService implements OnModuleDestroy {
   }
 
   private getScheduleInfo(job: Job): Schedule {
-    return job.scheduleType === ScheduleType.INTERVAL
-      ? {
+    const type = job.scheduleType as ScheduleType;
+    switch (type) {
+      case ScheduleType.INTERVAL:
+        return {
           type: ScheduleType.INTERVAL,
           value: job.scheduleIntervalValue as number,
-        }
-      : (
-          job.scheduleType === ScheduleType.ON_TIME
-            ? {
-                type: ScheduleType.ON_TIME,
-                value: job.scheduleOnTimeValue as Date,
-              }
-            : {
-                type: ScheduleType.PERIODICAL,
-                value: job.schedulePeriodicalValue as string,
-              }
-        );
+        };
+
+      case ScheduleType.PERIODICAL:
+        return {
+          type: ScheduleType.PERIODICAL,
+          value: job.schedulePeriodicalValue as string,
+        };
+
+      case ScheduleType.ON_TIME:
+        return {
+          type: ScheduleType.ON_TIME,
+          value: job.scheduleOnTimeValue as Date,
+        };
+      default:
+        this.throwMissingScheduleType(type);
+    }
   }
 
   private matchRepeatableJob(repeatableJob: Bull.JobInformation, job: Job) {
@@ -276,25 +282,31 @@ export class JobsService implements OnModuleDestroy {
       for (const job of jobs) {
         const schedule = this.getScheduleInfo(job);
 
-        if (schedule.type === ScheduleType.INTERVAL || schedule.type === ScheduleType.PERIODICAL) {
-          // Repeatable jobs
-          const foundRepeatable = repeatableJobs.find((repeatableJob) => this.matchRepeatableJob(repeatableJob, job));
+        switch (schedule.type) {
+          case ScheduleType.INTERVAL:
+          case ScheduleType.PERIODICAL: {
+            const foundRepeatable = repeatableJobs.find((repeatableJob) => this.matchRepeatableJob(repeatableJob, job));
 
-          if (!foundRepeatable) {
-            this.logger.debug(`job "${job.name}" with id "${job.id}" not found in queue. Restoring...`);
-            await this.addJobToQueue(job);
-            repeatableJobsRestored++;
+            if (!foundRepeatable) {
+              this.logger.debug(`job "${job.name}" with id "${job.id}" not found in queue. Restoring...`);
+              await this.addJobToQueue(job);
+              repeatableJobsRestored++;
+            }
+            break;
           }
-        } else {
-          // Single job
+          case ScheduleType.ON_TIME: {
+            const foundJob = queueJobs.find(queueJob => queueJob.data.id === job.id);
 
-          const foundJob = queueJobs.find(queueJob => queueJob.data.id === job.id);
-
-          if (!foundJob) {
-            this.logger.debug(`job "${job.name}" with id "${job.id}" not found in queue. Restoring...`);
-            await this.addJobToQueue(job);
-            singleJobsRestored++;
+            if (!foundJob) {
+              this.logger.debug(`job "${job.name}" with id "${job.id}" not found in queue. Restoring...`);
+              await this.addJobToQueue(job);
+              singleJobsRestored++;
+            }
+            break;
           }
+
+          default:
+            this.throwMissingScheduleType(schedule);
         }
       }
 
@@ -303,6 +315,19 @@ export class JobsService implements OnModuleDestroy {
       }
     } catch (err) {
       this.logger.error('Failed to run "restoreOrphanJobs" cron.', err);
+    }
+  }
+
+  private buildScheduleValue(schedule: Schedule) {
+    switch (schedule.type) {
+      case ScheduleType.INTERVAL:
+        return { scheduleIntervalValue: schedule.value };
+      case ScheduleType.PERIODICAL:
+        return { schedulePeriodicalValue: schedule.value };
+      case ScheduleType.ON_TIME:
+        return { scheduleOnTimeValue: schedule.value };
+      default:
+        this.throwMissingScheduleType(schedule);
     }
   }
 
@@ -364,15 +389,7 @@ export class JobsService implements OnModuleDestroy {
   }
 
   async createJob(environment: Environment, name: string, schedule: Schedule, functions: FunctionJob[], functionsExecutionType: FunctionsExecutionType, status: JobStatus) {
-    const scheduleValue: {
-      scheduleIntervalValue?: number;
-      scheduleOnTimeValue?: Date;
-      schedulePeriodicalValue?: string;
-    } = {
-      scheduleIntervalValue: schedule.type === ScheduleType.INTERVAL ? schedule.value : undefined,
-      scheduleOnTimeValue: schedule.type === ScheduleType.ON_TIME ? schedule.value : undefined,
-      schedulePeriodicalValue: schedule.type === ScheduleType.PERIODICAL ? schedule.value : undefined,
-    };
+    const scheduleValue = this.buildScheduleValue(schedule);
 
     return await this.prisma.$transaction(async trx => {
       const createdJob = await trx.job.create({
@@ -398,17 +415,7 @@ export class JobsService implements OnModuleDestroy {
   }
 
   async updateJob(job: Job, name: string | undefined, schedule: Schedule | undefined, functions: FunctionJob[] | undefined, functionsExecutionType: FunctionsExecutionType | undefined, status?: JobStatus) {
-    const scheduleValue: {
-      scheduleIntervalValue?: number;
-      scheduleOnTimeValue?: Date;
-      schedulePeriodicalValue?: string;
-    } | undefined = schedule
-      ? {
-          scheduleIntervalValue: schedule.type === ScheduleType.INTERVAL ? schedule.value : undefined,
-          scheduleOnTimeValue: schedule.type === ScheduleType.ON_TIME ? schedule.value : undefined,
-          schedulePeriodicalValue: schedule.type === ScheduleType.PERIODICAL ? schedule.value : undefined,
-        }
-      : undefined;
+    const scheduleValue = schedule ? this.buildScheduleValue(schedule) : undefined;
 
     try {
       return await this.prisma.$transaction(async trx => {
