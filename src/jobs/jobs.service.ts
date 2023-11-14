@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, JobStatus, ExecutionDto, JobExecutionStatus, Jobs } from '@poly/model';
+import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, JobStatus, ExecutionDto, JobExecutionStatus, Jobs, ExecutionFiltersDto } from '@poly/model';
 import { Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma-module/prisma.service';
 import { FunctionService } from 'function/function.service';
@@ -521,10 +521,11 @@ export class JobsService implements OnModuleDestroy {
     });
   }
 
-  async getExecutions(job: Job) {
+  async getExecutions(job: Job, query: ExecutionFiltersDto) {
     return this.prisma.jobExecution.findMany({
       where: {
         jobId: job.id,
+        status: query.status,
       },
       orderBy: {
         createdAt: 'desc',

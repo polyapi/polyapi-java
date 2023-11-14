@@ -1,6 +1,6 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { AuthRequest } from 'common/types';
-import { ConfigVariableName, CreateJobDto, FunctionJob, JobStatus, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
+import { ConfigVariableName, CreateJobDto, ExecutionFiltersDto, FunctionJob, JobStatus, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
 import { Environment } from '@prisma/client';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -81,10 +81,14 @@ export class JobsController {
 
   @Get(':id/executions')
   @UseGuards(PolyAuthGuard)
-  async getJobExecutions(@Req() req: AuthRequest, @Param('id') id: string) {
+  async getJobExecutions(@Req() req: AuthRequest, @Param('id') id: string, @Query(new ValidationPipe({
+    transform: true,
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  })) filters: ExecutionFiltersDto) {
     const job = await this.findJob(req.user.environment, id);
 
-    return (await this.service.getExecutions(job)).map(execution => this.service.toExecutionDto(execution));
+    return (await this.service.getExecutions(job, filters)).map(execution => this.service.toExecutionDto(execution));
   }
 
   @Get(':job/executions/:id')
