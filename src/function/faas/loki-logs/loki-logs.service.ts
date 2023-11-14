@@ -77,7 +77,7 @@ export class LokiLogsService implements FaasLogsService {
       The lines below correspond to Grafana's LogQL query language
     */
     const excludeByRegexOperator = '!~';
-    const excludeSystemLogsQuery = `${excludeByRegexOperator} "function-${functionId}-"`;
+    const excludeSystemLogsQuery = `${excludeByRegexOperator} "${this.getSystemLogsQueryRegex(functionId)}"`;
     const includeByRegexOperator = '|~';
     const makeCaseInsensitive = '(?i)';
     const getKeywordQuery = (keyword: string) => `${includeByRegexOperator} "${makeCaseInsensitive}${keyword}"`;
@@ -85,5 +85,9 @@ export class LokiLogsService implements FaasLogsService {
       ? `${excludeSystemLogsQuery} ${getKeywordQuery(keyword)}`
       : `${excludeSystemLogsQuery}`;
     return `{pod=~"function-${functionId}.*",container="user-container"} ${textContentQuery}`;
+  }
+
+  private getSystemLogsQueryRegex(functionId: string): string {
+    return `function-${functionId}-|Cached Poly library found|> http-handler@|> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js|^$`;
   }
 }
