@@ -96,7 +96,7 @@ export class JobsController {
   }
 
   private async checkFunctions(environment: Environment, functions: { id: string }[] = []) {
-    const [, notFoundFunctions] = await this.service.getJobFunctions(environment, functions);
+    const [, notFoundFunctions] = await this.functionService.retrieveFunctions(environment, functions);
 
     if (notFoundFunctions.length) {
       throw new BadRequestException(`Functions with ids ${notFoundFunctions.join(', ')} not found`);

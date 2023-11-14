@@ -1904,6 +1904,28 @@ export class FunctionService implements OnModuleInit {
     return this.faasService.getFunctionName(customFunction.id);
   }
 
+  /**
+   * Retrieve functions.
+   * Second element from array are not found functions.
+   */
+  async retrieveFunctions(environment: Environment, jobFunctions: { id: string }[] = []): Promise<[Array<CustomFunction>, Array<string>]> {
+    const ids = jobFunctions.map(({ id }) => id);
+
+    const customFunctions = await this.getServerFunctions(environment.id, undefined, undefined, ids);
+
+    const notFoundFunctions: string[] = [];
+
+    if (customFunctions.length !== jobFunctions.length) {
+      for (const jobFunction of jobFunctions) {
+        if (!customFunctions.find(currentFunction => currentFunction.id === jobFunction.id || currentFunction.visibility === Visibility.Tenant)) {
+          notFoundFunctions.push(jobFunction.id);
+        }
+      }
+    }
+
+    return [customFunctions, notFoundFunctions];
+  }
+
   private filterDisabledValues<T extends PostmanVariableEntry>(values: T[]) {
     return values.filter(({ disabled }) => !disabled);
   }

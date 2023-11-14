@@ -32,6 +32,8 @@ export class JobsService implements OnModuleDestroy {
     throw new Error('Missing schedule type');
   }
 
+  // TODO: CHEQUEAR SI EL SUBPROCESO ESTA ESUCHANDO HANDLERS TAMBIEN.
+
   private async addJobToQueue(job: Job): Promise<Bull.Job<Job>> {
     const schedule = this.getScheduleInfo(job);
 
@@ -122,7 +124,7 @@ export class JobsService implements OnModuleDestroy {
     this.logger.debug(`Removed job "${job.name}" with id "${job.id}" from queue.`);
   }
 
-  @Process(JOB_PREFIX)
+  // @Process(JOB_PREFIX)
   private async processJob(queueJob: Bull.Job<Job>) {
     const job = queueJob.data;
 
@@ -152,7 +154,7 @@ export class JobsService implements OnModuleDestroy {
 
     const functions = JSON.parse(job.functions) as FunctionJob[];
 
-    const [customFunctions, notFoundFunctions] = await this.getJobFunctions(environment, functions);
+    const [customFunctions, notFoundFunctions] = await this.functionService.retrieveFunctions(environment, functions);
 
     if (notFoundFunctions.length) {
       throw new Error(`Job won't be executed since functions ${notFoundFunctions.join(', ')} are not found.`);
@@ -224,12 +226,10 @@ export class JobsService implements OnModuleDestroy {
       }
     } */
 
-    /* const response = await lastValueFrom(
+    const response = await lastValueFrom(
       this.httpService
         .get('http://localhost:3000/delay'),
-    ); */
-
-    throw new UnauthorizedException('foo');
+    );
 
     // const executionDuration = ((Date.now() - executionStart) / 1000);
 
@@ -237,10 +237,6 @@ export class JobsService implements OnModuleDestroy {
 
     // return {};
   }
-
-  @OnQueueCompleted({
-    name: JOB_PREFIX,
-  })
 
   private getQueueJobDurationInSeconds(processedOn?: number, finishedOn?: number): number | null {
     let duration: number | null = null;
@@ -252,6 +248,9 @@ export class JobsService implements OnModuleDestroy {
     return duration;
   }
 
+  @OnQueueCompleted({
+    name: JOB_PREFIX,
+  })
   private async onQueueCompleted(queueJob: Bull.Job<Job>, results: JobFunctionCallResult[]) {
     const job = queueJob.data as Job;
 
@@ -279,7 +278,6 @@ export class JobsService implements OnModuleDestroy {
   private async saveExecutionDetails(job: Job, status: JobExecutionStatus, results: JobFunctionCallResult[], processedOn?: number, finishedOn?: number) {
     try {
       await this.prisma.$transaction(async trx => {
-        // Check if job still exists, if not, avoid saving execution info.
         const savedJob = await trx.job.findFirst({
           where: {
             id: job.id,
@@ -293,8 +291,8 @@ export class JobsService implements OnModuleDestroy {
               functions: job.functions,
               type: job.functionsExecutionType,
               status,
-              processedOn,
-              finishedOn,
+              ...(processedOn ? { processedOn: new Date(processedOn) } : null),
+              ...(finishedOn ? { finishedOn: new Date(finishedOn) } : null),
               schedule: JSON.stringify(this.getScheduleInfo(job)),
             },
           });
@@ -344,35 +342,13 @@ export class JobsService implements OnModuleDestroy {
     });
   }
 
-  /**
-   * Get custom functions for job execution.
-   * Second element from array are not found functions.
-   */
-  async getJobFunctions(environment: Environment, jobFunctions: { id: string }[] = []): Promise<[Array<CustomFunction>, Array<string>]> {
-    const ids = jobFunctions.map(({ id }) => id);
-
-    const customFunctions = await this.functionService.getServerFunctions(environment.id, undefined, undefined, ids);
-
-    const notFoundFunctions: string[] = [];
-
-    if (customFunctions.length !== jobFunctions.length) {
-      for (const jobFunction of jobFunctions) {
-        if (!customFunctions.find(currentFunction => currentFunction.id === jobFunction.id || currentFunction.visibility === Visibility.Tenant)) {
-          notFoundFunctions.push(jobFunction.id);
-        }
-      }
-    }
-
-    return [customFunctions, notFoundFunctions];
-  }
-
   public toExecutionDto(execution: JobExecution): ExecutionDto {
     return {
       id: execution.id,
       createdAt: execution.createdAt,
       jobId: execution.jobId,
       results: JSON.parse(execution.results),
-      duration: this.getQueueJobDurationInSeconds(execution.processedOn || undefined, execution.finishedOn || undefined),
+      duration: this.getQueueJobDurationInSeconds(execution.processedOn ? execution.processedOn.getTime() : undefined, execution.finishedOn ? execution.finishedOn.getTime() : undefined),
       functions: JSON.parse(execution.functions),
       type: execution.type as FunctionsExecutionType,
       status: execution.status as JobExecutionStatus,
