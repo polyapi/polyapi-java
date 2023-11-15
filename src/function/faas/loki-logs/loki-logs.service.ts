@@ -88,6 +88,6 @@ export class LokiLogsService implements FaasLogsService {
   }
 
   private getSystemLogsQueryRegex(functionId: string): string {
-    return `function-${functionId}-|Cached Poly library found|> http-handler@|> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js|^$`;
+    return `function-${functionId}-|Cached Poly library found|> http-handler@|> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js|stderr F $|stdout F $|^$`;
   }
 }
