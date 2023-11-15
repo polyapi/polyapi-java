@@ -1484,7 +1484,7 @@ export class FunctionService implements OnModuleInit {
       `Updating custom function ${id} with name ${name}, context ${context}, description ${description}`,
     );
 
-    if (customFunction.serverSide && (sleepAfter != null || sleep != null)) {
+    if (customFunction.serverSide && (sleepAfter != null || sleep != null || logsEnabled != null)) {
       await this.faasService.updateFunction(
         customFunction.id,
         customFunction.environment.tenantId,
