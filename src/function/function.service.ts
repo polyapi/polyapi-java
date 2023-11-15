@@ -1526,10 +1526,7 @@ export class FunctionService implements OnModuleInit {
       },
     });
 
-    if (
-      customFunction.serverSide &&
-      (customFunction.sleepAfter != null || customFunction.sleep != null || customFunction.logsEnabled != null)
-    ) {
+    if (customFunction.serverSide) {
       this.faasService.deleteFunction(id, environment.tenantId, environment.id).catch((err) => {
         this.logger.error(err, `Something failed when removing custom function ${id}.`);
       });
