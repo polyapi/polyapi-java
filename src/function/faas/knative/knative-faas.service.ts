@@ -411,7 +411,7 @@ export class KNativeFaasService implements FaasService {
       let attempts = 0;
       let namespacedCustomObjectReady = false;
 
-      while (attempts <= 2) {
+      while (attempts <= 2 && !namespacedCustomObjectReady) {
         try {
           await sleep(3000);
 
