@@ -2,6 +2,11 @@ const poly = require('polyapi');
 const { CloudEvent } = require('cloudevents');
 
 const handle = async (context, body) => {
+
+  if(context.readinessProbe) {
+    return 1;
+  }
+
   const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
   const args = context.cloudevent ? (Array.isArray(body.data) ? body.data : [body.data]) : body.args;
   const processedArgs = args.map(arg => arg === '$poly-undefined-value' ? undefined : arg);
