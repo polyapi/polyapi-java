@@ -44,12 +44,11 @@ export class LokiLogsService implements FaasLogsService {
   }
 
   private normalizeFaasLogs(rawLogsData): FunctionLog[] {
-    const logValues = rawLogsData.result
-      .flatMap(({ values, stream }) => values.map((logEntry) => ([...logEntry, stream.stream]))) as Array<[string, string, string]>;
-    return logValues.map(([nanoSecondsTime, logText, stream]) => ({
+    const logValues = rawLogsData.result.flatMap(({ values }) => values) as Array<[string, string]>;
+    return logValues.map(([nanoSecondsTime, logText]) => ({
       timestamp: BigInt(nanoSecondsTime),
-      value: logText,
-      level: stream === 'stderr' ? 'Error/Warning' : 'Info',
+      value: this.getCleanLogContent(logText),
+      level: logText.includes('stderr F') ? 'Error/Warning' : 'Info',
     }));
   }
 
@@ -89,5 +88,19 @@ export class LokiLogsService implements FaasLogsService {
 
   private getSystemLogsQueryRegex(functionId: string): string {
     return `function-${functionId}-|Cached Poly library found|> http-handler@|> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js|stderr F $|stdout F $|^$`;
+  }
+
+  private getCleanLogContent(logContent: string): string {
+    const removeStreamInfo = (stream: 'stderr' | 'stdout') => {
+      const [, cleanLogContent] = logContent.split(` ${stream} F `);
+      return cleanLogContent;
+    };
+    if (logContent.includes('stderr F')) {
+      return removeStreamInfo('stderr');
+    }
+    if (logContent.includes('stdout F')) {
+      return removeStreamInfo('stdout');
+    }
+    return logContent;
   }
 }
