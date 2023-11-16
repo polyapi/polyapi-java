@@ -3,6 +3,10 @@
 {{/each}}
 
 declare module vari {
+  type GetListIndices<T extends readonly any[]> = Exclude<keyof T, keyof []>;
+  type ObjectPaths<T extends Record<string, any>, K extends keyof T = keyof T> = K extends any ? T[K] extends readonly any[] ? `${K & string}` | `${K & string}.\$${ObjectPaths<T[K], GetListIndices<T[K]>>}`: T[K] extends Record<string, any> ? `${K & string}` | `${K & string}.${ObjectPaths<T[K]>}`: `${K & string}`: never;
+  type PathValue<T> = T extends Record<string, any> ? ObjectPaths<T> : string | undefined;
+
   type UnregisterOnUpdateHandler = () => void;
   interface VariableChangeEvent<T> {
     type: 'update' | 'delete';

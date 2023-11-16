@@ -29,7 +29,7 @@ export const isPlainObjectPredicate = (value: unknown): value is object => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
-export const toTypeDeclaration = (type: PropertyType, synchronous = true) => {
+export const toTypeDeclaration = (type: PropertyType, synchronous = true): string => {
   const wrapInPromiseIfNeeded = (code: string) => (synchronous ? code : `Promise<${code}>`);
 
   switch (type.kind) {

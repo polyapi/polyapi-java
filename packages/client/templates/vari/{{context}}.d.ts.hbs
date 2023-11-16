@@ -42,7 +42,7 @@ declare module vari {
          * @example
          * await poly.products.addItem(vari.products.shopId.inject(), 'Toy car', 1)
          */
-        inject: (path?: string) => {{#if isObjectType}}any{{else}}{{{type}}}{{/if}};
+        inject: (path: PathValue<{{constType}}>) => {{#if isObjectType}}any{{else}}{{{type}}}{{/if}};
       }
     {{/each}}
     get: () => Promise<{{interfaceName}}Values>;
