@@ -2,7 +2,7 @@ import { Logger, HttpException, HttpStatus, InternalServerErrorException } from 
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { catchError, lastValueFrom, map } from 'rxjs';
-import { getDateFromNanoseconds } from '@poly/common/utils';
+import { getDateFromNanoseconds, getNanosecondsFromDate, getDateMinusXHours } from '@poly/common/utils';
 import { FunctionLog } from '@poly/model';
 import { FaasLogsService } from '../faas.service';
 
@@ -14,9 +14,10 @@ export class LokiLogsService implements FaasLogsService {
   async getLogs(functionId: string, keyword: string): Promise<FunctionLog[]> {
     this.logger.debug(`Getting logs for function with id ${functionId}`);
     const logQuery = this.constructQuery(functionId, keyword);
+    const dateMinus24hs = getDateMinusXHours(new Date(), 24);
     return await lastValueFrom(
       this.httpService
-        .get(`${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}`)
+        .get(`${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}&start=${getNanosecondsFromDate(dateMinus24hs)}`)
         .pipe(
           map((response) => response.data as {status: string; data: any}),
           map(({ status, data }) => {
