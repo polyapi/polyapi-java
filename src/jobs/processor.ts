@@ -2,12 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppProcessorModule } from './app/app-processor.module';
 import Bull, { DoneCallback } from 'bull';
 import { PrismaService } from 'prisma-module/prisma.service';
-import { Job } from '@prisma/client';
+import { CustomFunction, Job } from '@prisma/client';
 import { FunctionJob, FunctionsExecutionType } from '@poly/model';
 import { FunctionService } from 'function/function.service';
-import { HttpService } from '@nestjs/axios';
-import { lastValueFrom } from 'rxjs';
-import { ConsoleLogger, Logger } from '@nestjs/common';
+import { ConsoleLogger, HttpStatus } from '@nestjs/common';
 import { JOB_DOES_NOT_EXIST_ANYMORE } from './constants';
 
 type JobFunctionCallResult = { statusCode: number | undefined, id: string, fatalErr: boolean };
@@ -56,7 +54,6 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
 
     const prisma = appProcessor.get(PrismaService);
     const functionService = appProcessor.get(FunctionService);
-    const httpService = appProcessor.get(HttpService);
 
     const [environment, jobStillExist] = await Promise.all([
       prisma.environment.findFirst({
@@ -93,7 +90,7 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
 
     const results: JobFunctionCallResult[] = [];
 
-    /* for (const functionExecution of functions) {
+    for (const functionExecution of functions) {
       const customFunction = customFunctions.find(customFunction => customFunction.id === functionExecution.id) as CustomFunction;
 
       const args = [functionExecution.eventPayload || {}, functionExecution.headersPayload || {}, functionExecution.paramsPayload || {}];
@@ -151,18 +148,7 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
           });
         }
       }
-    } */
-
-    const response = await lastValueFrom(
-      httpService
-        .get('http://localhost:3000/delay'),
-    );
-
-    // const executionDuration = ((Date.now() - executionStart) / 1000);
-
-    // return results;
-
-    // return {};
+    }
 
     cb(null, results);
   } catch (err) {

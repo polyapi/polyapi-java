@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, JobStatus, ExecutionDto, JobExecutionStatus, Jobs, ExecutionFiltersDto } from '@poly/model';
+import { FunctionJob, JobDto, FunctionsExecutionType, Schedule, ScheduleType, JobStatus, ExecutionDto, JobExecutionStatus, ExecutionFiltersDto } from '@poly/model';
 import { Environment, Job, JobExecution } from '@prisma/client';
 import { PrismaService } from 'prisma-module/prisma.service';
 import { FunctionService } from 'function/function.service';
