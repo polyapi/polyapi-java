@@ -3,9 +3,15 @@
 {{/each}}
 
 declare module vari {
-  type GetListIndices<T extends readonly any[]> = Exclude<keyof T, keyof []>;
-  type ObjectPaths<T extends Record<string, any>, K extends keyof T = keyof T> = K extends any ? T[K] extends readonly any[] ? `${K & string}` | `${K & string}.\$${ObjectPaths<T[K], GetListIndices<T[K]>>}`: T[K] extends Record<string, any> ? `${K & string}` | `${K & string}.${ObjectPaths<T[K]>}`: `${K & string}`: never;
-  type PathValue<T> = T extends Record<string, any> ? ObjectPaths<T> : string | undefined;
+  type ArrayChain<K extends string, PrevChain extends string = ''> = `${PrevChain}[${K}]`;
+  type ObjChain<Key extends string, PrevChain extends string = '', RootLevel extends boolean = true> = `${PrevChain}${RootLevel extends true ? '' : '.'}${Key}`;
+  type Keys<T> = Exclude<keyof T, keyof [] | keyof string | keyof number>;
+
+  type PathValue<T extends Record<string, any>, PrevChain extends string = '', RootLevel extends boolean = true, K extends keyof T = Keys<T>> = K extends string ?
+      T extends readonly any[] ? ArrayChain<K, PrevChain> | PathValue<T[K],ArrayChain<K, PrevChain>, false> :
+      T extends Record<string, any> ? ObjChain<K, PrevChain, RootLevel> | PathValue<T[K], ObjChain<K, PrevChain, RootLevel>, false> :
+      `${K & string}`
+  : never;
 
   type UnregisterOnUpdateHandler = () => void;
   interface VariableChangeEvent<T> {
