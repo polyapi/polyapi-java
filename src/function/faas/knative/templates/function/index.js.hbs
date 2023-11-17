@@ -4,6 +4,7 @@ const { CloudEvent } = require('cloudevents');
 const handle = async (context, body) => {
   const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
   const args = context.cloudevent ? (Array.isArray(body.data) ? body.data : [body.data]) : body.args;
+  const processedArgs = args.map(arg => arg === '$poly-undefined-value' ? undefined : arg);
   const polyCustomPreset = {
     ...poly.polyCustom
   };
@@ -18,7 +19,7 @@ const handle = async (context, body) => {
   {{{code}}}
 
   try {
-    const result = await {{name}}(...args);
+    const result = await {{name}}(...processedArgs);
     const statusCode = polyCustom.responseStatusCode || 200;
 
     // revert polyCustom to preset values

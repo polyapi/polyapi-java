@@ -30,6 +30,8 @@ ROUTE_CMD_MAP = {
     "h": "help",
     "general": "general",
     "g": "general",
+    # special route for error testing
+    "error": "error",
 }
 
 

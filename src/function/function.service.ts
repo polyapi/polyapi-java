@@ -249,16 +249,6 @@ export class FunctionService implements OnModuleInit {
 
     const parsedAuth = JSON.parse(apiFunction.auth || '{}');
 
-    // const bodyContentType = this.getContentTypeHeaders(parsedBody);
-    const authHeaders = this.getAuthorizationHeaders((apiFunction.auth && JSON.parse(apiFunction.auth)) || null);
-
-    for (const [key, value] of Object.entries(authHeaders)) {
-      headers.push({
-        key,
-        value,
-      });
-    }
-
     const [returnType, returnTypeSchema] = this.getReturnTypeData(apiFunction.responseType);
 
     return {
@@ -1494,7 +1484,7 @@ export class FunctionService implements OnModuleInit {
       `Updating custom function ${id} with name ${name}, context ${context}, description ${description}`,
     );
 
-    if (customFunction.serverSide && (sleepAfter != null || sleep != null)) {
+    if (customFunction.serverSide && (sleepAfter != null || sleep != null || logsEnabled != null)) {
       await this.faasService.updateFunction(
         customFunction.id,
         customFunction.environment.tenantId,
@@ -1741,7 +1731,8 @@ export class FunctionService implements OnModuleInit {
     this.logger.debug(`Executing server function ${customFunction.id}...`);
 
     const functionArguments = JSON.parse(customFunction.arguments || '[]');
-    const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => args[arg.key]);
+
+    const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => typeof args[arg.key] === 'undefined' ? '$poly-undefined-value' : args[arg.key]);
 
     try {
       const result = await this.faasService.executeFunction(customFunction.id, executionEnvironment.tenantId, executionEnvironment.id, argumentsList, headers);

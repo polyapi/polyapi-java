@@ -86,35 +86,52 @@ def function_completion() -> Response:
 
     language = data.get("language", "")
 
-    resp: Union[Generator, str] = ""  # either str or streaming completion type
-    if route == "function":
-        resp = get_completion_answer(
-            user_id, conversation.id, environment_id, question, prev_msgs, language
+    try:
+        resp: Union[Generator, str] = ""  # either str or streaming completion type
+        if route == "function":
+            resp = get_completion_answer(
+                user_id, conversation.id, environment_id, question, prev_msgs, language
+            )
+        elif route == "general":
+            resp = general_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
+        elif route == "help":
+            resp = help_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
+        elif route == "tenant_documentation":
+            resp = documentation_question(
+                user_id,
+                conversation.id,
+                question,
+                prev_msgs,
+                docs_tenant_id=user.tenantId,
+                openai_tenant_id=user.tenantId,
+            )
+        elif route == "poly_documentation":
+            resp = documentation_question(
+                user_id,
+                conversation.id,
+                question,
+                prev_msgs,
+                docs_tenant_id=None,
+                openai_tenant_id=user.tenantId,
+            )
+        elif route == "error":
+            # mock error for testing
+            raise RateLimitError("That model is currently overloaded...")
+        else:
+            resp = "unexpected category: {route}"
+    except Exception as e:
+        if isinstance(e, OpenAIError):
+            msg = handle_open_ai_error(e)
+        else:
+            msg = str(e)
+
+        err_data = {"message": msg}
+
+        return Response(
+            f"event:error\ndata:{json.dumps(err_data)}\n\n",
+            status=200,  # HACK arbitrary error code
+            mimetype="text/event-stream",
         )
-    elif route == "general":
-        resp = general_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
-    elif route == "help":
-        resp = help_question(user_id, conversation.id, question, prev_msgs)  # type: ignore
-    elif route == "tenant_documentation":
-        resp = documentation_question(
-            user_id,
-            conversation.id,
-            question,
-            prev_msgs,
-            docs_tenant_id=user.tenantId,
-            openai_tenant_id=user.tenantId,
-        )
-    elif route == "poly_documentation":
-        resp = documentation_question(
-            user_id,
-            conversation.id,
-            question,
-            prev_msgs,
-            docs_tenant_id=None,
-            openai_tenant_id=user.tenantId,
-        )
-    else:
-        resp = "unexpected category: {route}"
 
     def generate():
         if isinstance(resp, str):
@@ -271,7 +288,13 @@ def error_rate_limit():
 
 
 @bp.errorhandler(OpenAIError)
-def handle_open_ai_error(e):
+def openai_error_view(e):
+    # now you're handling non-HTTP exceptions only
+    msg = handle_open_ai_error(e)
+    return msg, 500
+
+
+def handle_open_ai_error(e: OpenAIError) -> str:
     # now you're handling non-HTTP exceptions only
     from flask import current_app
 
@@ -284,7 +307,7 @@ def handle_open_ai_error(e):
         # just pass along whatever
         msg = "OpenAI Error: {}".format(str(e))
     current_app.log_exception(msg)
-    return msg, 500
+    return msg
 
 
 @bp.errorhandler(400)

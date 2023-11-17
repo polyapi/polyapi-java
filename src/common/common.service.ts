@@ -75,6 +75,7 @@ export class CommonService {
       lang: 'json-schema',
       inputData,
       indentation: '  ',
+      inferEnums: false,
     });
     const schema = JSON.parse(lines.join('\n'));
 

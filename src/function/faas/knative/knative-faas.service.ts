@@ -142,7 +142,7 @@ export class KNativeFaasService implements FaasService {
 
     this.logger.debug(`Executing server function '${id}'...`);
     this.logger.verbose(`Calling ${functionUrl}`);
-    this.logger.verbose({ args });
+    this.logger.verbose({ args: JSON.stringify(args) });
     return await lastValueFrom(
       this.http
         .post(`${functionUrl}`, { args }, { headers: this.filterPassThroughHeaders(headers) })

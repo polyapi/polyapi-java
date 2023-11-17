@@ -86,7 +86,7 @@ class T(DbTestCase):
         resp = self.client.get("/function-completion", query_string=mock_input)
 
         # test
-        self.assertStatus(resp, 500)
+        self.assertStatus(resp, 200)
         self.assertEqual(get_answer.call_count, 1)
 
     @patch("app.description.openai.ChatCompletion.create")

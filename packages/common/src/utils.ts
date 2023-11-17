@@ -92,4 +92,11 @@ export const getOneDayLaterDate = () => {
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const getDateFromNanoseconds = (nanoSecondsTime: number): Date => new Date(nanoSecondsTime / 1000000);
+export const getDateFromNanoseconds = (nanoSecondsTime: bigint): Date => new Date(Number(nanoSecondsTime) / 1000000);
+
+export const getNanosecondsFromDate = (date: Date): string => `${date.getTime() * 1000000}`;
+
+export const getDateMinusXHours = (date: Date, hours: number): Date => {
+  date.setHours(date.getHours() - hours);
+  return date;
+};
