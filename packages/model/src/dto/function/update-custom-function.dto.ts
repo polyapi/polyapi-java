@@ -26,9 +26,6 @@ export class UpdateCustomFunctionDto {
   @IsOptional()
   arguments?: ArgumentsMetadata;
 
-  @IsOptional()
-  @IsBoolean()
-  logsEnabled?: boolean;
 }
 
 export class UpdateClientCustomFunctionDto extends UpdateCustomFunctionDto {

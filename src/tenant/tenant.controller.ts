@@ -520,9 +520,9 @@ export class TenantController {
     @Body() data: CreateEnvironmentDto,
   ): Promise<EnvironmentDto> {
     const tenant = await this.findTenant(tenantId);
-    const { name, logsDefault = false } = data;
+    const { name } = data;
     await this.authService.checkTenantAccess(tenantId, req.user);
-    return this.environmentService.toDto(await this.environmentService.create(tenant.id, name, logsDefault));
+    return this.environmentService.toDto(await this.environmentService.create(tenant.id, name, false));
   }
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin, Role.Admin]))
@@ -546,9 +546,9 @@ export class TenantController {
     @Body() data: UpdateEnvironmentDto,
   ): Promise<EnvironmentDto> {
     const environment = await this.findEnvironment(tenantId, environmentId);
-    const { name, logsDefault = false } = data;
+    const { name } = data;
     await this.authService.checkTenantAccess(tenantId, req.user);
-    return this.environmentService.toDto(await this.environmentService.update(environment, name, logsDefault));
+    return this.environmentService.toDto(await this.environmentService.update(environment, name, false));
   }
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin, Role.Admin]))

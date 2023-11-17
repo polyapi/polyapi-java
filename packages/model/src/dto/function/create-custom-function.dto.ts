@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
 import { ContextIdentifier, NameIdentifier } from '../validators';
 
 export class CreateCustomFunctionDto {
@@ -21,9 +21,6 @@ export class CreateCustomFunctionDto {
   @IsOptional()
   typeSchemas?: Record<string, any>;
 
-  @IsOptional()
-  @IsBoolean()
-  logsEnabled?: boolean;
 }
 
 export class CreateClientCustomFunctionDto extends CreateCustomFunctionDto {

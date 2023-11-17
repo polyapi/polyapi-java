@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Header,
   Headers,
@@ -418,7 +417,7 @@ export class FunctionController {
   @Post('/server')
   async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateServerCustomFunctionDto): Promise<CreateServerCustomFunctionResponseDto> {
     const { environment } = req.user;
-    const { context = '', name, description = '', code, typeSchemas = {}, logsEnabled = environment.logsDefault } = data;
+    const { context = '', name, description = '', code, typeSchemas = {} } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
@@ -433,7 +432,7 @@ export class FunctionController {
         code,
         typeSchemas,
         req.user.key,
-        logsEnabled,
+        false,
         () => this.checkFunctionsLimit(req.user.tenant, 'creating custom server function'),
       );
       return this.service.customServerFunctionResponseDto(customFunction);
@@ -488,7 +487,6 @@ export class FunctionController {
       arguments: argumentsMetadata,
       sleep,
       sleepAfter,
-      logsEnabled,
     } = data;
     const serverFunction = await this.service.findServerFunction(id, true);
     if (!serverFunction) {
@@ -513,7 +511,7 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, false, Permission.CustomDev);
 
     return this.service.customFunctionToDetailsDto(
-      await this.service.updateServerFunction(serverFunction, name, context, description, visibility, argumentsMetadata, enabled, sleep, sleepAfter, logsEnabled),
+      await this.service.updateServerFunction(serverFunction, name, context, description, visibility, argumentsMetadata, enabled, sleep, sleepAfter, false),
     );
   }
 
@@ -528,27 +526,6 @@ export class FunctionController {
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user, false, Permission.CustomDev);
 
     await this.service.deleteCustomFunction(id, req.user.environment);
-  }
-
-  @UseGuards(PolyAuthGuard)
-  @Get('/server/:id/logs')
-  async getServerFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query('keyword') keyword): Promise<any> {
-    const serverFunction = await this.service.findServerFunction(id);
-    if (!serverFunction) {
-      throw new NotFoundException(`Function with ID ${id} not found.`);
-    }
-
-    if (req.user.environment.id !== serverFunction.environmentId) {
-      throw new ForbiddenException(`You do not have access to the logs of the function with ID ${id}.`);
-    }
-
-    if (!serverFunction.logsEnabled) {
-      throw new BadRequestException(`The function with ID ${id} does not have logging enabled. You can enable the logs by updating the function through the API (PATCH) or re-deploying the function through the Poly CLI.`);
-    }
-
-    await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user);
-
-    return await this.service.getServerFunctionLogs(id, keyword, serverFunction.logsEnabled);
   }
 
   @PerfLog(PerfLogType.ServerFunctionExecution)
