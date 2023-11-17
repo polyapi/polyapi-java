@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { AuthRequest } from 'common/types';
 import { ConfigVariableName, CreateJobDto, ExecutionFiltersDto, FunctionJob, JobStatus, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
 import { Environment } from '@prisma/client';
@@ -28,8 +28,7 @@ export class JobsController {
       status = JobStatus.ENABLED,
     } = data;
 
-    // await this.checkSchedule(req.user.environment, schedule);
-    await this.checkFunctions(req.user.environment, data.functions);
+    await Promise.all([this.checkSchedule(req.user.environment, schedule), this.checkFunctions(req.user.environment, data.functions)]);
 
     const functionsJob = this.processJobFunctions(functions);
 
@@ -56,7 +55,11 @@ export class JobsController {
       name,
       status,
     } = data;
-    // await this.checkSchedule(req.user.environment, schedule);
+
+    if (schedule) {
+      await this.checkSchedule(req.user.environment, schedule);
+    }
+
     await this.checkFunctions(req.user.environment, data.functions);
 
     const job = await this.findJob(req.user.environment, id);
@@ -108,11 +111,9 @@ export class JobsController {
   }
 
   private async checkSchedule(environment: Environment, schedule: Schedule) {
-    const jobConfig = await this.configVariableService.getEffectiveValue<Jobs>(ConfigVariableName.Jobs, environment.tenantId, environment.id);
-
-    if (!jobConfig) {
-      throw new ConflictException('Jobs config variable is not set in server.');
-    }
+    const jobConfig = (await this.configVariableService.getEffectiveValue<Jobs>(ConfigVariableName.Jobs, environment.tenantId, environment.id)) || {
+      minimumIntervalTimeBetweenExecutions: 5,
+    };
 
     const { minimumIntervalTimeBetweenExecutions } = jobConfig;
 

@@ -46,7 +46,7 @@ const appProcessorPromise = NestFactory.createApplicationContext(AppProcessorMod
 
 export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
   try {
-    const job = queueJob.data;
+    let job = queueJob.data;
 
     logger.debug(`Processing job "${job.name}" with id "${job.id}"`);
 
@@ -55,7 +55,7 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
     const prisma = appProcessor.get(PrismaService);
     const functionService = appProcessor.get(FunctionService);
 
-    const [environment, jobStillExist] = await Promise.all([
+    const [environment, jobInDb] = await Promise.all([
       prisma.environment.findFirst({
         where: {
           id: job.environmentId,
@@ -71,10 +71,14 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
       throw new Error(`Environment not found for job "${job.name}" with id "${job.id}".`);
     }
 
-    if (!jobStillExist) {
+    if (!jobInDb) {
       logger.error('Job does not exist anymore in our database, execution skipped.');
       return cb(null, JOB_DOES_NOT_EXIST_ANYMORE);
     }
+
+    job = jobInDb;
+
+    logger.debug(`Executing job in "${job.functionsExecutionType}" mode...`);
 
     const functions = JSON.parse(job.functions) as FunctionJob[];
 
@@ -84,7 +88,7 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
       throw new Error(`Job won't be executed since functions ${notFoundFunctions.join(', ')} are not found.`);
     }
 
-    const parallelExecutions = job.functionsExecutionType === FunctionsExecutionType.SEQUENTIAL;
+    const parallelExecutions = job.functionsExecutionType === FunctionsExecutionType.PARALLEL;
 
     const executions: ReturnType<FunctionService['executeServerFunction']>[] = [];
 
@@ -102,8 +106,8 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
           callResult = await functionService.executeServerFunction(customFunction, environment, args);
         } catch (err) {
           results.push({
-            statusCode: undefined,
             id: functionExecution.id,
+            statusCode: undefined,
             fatalErr: true,
           });
           logger.error(`Fatal error executing server function "${functionExecution.id}". Stopped sequential execution of job "${job.name}" with id "${job.id}"`, err);
@@ -111,8 +115,8 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
         }
 
         results.push({
-          statusCode: callResult?.statusCode,
           id: functionExecution.id,
+          statusCode: callResult?.statusCode,
           fatalErr: false,
         });
 
@@ -136,15 +140,15 @@ export default async function (queueJob: Bull.Job<Job>, cb: DoneCallback) {
 
         if (result.status === 'fulfilled') {
           results.push({
-            statusCode: result.value?.statusCode,
             id,
+            statusCode: result.value?.statusCode,
             fatalErr: false,
           });
         } else {
           results.push({
             id,
-            fatalErr: true,
             statusCode: undefined,
+            fatalErr: true,
           });
         }
       }
