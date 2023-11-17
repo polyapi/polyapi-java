@@ -98,10 +98,15 @@ const logger = new Logger('AppModule');
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        console.log('redis host: ', configService.redisUrl.split('redis://')[1].split(':')[0]);
+        const password = configService.redisPassword;
         return {
           redis: {
             host: configService.redisUrl.split('redis://')[1].split(':')[0],
+            ...(password
+              ? {
+                  password,
+                }
+              : null),
           },
         };
       },
