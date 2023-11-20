@@ -1,4 +1,4 @@
-# Java Client Library (beta)
+# Java Client Library
 ### v0.1.5
 
 ## Introduction
