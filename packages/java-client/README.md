@@ -11,7 +11,7 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
 
 ## Setting up project
 1. Create a new Java Maven project
-4. Add the following to your project's `pom.xml` to add the dependencies:
+2. Add the following to your project's `pom.xml` to add the dependencies:
 ```xml
 <properties>
   <poly.version>0.1.5</poly.version>
@@ -36,7 +36,7 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
             <goal>generate-sources</goal>
           </goals>
           <configuration>
-            <apiBaseUrl>https://develop-k8s.polyapi.io</apiBaseUrl>
+            <apiBaseUrl>https://na1.polyapi.io</apiBaseUrl>
             <apiKey>{API_KEY}</apiKey>
           </configuration>
         </execution>
@@ -66,7 +66,7 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
 ```
 Make sure you replace `{API_KEY}` with valid API key to access the Poly API.
 
-5. Run `mvn clean compile` to generate the Poly functions and compile the project (this needs to be done everytime you update your Poly functions)
+3. Run `mvn clean compile` to generate the Poly functions and compile the project (this needs to be done everytime you update your Poly functions)
 
 ## Using the library
 ### Poly Functions
