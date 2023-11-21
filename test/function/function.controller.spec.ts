@@ -93,6 +93,10 @@ describe('FunctionController', () => {
         expect.anything(),
         expect.anything(),
         expect.anything(),
+        undefined,
+        undefined,
+        undefined,
+        expect.anything(),
         expectedValueForLogsEnabled,
         expect.anything(),
       );
