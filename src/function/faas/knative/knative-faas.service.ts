@@ -338,6 +338,9 @@ export class KNativeFaasService implements FaasService {
                 readinessProbe: {
                   exec: {
                     command: [
+                      'pwd',
+                      `cd /workspace/function/${functionPath}`,
+                      'pwd',
                       `
                       node -e "require('./index.js')({ readinessProbe: true }).then(result => result === 1 ? process.exit(0) : process.exit(1)).catch(() => process.exit(1));"
 
@@ -354,6 +357,13 @@ export class KNativeFaasService implements FaasService {
                   },
                   initialDelaySeconds: 3,
                   periodSeconds: 3,
+                },
+                startupProbe: {
+                  exec: {
+                    command: ['pwd'],
+                  },
+                  failureThreshold: 3,
+                  periodSeconds: 23,
                 },
                 image: `${imageName}`,
                 volumeMounts: [
