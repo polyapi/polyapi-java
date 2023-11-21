@@ -38,10 +38,15 @@ describe('CommonService', () => {
       const serverVersion = '1.1.0';
       expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
     });
-    it('should NOT throw when the client version is not present (undefined)', () => {
+    it('should NOT throw when the client version is not present (undefined) and not required', () => {
       const clientVersion = undefined;
       const serverVersion = '0.1.0';
-      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).toThrowError();
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion)).not.toThrowError();
+    });
+    it('should throw when the client version is not present (undefined) and required', () => {
+      const clientVersion = undefined;
+      const serverVersion = '0.1.0';
+      expect(() => commonService.checkPolyTrainingScriptVersion(clientVersion, serverVersion, true)).toThrowError();
     });
     it('should throw when the minor versions differ', () => {
       const clientVersion = '1.1.0';

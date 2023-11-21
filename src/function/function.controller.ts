@@ -117,7 +117,7 @@ export class FunctionController {
     } = data;
 
     const clientScriptVersion = req.headers[TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
-    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion);
+    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion, true);
 
     const environmentId = req.user.environment.id;
 
@@ -308,7 +308,17 @@ export class FunctionController {
   @UseGuards(PolyAuthGuard)
   @Post('/client')
   async createClientFunction(@Req() req: AuthRequest, @Body() data: CreateClientCustomFunctionDto): Promise<FunctionDetailsDto> {
-    const { context = '', name, description = '', code, typeSchemas = {} } = data;
+    const {
+      context = '',
+      name,
+      description = '',
+      code,
+      language = 'javascript',
+      typeSchemas = {},
+      returnType,
+      returnTypeSchema,
+      arguments: args,
+    } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
@@ -320,7 +330,11 @@ export class FunctionController {
           name,
           description,
           code,
+          language,
           typeSchemas,
+          returnType,
+          returnTypeSchema,
+          args,
           () => this.checkFunctionsLimit(req.user.tenant, 'creating custom client function'),
         ),
       );
@@ -418,7 +432,18 @@ export class FunctionController {
   @Post('/server')
   async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateServerCustomFunctionDto): Promise<CreateServerCustomFunctionResponseDto> {
     const { environment } = req.user;
-    const { context = '', name, description = '', code, typeSchemas = {}, logsEnabled = environment.logsDefault } = data;
+    const {
+      context = '',
+      name,
+      description = '',
+      code,
+      language = 'javascript',
+      typeSchemas = {},
+      returnType,
+      returnTypeSchema,
+      arguments: args,
+      logsEnabled = environment.logsDefault,
+    } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 
@@ -431,7 +456,11 @@ export class FunctionController {
         name,
         description,
         code,
+        language,
         typeSchemas,
+        returnType,
+        returnTypeSchema,
+        args,
         req.user.key,
         logsEnabled,
         () => this.checkFunctionsLimit(req.user.tenant, 'creating custom server function'),

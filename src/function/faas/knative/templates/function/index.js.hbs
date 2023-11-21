@@ -1,11 +1,29 @@
 const poly = require('polyapi');
 const { CloudEvent } = require('cloudevents');
 
+const patchConsoleMethodWithLoggerData = (method, logLevel, doLog) => {
+  const originalMethod = console[method];
+  console[method] = function () {
+    const args = Array.prototype.slice.call(arguments);
+    args.unshift();
+    if (!doLog) {
+      return;
+    }
+    originalMethod.apply(console, [`[${logLevel}]`, ...args, `[/${logLevel}]`]);
+  };
+};
+
 const handle = async (context, body) => {
 
   if(context.readinessProbe) {
     return 1;
   }
+
+  const DO_LOG = context.headers['x-poly-do-log'];
+  patchConsoleMethodWithLoggerData('log', 'LOG', DO_LOG);
+  patchConsoleMethodWithLoggerData('info', 'INFO', DO_LOG);
+  patchConsoleMethodWithLoggerData('error', 'ERROR', DO_LOG);
+  patchConsoleMethodWithLoggerData('warn', 'WARN', DO_LOG);
 
   const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
   const args = context.cloudevent ? (Array.isArray(body.data) ? body.data : [body.data]) : body.args;

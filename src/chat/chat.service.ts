@@ -108,7 +108,11 @@ export class ChatService {
       });
 
       eventSource.onerror = (error) => {
-        if (error.message) {
+        if (error.data) {
+          this.logger.debug(`Error from Science server for function completion: ${error.data}`);
+          const msg = JSON.parse(error.data).message;
+          subscriber.error(msg);
+        } else if (error.message) {
           this.logger.debug(`Error from Science server for function completion: ${error.message}`);
           subscriber.error(error.message);
         }

@@ -15,9 +15,9 @@ public class {{className}} {
   private final ObjectMapper objectMapper = ObjectMapper.getInstance();
 
   public {{typeName}} get() {
-    {{#if specification.variable.secret}}
+    {{~#if specification.variable.secret}}
     throw new PolyRuntimeException("Cannot access secret variable from client.");
-    {{else}}
+    {{~else}}
     var response = apiClient.get("/variables/{{specification.id}}/value");
     try {
       var responseBody = response.getBody();
@@ -25,7 +25,7 @@ public class {{className}} {
     } catch (Exception e) {
       throw new PolyRuntimeException(e);
     }
-    {{/if}}
+    {{~/if}}
   }
 
   public VariableUpdateResponse<{{typeName}}> update({{typeName}} value) {
@@ -43,7 +43,7 @@ public class {{className}} {
     }
   }
 
-  {{#if specification.variable.secret}}
+  {{~#if specification.variable.secret}}
   public String inject() {
     return inject(null, String.class);
   }
@@ -80,7 +80,7 @@ public class {{className}} {
     variableInjectManager.saveInjectedVariable(value, new InjectedVariable("{{specification.id}}", path));
     return (T) value;
   }
-  {{else}}
+  {{~else}}
   public {{typeName}} inject() {
     return inject(null);
   }
@@ -106,7 +106,7 @@ public class {{className}} {
     variableInjectManager.saveInjectedVariable(value, new InjectedVariable("{{specification.id}}", path));
     return value;
   }
-  {{/if}}
+  {{~/if}}
 
   public OnUpdateListener onUpdate(Consumer<VariableChangeEvent<{{typeName}}>> callback) {
     try {

@@ -87,7 +87,30 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+    - name: Obfuscate Javascript
+      run: |
+        yarn install
+        yarn prisma generate --generator js --schema ./prisma/schema.prisma
+        yarn build:minified
+        rm -rf ./src ./packages ./test
+    - name: Obfuscate Python
+      run: |
+        pip3 install pyarmor==8.4.1
+        cd science
+        pyarmor gen -O app_o -r app
+        rm -rf app tests
+        rm load_fixtures.py README.md
+        mv app_o/* ./
+        rmdir app_o
+        cd ..
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin

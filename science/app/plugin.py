@@ -188,7 +188,8 @@ def execute_function(api_key: str, openapi: Dict, function_call: Dict) -> Messag
     # domain = "https://megatronical.pagekite.me"
     domain = os.environ.get("HOST_URL", "https://na1.polyapi.io")
     headers = {"Authorization": f"Bearer {api_key}"}
-    print("right before we send to execute", function_call)
+    # NOTE: we need to figure out how to handle utf8 before we re-enable this log, otherwise we will get UnicodeEncodeErrors
+    # print("right before we send to execute", function_call)
     resp = requests.post(
         domain + path, json=json.loads(function_call["arguments"]), headers=headers
     )

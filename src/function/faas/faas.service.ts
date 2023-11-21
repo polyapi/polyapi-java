@@ -25,7 +25,14 @@ export interface FaasService {
     sleepAfter?: number | null,
     logsEnabled?: boolean,
   ) => Promise<void>;
-  executeFunction: (id: string, tenantId: string, environmentId: string, args: any[], headers: Record<string, any>) => Promise<ExecuteFunctionResult>;
+  executeFunction: (
+    id: string,
+    functionEnvironmentId: string,
+    tenantId: string,
+    executionEnvironmentId: string,
+    args: any[],
+    headers: Record<string, any>
+  ) => Promise<ExecuteFunctionResult>;
   updateFunction: (
     id: string,
     tenantId: string,

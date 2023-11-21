@@ -10,8 +10,8 @@ RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-$DO
 # Install Knative CLI (needed for server side functions)
 RUN mkdir -p /poly/funcs/bin && \
     mkdir -p /poly/funcs/serverfx && \
-    curl -Lo /poly/funcs/bin/kn https://storage.googleapis.com/knative-nightly/client/latest/kn-linux-amd64 && \
-    curl -Lo /poly/funcs/bin/kn-func https://github.com/knative/func/releases/latest/download/func_linux_amd64 && \
+    curl -Lo /poly/funcs/bin/kn https://github.com/knative/client/releases/download/knative-v1.11.0/kn-linux-amd64 && \
+    curl -Lo /poly/funcs/bin/kn-func https://github.com/knative/func/releases/download/knative-v1.11.0/func_linux_amd64 && \    
     chmod -R +x /poly/funcs
 COPY . /poly/app
 WORKDIR /poly/app

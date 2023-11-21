@@ -56,7 +56,9 @@ const loadTemplate = async (fileName: string) => fs.readFileSync(`${__dirname}/.
 
 const generateJSFiles = async (specs: Specification[]) => {
   const apiFunctions = specs.filter((spec) => spec.type === 'apiFunction') as ApiFunctionSpecification[];
-  const customFunctions = specs.filter((spec) => spec.type === 'customFunction') as CustomFunctionSpecification[];
+  const customFunctions = specs
+    .filter((spec) => spec.type === 'customFunction')
+    .filter((spec) => (spec as CustomFunctionSpecification).language === 'javascript') as CustomFunctionSpecification[];
   const webhookHandles = specs.filter((spec) => spec.type === 'webhookHandle') as WebhookHandleSpecification[];
   const authFunctions = specs.filter((spec) => spec.type === 'authFunction') as AuthFunctionSpecification[];
   const serverFunctions = specs.filter((spec) => spec.type === 'serverFunction') as ServerFunctionSpecification[];

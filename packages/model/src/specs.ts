@@ -102,6 +102,7 @@ export interface CustomFunctionSpecification extends ISpecification {
   function: FunctionSpecification;
   requirements: string[];
   code: string;
+  language: string;
 }
 
 export interface ServerFunctionSpecification extends ISpecification {
