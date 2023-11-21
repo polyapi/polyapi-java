@@ -32,16 +32,6 @@ const SERVICES_NAME = 'services';
 const ROUTES_NAME = 'routes';
 const PASS_THROUGH_HEADERS = ['openai-ephemeral-user-id', 'openai-conversation-id'];
 
-interface NamespaceCondition {
-  conditions: {
-    status: string;
-    type: string;
-    message: string;
-    reason: string;
-  }[]
-  phase: string;
-};
-
 interface KNativeRouteDef {
   status: {
     url: string;
@@ -274,7 +264,7 @@ export class KNativeFaasService implements FaasService {
     imageName: string,
     apiKey: string,
     limits: ServerFunctionLimits,
-    sleepFn?: boolean | null,
+    sleep?: boolean | null,
     sleepAfter?: number | null,
     logsEnabled = false,
   ) {
@@ -286,14 +276,14 @@ export class KNativeFaasService implements FaasService {
     const functionPath = `${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
     const getAnnotations = () => {
       const annotations = {};
-      if (sleepFn == null) {
-        sleepFn = true;
+      if (sleep == null) {
+        sleep = true;
       }
       if (sleepAfter == null || sleepAfter <= 0) {
         sleepAfter = this.config.faasDefaultSleepSeconds;
       }
 
-      if (sleepFn) {
+      if (sleep) {
         annotations['autoscaling.knative.dev/class'] = 'kpa.autoscaling.knative.dev';
         annotations['autoscaling.knative.dev/window'] = `${sleepAfter}s`;
       } else {
@@ -330,36 +320,6 @@ export class KNativeFaasService implements FaasService {
             timeoutSeconds: limits.time,
             containers: [
               {
-                readinessProbe: {
-                  exec: {
-                    command: [
-                      'pwd',
-                      `cd /workspace/function/${functionPath}`,
-                      'pwd',
-                      `
-                      node -e "require('./index.js')({ readinessProbe: true }).then(result => result === 1 ? process.exit(0) : process.exit(1)).catch(() => process.exit(1));"
-
-                      if [ $? -eq 0 ]
-                      then
-                          echo "Custom function ready";
-                          exit 0
-                      else
-                          echo "Custom function result is not equal to 1" >&2;
-                          exit 1
-                      fi
-                      `,
-                    ],
-                  },
-                  initialDelaySeconds: 3,
-                  periodSeconds: 3,
-                },
-                startupProbe: {
-                  exec: {
-                    command: ['pwd'],
-                  },
-                  failureThreshold: 3,
-                  periodSeconds: 23,
-                },
                 image: `${imageName}`,
                 volumeMounts: [
                   {
@@ -417,40 +377,7 @@ export class KNativeFaasService implements FaasService {
         SERVICES_NAME,
         options,
       );
-
-      let attempts = 0;
-      let namespacedCustomObjectReady = false;
-
-      while (attempts <= 2 && !namespacedCustomObjectReady) {
-        try {
-
-          const response = await this.k8sApi.getNamespacedCustomObjectStatus(SERVING_GROUP, SERVING_VERSION, this.config.faasNamespace, SERVICES_NAME, this.getFunctionName(id));
-
-          try {
-            console.log('reponse: ', response);
-            console.log('stringified - response: ', JSON.stringify(response));
-          } catch (err) {
-            console.log(err);
-          }
-
-          const responseBody = response.body as NamespaceCondition;
-
-          const readinessCondition = responseBody.conditions.find(cond => cond.type === 'Ready');
-
-          if (readinessCondition && readinessCondition.status === 'True') {
-            namespacedCustomObjectReady = true;
-          }
-        } catch (err) {
-          this.logger.error('Err checking readiness probe status.', err);
-        }
-        attempts++;
-      }
-
       this.logger.debug(`KNative service for function '${id}' created. Function deployed.`);
-
-      if (!namespacedCustomObjectReady) {
-        this.logger.debug('WARNING: ReadinessProbe is not successful.');
-      }
     } catch (e) {
       if (e.body?.code === 409) {
         this.logger.warn(`Server function '${id}' already exists, skipping.`);

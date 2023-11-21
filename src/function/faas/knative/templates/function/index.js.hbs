@@ -2,7 +2,6 @@ const poly = require('polyapi');
 const { CloudEvent } = require('cloudevents');
 
 const handle = async (context, body) => {
-
   const DO_LOG = context.headers['x-poly-do-log'];
   patchConsoleMethodWithLoggerData('log', 'LOG', DO_LOG);
   patchConsoleMethodWithLoggerData('info', 'INFO', DO_LOG);
