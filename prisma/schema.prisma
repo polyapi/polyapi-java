@@ -457,7 +457,7 @@ model Job {
   environmentId               String @map("environment_id")
   status                      String
 
-  @@map("jobs")
+  @@map("job")
 }
 
 
@@ -474,5 +474,5 @@ model JobExecution {
   status                  String
   schedule                String
 
-  @@map("job_executions")
+  @@map("job_execution")
 }
