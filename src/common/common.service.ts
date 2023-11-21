@@ -36,7 +36,7 @@ export class CommonService {
   ) {
   }
 
-  checkPolyTrainingScriptVersion(clientVersion: string | undefined, serverVersion: string): void {
+  checkPolyTrainingScriptVersion(clientVersion: string | undefined, serverVersion: string, clientVersionRequired = false): void {
     const throwUpdateScriptError = () => {
       const scriptDownloadUrl = `${process.env.HOST_URL}/postman/scripts.zip`;
       throw new BadRequestException(
@@ -44,7 +44,9 @@ export class CommonService {
       );
     };
     if (!clientVersion) {
-      throwUpdateScriptError();
+      if (clientVersionRequired) {
+        throwUpdateScriptError();
+      }
       return;
     }
     if (!semver.valid(clientVersion)) {
@@ -118,7 +120,8 @@ export class CommonService {
     if (numericStringAsNumber) {
       if (numberRegex.test(value)) {
         return ['number'];
-      };
+      }
+      ;
     } else if (typeof value === 'number' && !Number.isNaN(value)) {
       return ['number'];
     }
@@ -136,7 +139,10 @@ export class CommonService {
 
         const typeSchema = await this.getJsonSchema(typeName, obj);
         if (typeSchema) {
-          return ['object', isStringValue ? this.enhanceJSONSchemaWithComments(typeSchema, value, subpath) : typeSchema];
+          return [
+            'object',
+            isStringValue ? this.enhanceJSONSchemaWithComments(typeSchema, value, subpath) : typeSchema,
+          ];
         } else {
           return ['object'];
         }
@@ -335,13 +341,13 @@ export class CommonService {
     return false;
   }
 
-  getPublicContext(entity: { context: string | null, environment: { tenant: Tenant }}) {
+  getPublicContext(entity: { context: string | null, environment: { tenant: Tenant } }) {
     const { context, environment: { tenant } } = entity;
     return `${tenant.publicNamespace ? `${tenant.publicNamespace}${context ? '.' : ''}` : ''}${context || ''}`;
   }
 
   isPublicVisibilityAllowed(
-    entity: { context: string | null, environment: { tenant: Tenant }},
+    entity: { context: string | null, environment: { tenant: Tenant } },
     defaultHidden: boolean,
     visibleContexts: string[] | null,
   ): boolean {

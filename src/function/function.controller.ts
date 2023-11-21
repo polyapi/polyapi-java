@@ -117,7 +117,7 @@ export class FunctionController {
     } = data;
 
     const clientScriptVersion = req.headers[TRAINING_SCRIPT_VERSION_HEADER] as string | undefined;
-    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion);
+    this.commonService.checkPolyTrainingScriptVersion(clientScriptVersion, this.configService.postmanScriptVersion, true);
 
     const environmentId = req.user.environment.id;
 
