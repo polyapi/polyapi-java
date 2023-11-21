@@ -7,8 +7,7 @@ import { ConfigVariableModule } from 'config-variable/config-variable.module';
 import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
 import { CommonModule } from 'common/common.module';
-import { JOB_PREFIX, QUEUE_NAME } from './constants';
-import path from 'path';
+import { QUEUE_NAME } from './constants';
 
 @Module({
   controllers: [JobsController],
@@ -16,13 +15,6 @@ import path from 'path';
   imports: [
     FunctionModule, PrismaModule, ConfigVariableModule, FunctionModule, HttpModule, BullModule.registerQueue({
       name: QUEUE_NAME,
-      processors: [
-        {
-          path: path.join(__dirname, 'processor.js'),
-          name: JOB_PREFIX,
-          concurrency: 4,
-        },
-      ],
     }),
     CommonModule,
   ],
