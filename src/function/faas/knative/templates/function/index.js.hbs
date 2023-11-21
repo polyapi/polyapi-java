@@ -1,25 +1,24 @@
 const poly = require('polyapi');
 const { CloudEvent } = require('cloudevents');
 
-const patchConsoleMethodWithLoggerData = (method, logLevel, envId) => {
+const patchConsoleMethodWithLoggerData = (method, logLevel, doLog) => {
   const originalMethod = console[method];
   console[method] = function () {
     const args = Array.prototype.slice.call(arguments);
     args.unshift();
-    originalMethod.apply(console, [
-      `[${logLevel}][ENVIRONMENT=${envId}]`,
-      ...args,
-      `[/${logLevel}]`,
-    ]);
+    if (!doLog) {
+      return;
+    }
+    originalMethod.apply(console, [`[${logLevel}]`, ...args, `[/${logLevel}]`]);
   };
 };
 
 const handle = async (context, body) => {
-  const EXECUTION_ENV_ID = context.headers['x-poly-execution-environment'];
-  patchConsoleMethodWithLoggerData('log', 'LOG', EXECUTION_ENV_ID);
-  patchConsoleMethodWithLoggerData('info', 'INFO', EXECUTION_ENV_ID);
-  patchConsoleMethodWithLoggerData('error', 'ERROR', EXECUTION_ENV_ID);
-  patchConsoleMethodWithLoggerData('warn', 'WARN', EXECUTION_ENV_ID);
+  const DO_LOG = context.headers['x-poly-do-log'];
+  patchConsoleMethodWithLoggerData('log', 'LOG', DO_LOG);
+  patchConsoleMethodWithLoggerData('info', 'INFO', DO_LOG);
+  patchConsoleMethodWithLoggerData('error', 'ERROR', DO_LOG);
+  patchConsoleMethodWithLoggerData('warn', 'WARN', DO_LOG);
 
   const POLY_USER_SESSION_ID = context.headers['openai-conversation-id'];
   const args = context.cloudevent ? (Array.isArray(body.data) ? body.data : [body.data]) : body.args;

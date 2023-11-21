@@ -1774,7 +1774,14 @@ export class FunctionService implements OnModuleInit {
     const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => typeof args[arg.key] === 'undefined' ? '$poly-undefined-value' : args[arg.key]);
 
     try {
-      const result = await this.faasService.executeFunction(customFunction.id, executionEnvironment.tenantId, executionEnvironment.id, argumentsList, headers);
+      const result = await this.faasService.executeFunction(
+        customFunction.id,
+        customFunction.environmentId,
+        executionEnvironment.tenantId,
+        executionEnvironment.id,
+        argumentsList,
+        headers,
+      );
       this.logger.debug(
         `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
       );
