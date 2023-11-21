@@ -143,9 +143,13 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`Executing server function '${id}'...`);
     this.logger.verbose(`Calling ${functionUrl}`);
     this.logger.verbose({ args: JSON.stringify(args) });
+    const sanitizedHeaders = {
+      ...(this.filterPassThroughHeaders(headers) || {}),
+      'x-poly-execution-environment': environmentId,
+    };
     return await lastValueFrom(
       this.http
-        .post(`${functionUrl}`, { args }, { headers: this.filterPassThroughHeaders(headers) })
+        .post(`${functionUrl}`, { args }, { headers: sanitizedHeaders })
         .pipe(map((response) => (
           {
             body: response.data,
