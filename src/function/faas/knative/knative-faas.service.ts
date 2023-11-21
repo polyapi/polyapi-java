@@ -129,8 +129,9 @@ export class KNativeFaasService implements FaasService {
 
   async executeFunction(
     id: string,
+    functionEnvironmentId: string,
     tenantId: string,
-    environmentId: string,
+    executionEnvironmentId: string,
     args: any[],
     headers = {},
     maxRetryCount = 3,
@@ -150,7 +151,7 @@ export class KNativeFaasService implements FaasService {
     this.logger.verbose({ args: JSON.stringify(args) });
     const sanitizedHeaders = {
       ...(this.filterPassThroughHeaders(headers) || {}),
-      'x-poly-execution-environment': environmentId,
+      'x-poly-do-log': functionEnvironmentId === executionEnvironmentId,
     };
     return await lastValueFrom(
       this.http
@@ -177,7 +178,7 @@ export class KNativeFaasService implements FaasService {
             );
             if (maxRetryCount > 0) {
               await sleep(2000);
-              return this.executeFunction(id, tenantId, environmentId, args, headers, 0);
+              return this.executeFunction(id, functionEnvironmentId, tenantId, executionEnvironmentId, args, headers, 0);
             }
 
             throw error;
