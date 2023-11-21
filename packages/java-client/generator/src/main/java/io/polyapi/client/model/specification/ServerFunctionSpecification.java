@@ -9,4 +9,5 @@ public class ServerFunctionSpecification extends Specification {
   private FunctionSpecification function;
   private String[] requirements;
   private String code;
+  private String language;
 }

@@ -1,5 +1,6 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, Validate } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, Validate } from 'class-validator';
 import { ContextIdentifier, NameIdentifier } from '../validators';
+import { FunctionArgument } from './function.dto';
 
 export class CreateCustomFunctionDto {
   @IsString()
@@ -19,7 +20,21 @@ export class CreateCustomFunctionDto {
   code: string;
 
   @IsOptional()
+  language?: string;
+
+  @IsOptional()
   typeSchemas?: Record<string, any>;
+
+  @IsOptional()
+  @IsString()
+  returnType?: string;
+
+  @IsOptional()
+  @IsObject()
+  returnTypeSchema?: Record<string, any>;
+
+  @IsOptional()
+  arguments?: FunctionArgument[];
 
   @IsOptional()
   @IsBoolean()

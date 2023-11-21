@@ -1,5 +1,5 @@
 # Java Client Library (beta)
-### v0.1.5
+### v0.1.6
 
 ## Introduction
 This is a Java client library for Poly API. It is generated from the [Poly specification](https://develop-k8s.polyapi.io/specs). It is based on its Typescript counterpart [polyapi](https://www.npmjs.com/package/polyapi)
@@ -14,7 +14,7 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
 4. Add the following to your project's `pom.xml` to add the dependencies:
 ```xml
 <properties>
-  <poly.version>0.1.5</poly.version>
+  <poly.version>0.1.6</poly.version>
 </properties>
 <dependencies>
   <dependency>
@@ -123,14 +123,38 @@ Vari.auth.clientId.onUpdate((event) -> {
 });
 ```
 
+### Custom Functions
+It is possible to create custom functions that can be used in Poly. To do so, you need to create a class with desired function. For example:
+```java
+public class CustomFunction {
+    public String sayHello(String name) {
+        return "Hello " + name;
+    }
+}
+```
+Then to add it to Poly, you need to add run the following Maven goal:
+```bash
+mvn library:addFunction -Dname=sayHello -Dfile=src/main/java/custom/CustomFunction.java -Dcontext=test.client -Dclient -Ddescription="This says hello to you"
+```
+Note the use of `-Dclient` flag. This is used to specify that the function is a client function.
+This will add the function with specified name and context to Poly, so it can be used in code:
+
+```java
+var result = Poly.test.client.sayHello("John");
+System.out.println(result);
+```
+
 ## Limitations
 Comparing to its Typescript counterpart, the Java library is still missing the following features:
 - Error handlers
 - Fetching multiple Poly Variables from context
+- Java Server functions
 
 These features will be added in the future releases.
 
 ## Changelog
+### v0.1.6
+- Added support for Java client functions
 ### v0.1.5
 - Fixed issue with void return types
 ### v0.1.4

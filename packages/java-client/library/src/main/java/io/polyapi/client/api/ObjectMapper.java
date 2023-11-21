@@ -5,7 +5,7 @@ import org.json.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class ObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper {
-  public static ObjectMapper instance;
+  private static ObjectMapper instance;
 
   private ObjectMapper() {
     super();

@@ -9,6 +9,7 @@ import java.util.Map;
 import io.polyapi.client.model.property.FunctionPropertyType;
 import io.polyapi.client.model.property.ObjectPropertyType;
 import io.polyapi.client.model.specification.ApiFunctionSpecification;
+import io.polyapi.client.model.specification.CustomFunctionSpecification;
 import io.polyapi.client.model.specification.FunctionSpecification;
 import io.polyapi.client.model.specification.PropertySpecification;
 import io.polyapi.client.model.specification.Specification;
@@ -47,14 +48,27 @@ public class PolyContextClassGenerator extends SpecificationClassGenerator<Speci
     }
   }
 
-  private void generateTypeClasses(LibraryTreeNode<Specification> node, String currentPackage) throws IOException {
+  private void generateTypeClasses(LibraryTreeNode<Specification> node, String currentPackage) {
     var specifications = node.getSpecifications();
     for (var specification : specifications) {
-      if (specification instanceof ApiFunctionSpecification) {
-        generateFunctionTypeClasses(specification, ((ApiFunctionSpecification) specification).getFunction(), currentPackage);
+      if (specification instanceof ApiFunctionSpecification apiFunctionSpecification) {
+        generateFunctionTypeClasses(specification, apiFunctionSpecification.getFunction(), currentPackage);
       }
-      if (specification instanceof WebhookHandleSpecification) {
-        var type = ((FunctionPropertyType) ((WebhookHandleSpecification) specification).getFunction().getArguments().get(0).getType()).getSpec().getArguments().get(0).getType();
+      if (specification instanceof CustomFunctionSpecification customFunctionSpecification && customFunctionSpecification.isJava()) {
+        var className = customFunctionSpecification.getClassName();
+        var classContent = "package " + currentPackage + ";\n\n" +
+          customFunctionSpecification.getCode();
+
+        saveClassToFile(
+          classContent
+            .replace("class PolyCustomFunction", "class " + className),
+          currentPackage,
+          className
+        );
+        generateFunctionTypeClasses(specification, customFunctionSpecification.getFunction(), currentPackage);
+      }
+      if (specification instanceof WebhookHandleSpecification webhookHandleSpecification) {
+        var type = ((FunctionPropertyType) webhookHandleSpecification.getFunction().getArguments().get(0).getType()).getSpec().getArguments().get(0).getType();
         if (type instanceof ObjectPropertyType) {
           generateObjectPropertyType(currentPackage, (ObjectPropertyType) type, StringUtils.toPascalCase(specification.getName()) + "$EventType");
         }

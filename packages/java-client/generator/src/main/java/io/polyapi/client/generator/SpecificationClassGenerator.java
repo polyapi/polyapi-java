@@ -73,7 +73,7 @@ abstract class SpecificationClassGenerator<T extends Specification> extends Abst
       }
       result.append("}");
       saveClassToFile(result.toString(), packageName, typeName);
-    } else {
+    } else if (objectPropertyType.getSchema() == null) {
       return;
     }
 
