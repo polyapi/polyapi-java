@@ -830,7 +830,11 @@ export class FunctionService implements OnModuleInit {
   }
 
   private processRawBody(body: RawBody, argumentsMetadata: ArgumentsMetadata, args: Record<string, any>) {
+    this.logger.debug(`Processing raw body: ${JSON.stringify(body)}`);
+
     const jsonTemplateObject = this.jsonTemplate.parse(body.raw);
+
+    this.logger.debug(`Json template is ${JSON.stringify(jsonTemplateObject)}`);
 
     const removeUndefinedValuesFromOptionalArgs = (value: any) => {
       if (Array.isArray(value)) {
