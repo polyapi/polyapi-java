@@ -327,21 +327,7 @@ export class KNativeFaasService implements FaasService {
               {
                 readinessProbe: {
                   exec: {
-                    command: [
-                      `cd /workspace/function/${functionPath}`,
-                      `
-                      node -e "require('./index.js')({ readinessProbe: true }).then(result => result === 1 ? process.exit(0) : process.exit(1)).catch(() => process.exit(1));"
-
-                      if [ $? -eq 0 ]
-                      then
-                          echo "Custom function ready";
-                          exit 0
-                      else
-                          echo "Custom function result is not equal to 1" >&2;
-                          exit 1
-                      fi
-                      `,
-                    ],
+                    command: ['node --version'],
                   },
                   initialDelaySeconds: 5,
                   periodSeconds: 3,
