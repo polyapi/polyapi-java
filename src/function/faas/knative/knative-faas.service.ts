@@ -431,15 +431,23 @@ export class KNativeFaasService implements FaasService {
             continue;
           }
 
-          if (pod.status?.phase === 'Running') {
-            this.logger.debug('Pod status is "Running"');
+          const userContainer = pod.status?.containerStatuses?.find(containerStatus => containerStatus.name === 'user-container');
+
+          if (!userContainer) {
+            this.logger.debug('Could not find user container, retrying...');
+            attempts++;
+            continue;
+          }
+
+          if (userContainer.ready) {
+            this.logger.debug('User container is ready.');
             namespacedCustomObjectReady = true;
             continue;
           } else {
-            this.logger.debug('Pod status is not "Running"');
+            this.logger.debug('User container is not ready.');
           }
         } catch (err) {
-          this.logger.error('Err checking pod status.', err);
+          this.logger.error('Err checking user container status..', err);
         }
         attempts++;
       }
