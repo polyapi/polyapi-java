@@ -419,26 +419,28 @@ export class KNativeFaasService implements FaasService {
       );
 
       let attempts = 0;
-      let namespacedCustomObjectReady = false;
+      const namespacedCustomObjectReady = false;
 
-      while (attempts <= 2 && !namespacedCustomObjectReady) {
+      while (attempts <= 2) {
+        await sleep(3000);
+
         try {
           const response = await this.k8sApi.getNamespacedCustomObject(SERVING_GROUP, SERVING_VERSION, this.config.faasNamespace, SERVICES_NAME, this.getFunctionName(id));
 
           const responseBody = response.body as NamespaceCondition;
 
           try {
-            console.log('reponse: ', response);
-            console.log('stringified - response: ', JSON.stringify(response));
+            // console.log(response);
+            console.log('stringified - response: ', JSON.stringify(responseBody));
           } catch (err) {
             console.log(err);
           }
 
-          const readinessCondition = responseBody.conditions.find(cond => cond.type === 'Ready');
+          // const readinessCondition = responseBody.conditions.find(cond => cond.type === 'Ready');
 
-          if (readinessCondition && readinessCondition.status === 'True') {
-            namespacedCustomObjectReady = true;
-          }
+          // if (readinessCondition && readinessCondition.status === 'True') {
+          // namespacedCustomObjectReady = true;
+          // }
         } catch (err) {
           this.logger.error('Err checking readiness probe status.', err);
         }
