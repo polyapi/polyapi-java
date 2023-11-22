@@ -418,7 +418,7 @@ export class FunctionController {
   @Post('/server')
   async createServerFunction(@Req() req: AuthRequest, @Body() data: CreateServerCustomFunctionDto): Promise<CreateServerCustomFunctionResponseDto> {
     const { environment } = req.user;
-    const { context = '', name, description = '', code, typeSchemas = {}, logsEnabled = environment.logsDefault } = data;
+    const { context = '', name, description = '', code, typeSchemas = {}, logsEnabled } = data;
 
     await this.authService.checkPermissions(req.user, Permission.CustomDev);
 

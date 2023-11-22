@@ -1237,7 +1237,7 @@ export class FunctionService implements OnModuleInit {
     customCode: string,
     typeSchemas: Record<string, any>,
     apiKey: string,
-    logsEnabled: boolean,
+    logsEnabled?: boolean,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
     createFromScratch = false,
   ) {
@@ -1265,7 +1265,7 @@ export class FunctionService implements OnModuleInit {
     typeSchemas: Record<string, any>,
     serverFunction: boolean,
     apiKey: string | null,
-    logsEnabled = false,
+    logsEnabled?: boolean,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
     createFromScratch = false,
   ): Promise<CustomFunction & { traceId?: string }> {
@@ -1287,6 +1287,10 @@ export class FunctionService implements OnModuleInit {
         context,
       },
     });
+
+    if (logsEnabled == null) {
+      logsEnabled = customFunction?.logsEnabled ?? environment.logsDefault;
+    }
 
     let traceId: string | undefined;
 
