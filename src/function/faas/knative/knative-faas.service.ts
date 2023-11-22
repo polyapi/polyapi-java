@@ -32,7 +32,6 @@ const SERVICES_NAME = 'services';
 const ROUTES_NAME = 'routes';
 const PASS_THROUGH_HEADERS = ['openai-ephemeral-user-id', 'openai-conversation-id'];
 
-
 interface KNativeRouteDef {
   status: {
     url: string;

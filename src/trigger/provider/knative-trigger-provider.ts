@@ -71,7 +71,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug('Initializing KNative trigger provider...');
     this.logger.debug('Initializing Kubernetes API client...');
 
-    this.k8sApi = makeCustomObjectsApiClient();
+    this.k8sApi = makeCustomObjectsApiClient().customObjectsApi;
     await this.createResponseTrigger();
   }
 
