@@ -398,9 +398,9 @@ export class KNativeFaasService implements FaasService {
       );
 
       let attempts = 0;
-      let namespacedCustomObjectReady = false;
+      let podReady = false;
 
-      while (attempts <= 3 && !namespacedCustomObjectReady) {
+      while (attempts <= 3 && !podReady) {
         await sleep(4000);
         this.logger.debug('Checking pod status before sending id to user...');
 
@@ -425,7 +425,7 @@ export class KNativeFaasService implements FaasService {
 
           if (userContainer.ready) {
             this.logger.debug('User container is ready.');
-            namespacedCustomObjectReady = true;
+            podReady = true;
             continue;
           } else {
             this.logger.debug('User container is not ready.');
@@ -438,8 +438,8 @@ export class KNativeFaasService implements FaasService {
 
       this.logger.debug(`KNative service for function '${id}' created. Function deployed.`);
 
-      if (!namespacedCustomObjectReady) {
-        this.logger.debug('WARNING: Function pod may not be in "Running" status.');
+      if (!podReady) {
+        this.logger.debug('WARNING: Function pod may not be ready.');
       }
     } catch (e) {
       if (e.body?.code === 409) {
