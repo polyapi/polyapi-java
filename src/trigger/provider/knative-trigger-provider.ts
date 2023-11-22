@@ -51,7 +51,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
   private readonly logger = new Logger(KNativeTriggerProvider.name);
 
   private readonly emitCloudEvent: EmitterFunction;
-  private k8sApi: CustomObjectsApi;
+  private customObjectsApi: CustomObjectsApi;
 
   constructor(
     private readonly cacheManager: Cache,
@@ -71,7 +71,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug('Initializing KNative trigger provider...');
     this.logger.debug('Initializing Kubernetes API client...');
 
-    this.k8sApi = makeCustomObjectsApiClient().customObjectsApi;
+    this.customObjectsApi = makeCustomObjectsApiClient().customObjectsApi;
     await this.createResponseTrigger();
   }
 
@@ -135,7 +135,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug(`Getting triggers for environment ${environmentId}`);
 
     try {
-      const response = await this.k8sApi.listNamespacedCustomObject(
+      const response = await this.customObjectsApi.listNamespacedCustomObject(
         TRIGGERS_GROUP,
         TRIGGERS_VERSION,
         this.config.knativeTriggerNamespace,
@@ -167,7 +167,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug(`Creating trigger ${triggerName} (environmentId: ${environmentId})`);
 
     try {
-      await this.k8sApi.createNamespacedCustomObject(
+      await this.customObjectsApi.createNamespacedCustomObject(
         TRIGGERS_GROUP,
         TRIGGERS_VERSION,
         this.config.knativeTriggerNamespace,
@@ -212,7 +212,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug(`Updating trigger ${triggerName} (environmentId: ${environmentId})`);
 
     try {
-      await this.k8sApi.patchNamespacedCustomObject(
+      await this.customObjectsApi.patchNamespacedCustomObject(
         TRIGGERS_GROUP,
         TRIGGERS_VERSION,
         this.config.knativeTriggerNamespace,
@@ -306,7 +306,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug(`Deleting trigger ${trigger.name} (environmentId: ${environmentId})`);
 
     try {
-      await this.k8sApi.deleteNamespacedCustomObject(
+      await this.customObjectsApi.deleteNamespacedCustomObject(
         TRIGGERS_GROUP,
         TRIGGERS_VERSION,
         this.config.knativeTriggerNamespace,
@@ -347,7 +347,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
 
   private async findTriggerDefByName(name: string): Promise<KNativeTriggerDef | null> {
     try {
-      const response = await this.k8sApi.getNamespacedCustomObject(
+      const response = await this.customObjectsApi.getNamespacedCustomObject(
         TRIGGERS_GROUP,
         TRIGGERS_VERSION,
         this.config.knativeTriggerNamespace,
@@ -403,7 +403,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
 
     this.logger.debug('Creating response trigger...');
     try {
-      await this.k8sApi.createNamespacedCustomObject(
+      await this.customObjectsApi.createNamespacedCustomObject(
         TRIGGERS_GROUP,
         TRIGGERS_VERSION,
         this.config.knativeTriggerNamespace,

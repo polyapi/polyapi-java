@@ -40,8 +40,8 @@ interface KNativeRouteDef {
 
 export class KNativeFaasService implements FaasService {
   private logger = new Logger(KNativeFaasService.name);
-  private customObjectsAPI: CustomObjectsApi;
-  private coreV1API: CoreV1Api;
+  private customObjectsApi: CustomObjectsApi;
+  private coreV1Api: CoreV1Api;
 
   constructor(private readonly config: ConfigService, private readonly http: HttpService) {
   }
@@ -75,8 +75,8 @@ export class KNativeFaasService implements FaasService {
 
     const clientLib = makeCustomObjectsApiClient();
 
-    this.customObjectsAPI = clientLib.customObjectsApi;
-    this.coreV1API = clientLib.v1Api;
+    this.customObjectsApi = clientLib.customObjectsApi;
+    this.coreV1Api = clientLib.v1Api;
   }
 
   async createFunction(
@@ -204,7 +204,7 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`Deleting server function '${id}'...`);
 
     try {
-      await this.customObjectsAPI.deleteNamespacedCustomObject(
+      await this.customObjectsApi.deleteNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.knativeTriggerNamespace,
@@ -389,7 +389,7 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`createNamespacedCustomObject options - ${JSON.stringify(options)}`);
 
     try {
-      await this.customObjectsAPI.createNamespacedCustomObject(
+      await this.customObjectsApi.createNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.faasNamespace,
@@ -405,7 +405,7 @@ export class KNativeFaasService implements FaasService {
         this.logger.debug('Checking pod status before sending id to user...');
 
         try {
-          const response = await this.coreV1API.listNamespacedPod(this.config.faasNamespace);
+          const response = await this.coreV1Api.listNamespacedPod(this.config.faasNamespace);
 
           const pod = response.body.items.find(item => item.metadata?.name?.match(new RegExp(this.getFunctionName(id))));
 
@@ -462,7 +462,7 @@ export class KNativeFaasService implements FaasService {
     const name = this.getFunctionName(id);
 
     try {
-      const response = await this.customObjectsAPI.getNamespacedCustomObject(
+      const response = await this.customObjectsApi.getNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.faasNamespace,
