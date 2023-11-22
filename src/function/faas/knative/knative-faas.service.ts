@@ -417,15 +417,13 @@ export class KNativeFaasService implements FaasService {
       let namespacedCustomObjectReady = false;
 
       while (attempts <= 2 && !namespacedCustomObjectReady) {
-        await sleep(2000);
+        // await sleep(1000);
         this.logger.debug('Checking pod status before sending id to user...');
 
         try {
           const response = await this.coreV1API.listNamespacedPod(this.config.faasNamespace);
 
           const pod = response.body.items.find(item => item.metadata?.name?.match(new RegExp(this.getFunctionName(id))));
-
-          console.log(response.body.items);
 
           if (!pod) {
             this.logger.debug('Could not find pod, retrying...');
@@ -434,9 +432,11 @@ export class KNativeFaasService implements FaasService {
           }
 
           if (pod.status?.phase === 'Running') {
-            this.logger.debug('Pod status is not "Running"');
+            this.logger.debug('Pod status is "Running"');
             namespacedCustomObjectReady = true;
             continue;
+          } else {
+            this.logger.debug('Pod status is not "Running"');
           }
         } catch (err) {
           this.logger.error('Err checking pod status.', err);
