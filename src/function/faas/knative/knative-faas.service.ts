@@ -327,7 +327,7 @@ export class KNativeFaasService implements FaasService {
               {
                 readinessProbe: {
                   exec: {
-                    command: ['node --version'],
+                    command: ['pwd'],
                   },
                   initialDelaySeconds: 5,
                   periodSeconds: 3,
