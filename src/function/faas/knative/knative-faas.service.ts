@@ -328,9 +328,7 @@ export class KNativeFaasService implements FaasService {
                 readinessProbe: {
                   exec: {
                     command: [
-                      'pwd',
                       `cd /workspace/function/${functionPath}`,
-                      'pwd',
                       `
                       node -e "require('./index.js')({ readinessProbe: true }).then(result => result === 1 ? process.exit(0) : process.exit(1)).catch(() => process.exit(1));"
 
@@ -417,7 +415,7 @@ export class KNativeFaasService implements FaasService {
       let namespacedCustomObjectReady = false;
 
       while (attempts <= 3 && !namespacedCustomObjectReady) {
-        await sleep(2000);
+        await sleep(4000);
         this.logger.debug('Checking pod status before sending id to user...');
 
         try {
