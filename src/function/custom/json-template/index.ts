@@ -48,7 +48,7 @@ export class JsonTemplate implements JsonTemplateProcessor {
     const result = typeof template === 'string' ? this.parse(template) : cloneDeep<ReturnType<typeof this.parse>>(template);
 
     if (typeof result[POLY_ARG_NAME_KEY] !== 'undefined') {
-      return args;
+      return args[result[POLY_ARG_NAME_KEY]];
     }
 
     const isTemplateArg = (value): value is ArgMetadata => typeof value[POLY_ARG_NAME_KEY] !== 'undefined';
