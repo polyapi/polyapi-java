@@ -345,7 +345,7 @@ export class KNativeFaasService implements FaasService {
                       `,
                     ],
                   },
-                  initialDelaySeconds: 3,
+                  initialDelaySeconds: 5,
                   periodSeconds: 3,
                 },
                 startupProbe: {
@@ -416,8 +416,8 @@ export class KNativeFaasService implements FaasService {
       let attempts = 0;
       let namespacedCustomObjectReady = false;
 
-      while (attempts <= 2 && !namespacedCustomObjectReady) {
-        // await sleep(1000);
+      while (attempts <= 3 && !namespacedCustomObjectReady) {
+        await sleep(2000);
         this.logger.debug('Checking pod status before sending id to user...');
 
         try {
