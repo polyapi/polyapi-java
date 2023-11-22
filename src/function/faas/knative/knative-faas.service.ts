@@ -10,7 +10,7 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { AxiosError } from 'axios';
 import { ConfigService } from 'config/config.service';
 import { ExecuteFunctionResult, FaasService } from '../faas.service';
-import { CustomObjectsApi } from '@kubernetes/client-node';
+import { CoreV1Api, CustomObjectsApi } from '@kubernetes/client-node';
 import { makeCustomObjectsApiClient } from 'kubernetes/client';
 import { ServerFunctionLimits } from '@poly/model';
 import { ServerFunctionDoesNotExists } from './errors/ServerFunctionDoesNotExist';
@@ -32,15 +32,6 @@ const SERVICES_NAME = 'services';
 const ROUTES_NAME = 'routes';
 const PASS_THROUGH_HEADERS = ['openai-ephemeral-user-id', 'openai-conversation-id'];
 
-interface NamespaceCondition {
-  conditions: {
-    status: string;
-    type: string;
-    message: string;
-    reason: string;
-  }[]
-  phase: string;
-};
 
 interface KNativeRouteDef {
   status: {
@@ -50,7 +41,8 @@ interface KNativeRouteDef {
 
 export class KNativeFaasService implements FaasService {
   private logger = new Logger(KNativeFaasService.name);
-  private k8sApi: CustomObjectsApi;
+  private customObjectsAPI: CustomObjectsApi;
+  private coreV1API: CoreV1Api;
 
   constructor(private readonly config: ConfigService, private readonly http: HttpService) {
   }
@@ -81,7 +73,11 @@ export class KNativeFaasService implements FaasService {
     await writeFile(this.config.faasDockerConfigFile, JSON.stringify(getConfig(), null, 2));
 
     this.logger.debug('Initializing Kubernetes API client...');
-    this.k8sApi = makeCustomObjectsApiClient();
+
+    const clientLib = makeCustomObjectsApiClient();
+
+    this.customObjectsAPI = clientLib.customObjectsApi;
+    this.coreV1API = clientLib.v1Api;
   }
 
   async createFunction(
@@ -209,7 +205,7 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`Deleting server function '${id}'...`);
 
     try {
-      await this.k8sApi.deleteNamespacedCustomObject(
+      await this.customObjectsAPI.deleteNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.knativeTriggerNamespace,
@@ -410,7 +406,7 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`createNamespacedCustomObject options - ${JSON.stringify(options)}`);
 
     try {
-      await this.k8sApi.createNamespacedCustomObject(
+      await this.customObjectsAPI.createNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.faasNamespace,
@@ -419,30 +415,32 @@ export class KNativeFaasService implements FaasService {
       );
 
       let attempts = 0;
-      const namespacedCustomObjectReady = false;
+      let namespacedCustomObjectReady = false;
 
-      while (attempts <= 2) {
-        await sleep(3000);
+      while (attempts <= 2 && !namespacedCustomObjectReady) {
+        await sleep(2000);
+        this.logger.debug('Checking pod status before sending id to user...');
 
         try {
-          const response = await this.k8sApi.getNamespacedCustomObject(SERVING_GROUP, SERVING_VERSION, this.config.faasNamespace, SERVICES_NAME, this.getFunctionName(id));
+          const response = await this.coreV1API.listNamespacedPod(this.config.faasNamespace);
 
-          const responseBody = response.body as NamespaceCondition;
+          const pod = response.body.items.find(item => item.metadata?.name?.match(new RegExp(this.getFunctionName(id))));
 
-          try {
-            // console.log(response);
-            console.log('stringified - response: ', JSON.stringify(responseBody));
-          } catch (err) {
-            console.log(err);
+          console.log(response.body.items);
+
+          if (!pod) {
+            this.logger.debug('Could not find pod, retrying...');
+            attempts++;
+            continue;
           }
 
-          // const readinessCondition = responseBody.conditions.find(cond => cond.type === 'Ready');
-
-          // if (readinessCondition && readinessCondition.status === 'True') {
-          // namespacedCustomObjectReady = true;
-          // }
+          if (pod.status?.phase === 'Running') {
+            this.logger.debug('Pod status is not "Running"');
+            namespacedCustomObjectReady = true;
+            continue;
+          }
         } catch (err) {
-          this.logger.error('Err checking readiness probe status.', err);
+          this.logger.error('Err checking pod status.', err);
         }
         attempts++;
       }
@@ -450,7 +448,7 @@ export class KNativeFaasService implements FaasService {
       this.logger.debug(`KNative service for function '${id}' created. Function deployed.`);
 
       if (!namespacedCustomObjectReady) {
-        this.logger.debug('WARNING: ReadinessProbe is not successful.');
+        this.logger.debug('WARNING: Function pod may not be in "Running" status.');
       }
     } catch (e) {
       if (e.body?.code === 409) {
@@ -473,7 +471,7 @@ export class KNativeFaasService implements FaasService {
     const name = this.getFunctionName(id);
 
     try {
-      const response = await this.k8sApi.getNamespacedCustomObject(
+      const response = await this.customObjectsAPI.getNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.faasNamespace,

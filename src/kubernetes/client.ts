@@ -1,9 +1,12 @@
-import { CustomObjectsApi, KubeConfig } from '@kubernetes/client-node';
+import { CustomObjectsApi, KubeConfig, CoreV1Api } from '@kubernetes/client-node';
 import { Logger } from '@nestjs/common';
 
 const logger = new Logger('KubernetesClient');
 
-export const makeCustomObjectsApiClient = (): CustomObjectsApi => {
+export const makeCustomObjectsApiClient = (): {
+  customObjectsApi: CustomObjectsApi,
+  v1Api: CoreV1Api
+} => {
   const kc = new KubeConfig();
 
   if (process.env.KUBE_CONFIG_USE_DEFAULT === 'true') {
@@ -17,5 +20,8 @@ export const makeCustomObjectsApiClient = (): CustomObjectsApi => {
     kc.loadFromCluster();
   }
 
-  return kc.makeApiClient(CustomObjectsApi);
+  return {
+    customObjectsApi: kc.makeApiClient(CustomObjectsApi),
+    v1Api: kc.makeApiClient(CoreV1Api),
+  };
 };
