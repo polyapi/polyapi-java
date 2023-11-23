@@ -58,7 +58,7 @@ import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
 import { API_TAG_INTERNAL } from 'common/constants';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { EnvironmentService } from 'environment/environment.service';
 import { PerfLog } from 'statistics/perf-log.decorator';
 import { PerfLogType } from 'statistics/perf-log-type';
@@ -648,11 +648,11 @@ export class FunctionController {
     }
   }
 
-  private async resolveExecutionEnvironment(customFunction: CustomFunction & {environment: Environment}, req: Request) {
+  private async resolveExecutionEnvironment(customFunction: CustomFunction & {environment: Environment}, req: AuthRequest) {
     let executionEnvironment: Environment | null = null;
 
     if (customFunction.visibility !== Visibility.Environment) {
-      executionEnvironment = await this.environmentService.findByHost(req.hostname);
+      executionEnvironment = await this.environmentService.findByHost(req.hostname) || req.user.environment;
     }
 
     if (!executionEnvironment) {
