@@ -15,9 +15,11 @@ export class LokiLogsService implements FaasLogsService {
     this.logger.debug(`Getting logs for function with id ${functionId}`);
     const logQuery = this.constructQuery(functionId, keyword);
     const dateMinus24hs = getDateMinusXHours(new Date(), 24);
+    const url = `${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}&start=${getNanosecondsFromDate(dateMinus24hs)}`;
+    this.logger.debug(`Sending request to ${url}`);
     return await lastValueFrom(
       this.httpService
-        .get(`${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}&start=${getNanosecondsFromDate(dateMinus24hs)}`)
+        .get(url)
         .pipe(
           map((response) => response.data as {status: string; data: any}),
           map(({ status, data }) => {
