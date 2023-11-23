@@ -1,8 +1,15 @@
 const poly = require('polyapi');
 const { CloudEvent } = require('cloudevents');
 
+const originalConsole = {
+  log: console.log,
+  info: console.info,
+  error: console.error,
+  warn: console.warn,
+};
+
 const patchConsoleMethodWithLoggerData = (method, logLevel, doLog) => {
-  const originalMethod = console[method];
+  const originalMethod = originalConsole[method];
   console[method] = function () {
     const args = Array.prototype.slice.call(arguments);
     args.unshift();
