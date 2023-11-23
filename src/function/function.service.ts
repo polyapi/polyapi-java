@@ -830,7 +830,11 @@ export class FunctionService implements OnModuleInit {
   }
 
   private processRawBody(body: RawBody, argumentsMetadata: ArgumentsMetadata, args: Record<string, any>) {
+    this.logger.debug(`Processing raw body: ${JSON.stringify(body)}`);
+
     const jsonTemplateObject = this.jsonTemplate.parse(body.raw);
+
+    this.logger.debug(`Json template is ${JSON.stringify(jsonTemplateObject)}`);
 
     const removeUndefinedValuesFromOptionalArgs = (value: any) => {
       if (Array.isArray(value)) {
@@ -889,7 +893,7 @@ export class FunctionService implements OnModuleInit {
     this.logger.debug(`Executing function ${apiFunction.id}...`);
 
     const argumentsMetadata = JSON.parse(apiFunction.argumentsMetadata || '{}') as ArgumentsMetadata;
-    let argumentValueMap: {[key: string]: any } = {};
+    let argumentValueMap: { [key: string]: any } = {};
     const method = apiFunction.method;
     const parsedBody = JSON.parse(apiFunction.body || '{}') as Body;
 
@@ -1207,8 +1211,12 @@ export class FunctionService implements OnModuleInit {
     context: string,
     name: string,
     description: string,
-    customCode: string,
+    code: string,
+    language: string,
     typeSchemas: Record<string, any>,
+    returnType?: string,
+    returnTypeSchema?: Record<string, any>,
+    args?: FunctionArgument[],
     checkBeforeCreate: () => Promise<void> = async () => undefined,
   ) {
     return this.createOrUpdateCustomFunction(
@@ -1216,8 +1224,12 @@ export class FunctionService implements OnModuleInit {
       context,
       name,
       description,
-      customCode,
+      code,
+      language,
       typeSchemas,
+      returnType,
+      returnTypeSchema,
+      args,
       false,
       null,
       false,
@@ -1230,10 +1242,14 @@ export class FunctionService implements OnModuleInit {
     context: string,
     name: string,
     description: string,
-    customCode: string,
+    code: string,
+    language: string,
     typeSchemas: Record<string, any>,
+    returnType: string | undefined,
+    returnTypeSchema: Record<string, any> | undefined,
+    args: FunctionArgument[] | undefined,
     apiKey: string,
-    logsEnabled: boolean,
+    logsEnabled?: boolean,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
     createFromScratch = false,
   ) {
@@ -1242,8 +1258,12 @@ export class FunctionService implements OnModuleInit {
       context,
       name,
       description,
-      customCode,
+      code,
+      language,
       typeSchemas,
+      returnType,
+      returnTypeSchema,
+      args,
       true,
       apiKey,
       logsEnabled,
@@ -1257,24 +1277,45 @@ export class FunctionService implements OnModuleInit {
     context: string,
     name: string,
     description: string,
-    customCode: string,
+    code: string,
+    language: string,
     typeSchemas: Record<string, any>,
+    returnType: string | undefined,
+    returnTypeSchema: Record<string, any> | undefined,
+    args: FunctionArgument[] | undefined,
     serverFunction: boolean,
     apiKey: string | null,
-    logsEnabled = false,
+    logsEnabled?: boolean,
     checkBeforeCreate: () => Promise<void> = async () => undefined,
     createFromScratch = false,
   ): Promise<CustomFunction & { traceId?: string }> {
-    const {
-      code,
-      args,
-      returnType,
-      synchronous,
-      contextChain,
-      requirements,
-    } = await transpileCode(name, customCode, typeSchemas);
+    let requirements: string[] = [];
+    let synchronous = true;
 
-    context = context || contextChain.join('.');
+    if (returnTypeSchema) {
+      returnType = JSON.stringify(returnTypeSchema);
+    }
+    if (!returnType || !args) {
+      const {
+        code: transpilerCode,
+        args: transpilerArgs,
+        returnType: transpilerReturnType,
+        synchronous: transpilerSynchronous,
+        contextChain,
+        requirements: transpilerRequirements,
+      } = await transpileCode(name, code, typeSchemas);
+
+      context = context || contextChain.join('.');
+      if (!returnType) {
+        returnType = transpilerReturnType;
+      }
+      if (!args) {
+        args = transpilerArgs;
+      }
+      code = transpilerCode;
+      requirements = transpilerRequirements;
+      synchronous = transpilerSynchronous;
+    }
 
     let customFunction = await this.prisma.customFunction.findFirst({
       where: {
@@ -1284,10 +1325,14 @@ export class FunctionService implements OnModuleInit {
       },
     });
 
+    if (logsEnabled == null) {
+      logsEnabled = customFunction?.logsEnabled ?? environment.logsDefault;
+    }
+
     let traceId: string | undefined;
 
     const argumentsNeedDescription = !customFunction || JSON.parse(customFunction.arguments).some((arg) => {
-      const newArg = args.find((a) => a.key === arg.key);
+      const newArg = args!.find((a) => a.key === arg.key);
       return !newArg || newArg.type !== arg.type || !arg.description;
     });
 
@@ -1307,7 +1352,7 @@ export class FunctionService implements OnModuleInit {
         description = description || customFunction?.description || aiDescription;
         aiArguments.forEach(aiArgument => {
           const existingArgument = existingArguments.find(arg => arg.key === aiArgument.name);
-          const updatedArgument = args.find(arg => arg.key === aiArgument.name);
+          const updatedArgument = args!.find(arg => arg.key === aiArgument.name);
           if (updatedArgument && !existingArgument?.description) {
             updatedArgument.description = aiArgument.description;
           }
@@ -1325,6 +1370,7 @@ export class FunctionService implements OnModuleInit {
         },
         data: {
           code,
+          language,
           description: description || customFunction.description,
           arguments: JSON.stringify(args),
           returnType,
@@ -1355,6 +1401,7 @@ export class FunctionService implements OnModuleInit {
           name,
           description,
           code,
+          language,
           arguments: JSON.stringify(args),
           returnType,
           synchronous,
@@ -1735,7 +1782,14 @@ export class FunctionService implements OnModuleInit {
     const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => typeof args[arg.key] === 'undefined' ? '$poly-undefined-value' : args[arg.key]);
 
     try {
-      const result = await this.faasService.executeFunction(customFunction.id, executionEnvironment.tenantId, executionEnvironment.id, argumentsList, headers);
+      const result = await this.faasService.executeFunction(
+        customFunction.id,
+        customFunction.environmentId,
+        executionEnvironment.tenantId,
+        executionEnvironment.id,
+        argumentsList,
+        headers,
+      );
       this.logger.debug(
         `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
       );
@@ -1843,13 +1897,14 @@ export class FunctionService implements OnModuleInit {
         synchronous: customFunction.synchronous,
       },
       code: customFunction.code,
+      language: customFunction.language,
       visibilityMetadata: {
         visibility: customFunction.visibility as Visibility,
       },
     };
   }
 
-  async getServerFunctionLogs(id: string, keyword: string, logsEnabled: boolean): Promise<{logsEnabled: boolean, logs: FunctionLog[]}> {
+  async getServerFunctionLogs(id: string, keyword: string, logsEnabled: boolean): Promise<{ logsEnabled: boolean, logs: FunctionLog[] }> {
     const logs = await this.faasLogsService.getLogs(id, keyword);
     return {
       logsEnabled,
@@ -1885,7 +1940,11 @@ export class FunctionService implements OnModuleInit {
       functionName,
       '',
       code,
+      'javascript',
       {},
+      undefined,
+      undefined,
+      undefined,
       user.key,
       false,
       () => Promise.resolve(),

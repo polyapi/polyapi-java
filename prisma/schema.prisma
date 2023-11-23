@@ -159,6 +159,7 @@ model CustomFunction {
   context       String
   description   String       @default("")
   code          String
+  language      String
   arguments     String
   returnType    String?      @map("return_type")
   synchronous   Boolean      @default(true)

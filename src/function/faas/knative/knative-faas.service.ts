@@ -10,8 +10,8 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { AxiosError } from 'axios';
 import { ConfigService } from 'config/config.service';
 import { ExecuteFunctionResult, FaasService } from '../faas.service';
-import { CustomObjectsApi } from '@kubernetes/client-node';
-import { makeCustomObjectsApiClient } from 'kubernetes/client';
+import { CoreV1Api, CustomObjectsApi } from '@kubernetes/client-node';
+import { getApiClient } from 'kubernetes/client';
 import { ServerFunctionLimits } from '@poly/model';
 import { ServerFunctionDoesNotExists } from './errors/ServerFunctionDoesNotExist';
 
@@ -40,7 +40,8 @@ interface KNativeRouteDef {
 
 export class KNativeFaasService implements FaasService {
   private logger = new Logger(KNativeFaasService.name);
-  private k8sApi: CustomObjectsApi;
+  private customObjectsApi: CustomObjectsApi;
+  private coreV1Api: CoreV1Api;
 
   constructor(private readonly config: ConfigService, private readonly http: HttpService) {
   }
@@ -71,7 +72,11 @@ export class KNativeFaasService implements FaasService {
     await writeFile(this.config.faasDockerConfigFile, JSON.stringify(getConfig(), null, 2));
 
     this.logger.debug('Initializing Kubernetes API client...');
-    this.k8sApi = makeCustomObjectsApiClient();
+
+    const clientLib = getApiClient();
+
+    this.customObjectsApi = clientLib.customObjectsApi;
+    this.coreV1Api = clientLib.v1Api;
   }
 
   async createFunction(
@@ -124,8 +129,9 @@ export class KNativeFaasService implements FaasService {
 
   async executeFunction(
     id: string,
+    functionEnvironmentId: string,
     tenantId: string,
-    environmentId: string,
+    executionEnvironmentId: string,
     args: any[],
     headers = {},
     maxRetryCount = 3,
@@ -143,9 +149,13 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`Executing server function '${id}'...`);
     this.logger.verbose(`Calling ${functionUrl}`);
     this.logger.verbose({ args: JSON.stringify(args) });
+    const sanitizedHeaders = {
+      ...(this.filterPassThroughHeaders(headers) || {}),
+      'x-poly-do-log': functionEnvironmentId === executionEnvironmentId,
+    };
     return await lastValueFrom(
       this.http
-        .post(`${functionUrl}`, { args }, { headers: this.filterPassThroughHeaders(headers) })
+        .post(`${functionUrl}`, { args }, { headers: sanitizedHeaders })
         .pipe(map((response) => (
           {
             body: response.data,
@@ -168,7 +178,7 @@ export class KNativeFaasService implements FaasService {
             );
             if (maxRetryCount > 0) {
               await sleep(2000);
-              return this.executeFunction(id, tenantId, environmentId, args, headers, 0);
+              return this.executeFunction(id, functionEnvironmentId, tenantId, executionEnvironmentId, args, headers, 0);
             }
 
             throw error;
@@ -199,7 +209,7 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`Deleting server function '${id}'...`);
 
     try {
-      await this.k8sApi.deleteNamespacedCustomObject(
+      await this.customObjectsApi.deleteNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.knativeTriggerNamespace,
@@ -264,7 +274,7 @@ export class KNativeFaasService implements FaasService {
     imageName: string,
     apiKey: string,
     limits: ServerFunctionLimits,
-    sleep?: boolean | null,
+    sleepFn?: boolean | null,
     sleepAfter?: number | null,
     logsEnabled = false,
   ) {
@@ -276,14 +286,14 @@ export class KNativeFaasService implements FaasService {
     const functionPath = `${tenantId}/${environmentId}/${this.getFunctionName(id)}`;
     const getAnnotations = () => {
       const annotations = {};
-      if (sleep == null) {
-        sleep = true;
+      if (sleepFn == null) {
+        sleepFn = true;
       }
       if (sleepAfter == null || sleepAfter <= 0) {
         sleepAfter = this.config.faasDefaultSleepSeconds;
       }
 
-      if (sleep) {
+      if (sleepFn) {
         annotations['autoscaling.knative.dev/class'] = 'kpa.autoscaling.knative.dev';
         annotations['autoscaling.knative.dev/window'] = `${sleepAfter}s`;
       } else {
@@ -320,6 +330,20 @@ export class KNativeFaasService implements FaasService {
             timeoutSeconds: limits.time,
             containers: [
               {
+                readinessProbe: {
+                  exec: {
+                    command: ['pwd'],
+                  },
+                  initialDelaySeconds: 5,
+                  periodSeconds: 3,
+                },
+                startupProbe: {
+                  exec: {
+                    command: ['pwd'],
+                  },
+                  failureThreshold: 3,
+                  periodSeconds: 23,
+                },
                 image: `${imageName}`,
                 volumeMounts: [
                   {
@@ -370,14 +394,58 @@ export class KNativeFaasService implements FaasService {
     this.logger.debug(`createNamespacedCustomObject options - ${JSON.stringify(options)}`);
 
     try {
-      await this.k8sApi.createNamespacedCustomObject(
+      await this.customObjectsApi.createNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.faasNamespace,
         SERVICES_NAME,
         options,
       );
+
+      let attempts = 0;
+      let podReady = false;
+
+      while (attempts <= 3 && !podReady) {
+        await sleep(4000);
+        this.logger.debug('Checking pod status before sending id to user...');
+
+        try {
+          const response = await this.coreV1Api.listNamespacedPod(this.config.faasNamespace);
+
+          const pod = response.body.items.find(item => item.metadata?.name?.match(new RegExp(this.getFunctionName(id))));
+
+          if (!pod) {
+            this.logger.debug('Could not find pod, retrying...');
+            attempts++;
+            continue;
+          }
+
+          const userContainer = pod.status?.containerStatuses?.find(containerStatus => containerStatus.name === 'user-container');
+
+          if (!userContainer) {
+            this.logger.debug('Could not find user container, retrying...');
+            attempts++;
+            continue;
+          }
+
+          if (userContainer.ready) {
+            this.logger.debug('User container is ready.');
+            podReady = true;
+            continue;
+          } else {
+            this.logger.debug('User container is not ready.');
+          }
+        } catch (err) {
+          this.logger.error('Err checking user container status..', err);
+        }
+        attempts++;
+      }
+
       this.logger.debug(`KNative service for function '${id}' created. Function deployed.`);
+
+      if (!podReady) {
+        this.logger.debug('WARNING: Function pod may not be ready.');
+      }
     } catch (e) {
       if (e.body?.code === 409) {
         this.logger.warn(`Server function '${id}' already exists, skipping.`);
@@ -399,7 +467,7 @@ export class KNativeFaasService implements FaasService {
     const name = this.getFunctionName(id);
 
     try {
-      const response = await this.k8sApi.getNamespacedCustomObject(
+      const response = await this.customObjectsApi.getNamespacedCustomObject(
         SERVING_GROUP,
         SERVING_VERSION,
         this.config.faasNamespace,

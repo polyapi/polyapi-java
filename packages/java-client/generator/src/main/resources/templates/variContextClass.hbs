@@ -9,28 +9,30 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.polyapi.client.api.*;
 
 public class {{className}} {
-{{#if root}}
+{{~#if root}}
   private final static WebSocketClient webSocketClient = WebSocketClient.getInstance();
   private final static ObjectMapper objectMapper = ObjectMapper.getInstance();
-{{/if}}
-{{#each variables}}
-  {{#if rootContext}}
+{{~/if}}
+{{~#each variables}}
+  {{~#if rootContext}}
   public static {{className}} {{name}} = new {{className}}();
-  {{else}}
+  {{~else}}
   public {{className}} {{name}} = new {{className}}();
-  {{/if}}
-{{/each}}
-{{#each subContexts}}
+  {{~/if}}
+{{~/each}}
+{{~#each subContexts}}
   {{#if useStatic}}
   public static {{className}} {{name}} = new {{className}}();
-  {{else}}
+  {{~else}}
   public {{className}} {{name}} = new {{className}}();
-  {{/if}}
-{{/each}}
-{{#if root}}
+  {{~/if}}
+{{~/each}}
+
+{{~#if root}}
   public static OnUpdateListener onUpdate(String path, Consumer<VariableChangeEvent> callback) {
     return onUpdate(path, callback, null);
   }
+
   public static OnUpdateListener onUpdate(String path, Consumer<VariableChangeEvent> callback, OnUpdateOptions options) {
     try {
       if (options == null) {
@@ -52,5 +54,5 @@ public class {{className}} {
       throw new PolyRuntimeException(e);
     }
   }
-{{/if}}
+{{~/if}}
 }

@@ -8,6 +8,8 @@ import org.json.JSONException;
 import io.polyapi.client.api.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import io.polyapi.Poly;
+import io.polyapi.Vari;
 
 import static io.polyapi.client.api.Utils.*;
 
@@ -18,44 +20,56 @@ public class {{className}} {
   private final ObjectMapper objectMapper = ObjectMapper.getInstance();
 
 {{#each subContexts}}
-{{#if useStatic}}
+{{~#if useStatic}}
   public static {{className}} {{name}} = new {{className}}();
-{{else}}
+{{~else}}
   public {{className}} {{name}} = new {{className}}();
-{{/if}}
-{{/each}}
+{{~/if}}
+{{~/each}}
 
-{{#each specifications}}
-  {{#ifIsType this "ApiFunctionSpecification"}}
-  {{#ifIsType function.returnType "VoidPropertyType"}}
+{{~#each specifications}}
+  {{~#ifIsType this "ApiFunctionSpecification"}}
+  {{~#ifIsType function.returnType "VoidPropertyType"}}
   public void {{name}}({{{renderArguments function.arguments}}}) {
-  {{else}}
+  {{~else}}
   public ApiFunctionResponse<{{{function.returnType.getInCodeType}}}> {{name}}({{{renderArguments function.arguments}}}) {
-  {{/ifIsType}}
+  {{~/ifIsType}}
     try {
       var payloadForThePolyApiFunction = new JSONObject();
-      {{#each function.arguments}}
+      {{~#each function.arguments}}
       payloadForThePolyApiFunction.put("{{name}}", objectMapper.toJSONValue(variableInjectManager.getInjectedValueOrOriginal({{inCodeName}})));
-      {{/each}}
-      {{#ifIsType function.returnType "VoidPropertyType"}}
+      {{~/each}}
+      {{~#ifIsType function.returnType "VoidPropertyType"}}
       apiClient.post("/functions/api/{{id}}/execute", payloadForThePolyApiFunction.toString());
-      {{else}}
+      {{~else}}
       var response = apiClient.post("/functions/api/{{id}}/execute", payloadForThePolyApiFunction.toString());
       var responseBody = response.getBody();
       var typeRef = new TypeReference<ApiFunctionResponse<{{{function.returnType.getInCodeType}}}>>() {};
       return objectMapper.readValue(responseBody, typeRef);
-      {{/ifIsType}}
+      {{~/ifIsType}}
     } catch (Exception e) {
       throw new PolyRuntimeException(e);
     }
   }
-  {{/ifIsType}}
-  {{#ifIsType this "CustomFunctionSpecification"}}
+  {{~/ifIsType}}
+
+  {{~#ifIsType this "CustomFunctionSpecification"}}
   public {{{function.returnType.getInCodeType}}} {{name}}({{{renderArguments function.arguments}}}) {
+    {{~#if this.isJava}}
+    var clientFunction = new {{className}}();
+    var result = clientFunction.execute(
+    {{~#each function.arguments}}
+      {{inCodeName}}{{#unless @last}},{{/unless}}
+    {{~/each}}
+    );
+    return objectMapper.convertValue(result, {{{function.returnType.getInCodeType}}}.class);
+    {{~else}}
     throw new UnsupportedOperationException("Javascript client functions cannot be used in the Java client.");
+    {{~/if}}
   }
-  {{/ifIsType}}
-  {{#ifIsType this "ServerFunctionSpecification"}}
+  {{~/ifIsType}}
+
+  {{~#ifIsType this "ServerFunctionSpecification"}}
   public {{{function.returnType.getInCodeType}}} {{name}}({{{renderArguments function.arguments}}}) {
     try {
       var payloadForThePolyServerFunction = new JSONObject();
@@ -72,8 +86,9 @@ public class {{className}} {
       throw new PolyRuntimeException(e);
     }
   }
-  {{/ifIsType}}
-  {{#ifIsType this "WebhookHandleSpecification"}}
+  {{~/ifIsType}}
+
+  {{~#ifIsType this "WebhookHandleSpecification"}}
   public void {{name}}(WebhookEventConsumer<{{{function.arguments.0.type.spec.arguments.0.type.inCodeType}}}> callback) {
     try {
       webSocketClient.registerWebhookEventHandler("{{id}}", objects -> {
@@ -92,9 +107,10 @@ public class {{className}} {
       throw new PolyRuntimeException(e);
     }
   }
-  {{/ifIsType}}
-  {{#ifIsType this "AuthFunctionSpecification"}}
-  {{#if subResource}}
+  {{~/ifIsType}}
+
+  {{~#ifIsType this "AuthFunctionSpecification"}}
+  {{~#if subResource}}
   public void {{name}}(String token) {
     try {
       var payload = new JSONObject();
@@ -106,7 +122,7 @@ public class {{className}} {
       throw new PolyRuntimeException(e);
     }
   }
-  {{else}}
+  {{~else}}
   public void getToken(String clientID, String clientSecret{{#if audienceRequired}}, audience{{/if}}, String[] scopes, AuthTokenEventConsumer callback) {
     getToken(clientID, clientSecret{{#if audienceRequired}}, audience{{/if}}, scopes, callback, null);
   }
@@ -178,7 +194,7 @@ public class {{className}} {
       throw new PolyRuntimeException(e);
     }
   }
-  {{/if}}
-  {{/ifIsType}}
-{{/each}}
+  {{~/if}}
+  {{~/ifIsType}}
+{{~/each}}
 }
