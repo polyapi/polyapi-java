@@ -72,7 +72,7 @@ export class JsonTemplate implements JsonTemplateProcessor {
             return `${argValue}`;
           }
 
-          if (argumentsMetadata[value.$polyArgName]?.required === false && argumentsMetadata[value.$polyArgName]?.removeIfNotPresentOnExecute === false) {
+          if (argumentsMetadata[value.$polyArgName]?.required === false && argumentsMetadata[value.$polyArgName]?.removeIfNotPresentOnExecute === false && typeof argValue === 'undefined') {
             // In this case, argument is quoted in json template and user sent `undefined`, we should send an empty string to respect user decision.
             return '';
           }
