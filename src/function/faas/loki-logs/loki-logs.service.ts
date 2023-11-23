@@ -1,17 +1,31 @@
-import { Logger, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
+import { HttpException, HttpStatus, InternalServerErrorException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { catchError, lastValueFrom, map } from 'rxjs';
-import { getDateFromNanoseconds, getNanosecondsFromDate, getDateMinusXHours } from '@poly/common/utils';
+import { getDateMinusXHours, getNanosecondsFromDate } from '@poly/common/utils';
 import { FunctionLog } from '@poly/model';
 import { FaasLogsService } from '../faas.service';
+
+type LokiResultValue = [timestamp: string, logText: string];
+
+interface LokiResult {
+  stream: {
+    //
+  },
+  values: LokiResultValue[],
+}
+
+type LokiData = {
+  resultType: 'streams';
+  result: LokiResult[];
+}
 
 export class LokiLogsService implements FaasLogsService {
   private readonly logger: Logger = new Logger(LokiLogsService.name);
 
   constructor(private readonly config: ConfigService, private readonly httpService: HttpService) {}
 
-  async getLogs(functionId: string, keyword: string): Promise<FunctionLog[]> {
+  async getLogs(functionId: string, keyword = ''): Promise<FunctionLog[]> {
     this.logger.debug(`Getting logs for function with id ${functionId}`);
     const logQuery = this.constructQuery(functionId, keyword);
     const dateMinus24hs = getDateMinusXHours(new Date(), 24);
@@ -21,23 +35,22 @@ export class LokiLogsService implements FaasLogsService {
       this.httpService
         .get(url)
         .pipe(
-          map((response) => response.data as {status: string; data: any}),
+          map((response) => response.data as {status: string; data: LokiData}),
           map(({ status, data }) => {
             if (status !== 'success') {
               throw new InternalServerErrorException(`Fetching data from the Faas logger service returned a status of ${status}`);
             }
             return data;
           }),
-          map((rawLogsData) => this.normalizeFaasLogs(rawLogsData)),
-          map((normalizedLogs) => this.sortLogsByNewestFirst(normalizedLogs)),
-          map((sortedLogs) => this.getUserFriendlyLogs(sortedLogs)),
+          map((lokiData) => this.toFunctionLogs(lokiData)),
+          map((logs) => this.sortLogsByNewestFirst(logs)),
           catchError(this.processLogsRetrievalError()),
         ),
     );
   }
 
   private processLogsRetrievalError() {
-    return (error) => {
+    return (error: any) => {
       this.logger.error(`Error while processing data from the FaaS logger service: ${error}`);
       throw new HttpException(
         error.response?.data || error.message,
@@ -46,13 +59,20 @@ export class LokiLogsService implements FaasLogsService {
     };
   }
 
-  private normalizeFaasLogs(rawLogsData): FunctionLog[] {
-    const logValues = rawLogsData.result.flatMap(({ values }) => values) as Array<[string, string]>;
-    return logValues.map(([nanoSecondsTime, logText]) => ({
-      timestamp: BigInt(nanoSecondsTime),
-      value: this.getCleanLogContent(logText),
-      level: logText.includes('stderr F') ? 'Error/Warning' : 'Info',
-    }));
+  private toFunctionLogs(lokiData: LokiData): FunctionLog[] {
+    const logValues = lokiData.result.flatMap(({ values }) => values);
+
+    return logValues
+      .map(([timestamp, logText]) => {
+        const [value, level] = this.getLogContentAndLevel(logText);
+
+        return ({
+          timestamp,
+          value,
+          level,
+        });
+      })
+      .filter(({ level }) => level !== 'UNKNOWN');
   }
 
   private sortLogsByNewestFirst(logs: FunctionLog[]): FunctionLog[] {
@@ -62,48 +82,30 @@ export class LokiLogsService implements FaasLogsService {
       and we need to sort once all values have been aggregated
     */
     return logs.sort(
-      (a, b) => Number((b.timestamp as bigint) - (a.timestamp as bigint)),
+      (a, b) => b.timestamp.localeCompare(a.timestamp),
     );
   }
 
-  private getUserFriendlyLogs(logs: FunctionLog[]): FunctionLog[] {
-    return logs.map(
-      (logentry) => ({
-        ...logentry,
-        timestamp: getDateFromNanoseconds(logentry.timestamp as bigint),
-      }));
-  }
-
   private constructQuery(functionId: string, keyword: string): string {
-    /*
-      The lines below correspond to Grafana's LogQL query language
-    */
-    const excludeByRegexOperator = '!~';
-    const excludeSystemLogsQuery = `${excludeByRegexOperator} "${this.getSystemLogsQueryRegex(functionId)}"`;
-    const includeByRegexOperator = '|~';
-    const makeCaseInsensitive = '(?i)';
-    const getKeywordQuery = (keyword: string) => `${includeByRegexOperator} "${makeCaseInsensitive}${keyword}"`;
+    const getKeywordQuery = (keyword: string) => `|~ "(?i)${keyword}"`;
     const textContentQuery = keyword
-      ? `${excludeSystemLogsQuery} ${getKeywordQuery(keyword)}`
-      : `${excludeSystemLogsQuery}`;
-    return `{pod=~"function-${functionId}.*",container="user-container"} ${textContentQuery}`;
+      ? ` ${getKeywordQuery(keyword)}`
+      : '';
+    return `{pod=~"function-${functionId}.*",container="user-container"}${textContentQuery}`;
   }
 
-  private getSystemLogsQueryRegex(functionId: string): string {
-    return `function-${functionId}-|Cached Poly library found|> http-handler@|> FUNC_LOG_LEVEL=info faas-js-runtime ./index.js|npm notice |Generating Poly functions|stderr F $|stdout F $|^$`;
-  }
+  private getLogContentAndLevel(rawLogText: string): [logContent: string, logLevel: string] {
+    const polyLogPattern = /\[(ERROR|LOG|INFO|WARN)](.*?)\[\/\1]/gs;
+    const timestampStdPipePattern = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z (stdout|stderr) F /g;
 
-  private getCleanLogContent(logContent: string): string {
-    const removeStreamInfo = (stream: 'stderr' | 'stdout') => {
-      const [, cleanLogContent] = logContent.split(` ${stream} F `);
-      return cleanLogContent;
-    };
-    if (logContent.includes('stderr F')) {
-      return removeStreamInfo('stderr');
-    }
-    if (logContent.includes('stdout F')) {
-      return removeStreamInfo('stdout');
-    }
-    return logContent;
+    const [, level, logText] = polyLogPattern.exec(rawLogText) || [null, 'UNKNOWN', rawLogText];
+    const lines = logText.trim().split('\n');
+
+    return [
+      lines
+        .map(line => line.replace(timestampStdPipePattern, ''))
+        .join('\n'),
+      level,
+    ];
   }
 }
