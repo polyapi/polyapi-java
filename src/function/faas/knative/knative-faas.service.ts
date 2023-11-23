@@ -11,7 +11,7 @@ import { AxiosError } from 'axios';
 import { ConfigService } from 'config/config.service';
 import { ExecuteFunctionResult, FaasService } from '../faas.service';
 import { CoreV1Api, CustomObjectsApi } from '@kubernetes/client-node';
-import { makeCustomObjectsApiClient } from 'kubernetes/client';
+import { getApiClient } from 'kubernetes/client';
 import { ServerFunctionLimits } from '@poly/model';
 import { ServerFunctionDoesNotExists } from './errors/ServerFunctionDoesNotExist';
 
@@ -73,7 +73,7 @@ export class KNativeFaasService implements FaasService {
 
     this.logger.debug('Initializing Kubernetes API client...');
 
-    const clientLib = makeCustomObjectsApiClient();
+    const clientLib = getApiClient();
 
     this.customObjectsApi = clientLib.customObjectsApi;
     this.coreV1Api = clientLib.v1Api;

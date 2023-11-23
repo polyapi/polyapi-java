@@ -3,7 +3,7 @@ import { CloudEvent, emitterFor, EmitterFunction, httpTransport } from 'cloudeve
 import { Logger } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import crypto from 'crypto';
-import { makeCustomObjectsApiClient } from 'kubernetes/client';
+import { getApiClient } from 'kubernetes/client';
 import { ConfigService } from 'config/config.service';
 import { TriggerProvider } from 'trigger/provider/trigger-provider';
 import { TriggerDestination, TriggerDto, TriggerSource } from '@poly/model';
@@ -71,7 +71,7 @@ export class KNativeTriggerProvider implements TriggerProvider {
     this.logger.debug('Initializing KNative trigger provider...');
     this.logger.debug('Initializing Kubernetes API client...');
 
-    this.customObjectsApi = makeCustomObjectsApiClient().customObjectsApi;
+    this.customObjectsApi = getApiClient().customObjectsApi;
     await this.createResponseTrigger();
   }
 

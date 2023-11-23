@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('KubernetesClient');
 
-export const makeCustomObjectsApiClient = (): {
+export const getApiClient = (): {
   customObjectsApi: CustomObjectsApi,
   v1Api: CoreV1Api
 } => {
