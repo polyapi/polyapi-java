@@ -52,6 +52,7 @@ describe('LokiLogsService', () => {
     });
     it('should return the logs data in the expected format', async () => {
       const result = await service.getLogs('id', '');
+      console.log(result);
       expect(result).toEqual(EXPECTED_DATA);
     });
     it('should make the request to Loki with the included keyword', async () => {

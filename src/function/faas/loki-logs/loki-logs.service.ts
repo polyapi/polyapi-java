@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, InternalServerErrorException, Logger } from 
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from 'config/config.service';
 import { catchError, lastValueFrom, map } from 'rxjs';
-import { getDateMinusXHours, getNanosecondsFromDate } from '@poly/common/utils';
+import { getDateMinusXHours, getNanosecondsFromDate, getNanosecondsDateISOString } from '@poly/common/utils';
 import { FunctionLog } from '@poly/model';
 import { FaasLogsService } from '../faas.service';
 
@@ -44,6 +44,7 @@ export class LokiLogsService implements FaasLogsService {
           }),
           map((lokiData) => this.toFunctionLogs(lokiData)),
           map((logs) => this.sortLogsByNewestFirst(logs)),
+          map((sortedLogs) => this.getUserFriendlyLogs(sortedLogs)),
           catchError(this.processLogsRetrievalError()),
         ),
     );
@@ -83,6 +84,15 @@ export class LokiLogsService implements FaasLogsService {
     */
     return logs.sort(
       (a, b) => b.timestamp.localeCompare(a.timestamp),
+    );
+  }
+
+  private getUserFriendlyLogs(logs: FunctionLog[]): FunctionLog[] {
+    return logs.map(
+      (logentry) => ({
+        ...logentry,
+        timestamp: getNanosecondsDateISOString(logentry.timestamp),
+      }),
     );
   }
 

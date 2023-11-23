@@ -94,6 +94,14 @@ export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve
 
 export const getNanosecondsFromDate = (date: Date): string => `${date.getTime() * 1000000}`;
 
+export const getNanosecondsDateISOString = (nanoSecondTimestamp: string): string => {
+  const milliseconds = parseInt(nanoSecondTimestamp.slice(0, -6), 10);
+  const date = new Date(milliseconds);
+  const isoString = date.toISOString();
+  const nanoseconds = nanoSecondTimestamp.slice(-6);
+  return `${isoString.slice(0, -1)}${nanoseconds}Z`;
+};
+
 export const getDateMinusXHours = (date: Date, hours: number): Date => {
   date.setHours(date.getHours() - hours);
   return date;

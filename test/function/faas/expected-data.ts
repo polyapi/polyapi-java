@@ -1,11 +1,11 @@
 export const EXPECTED_DATA = [
   {
-    timestamp: '1700729421736827852',
+    timestamp: '2023-11-23T08:50:21.736827852Z',
     value: "{ property: 'value', another: 'value2' } { property: 'value', another: 'value2' }",
     level: 'ERROR',
   },
   {
-    timestamp: '1700729421735282205',
+    timestamp: '2023-11-23T08:50:21.735282205Z',
     value: 'Error: error object\n' +
       '    at testLogging (/workspace/index.js:82:19)\n' +
       '    at Object.handle (/workspace/index.js:89:26)\n' +
@@ -20,42 +20,42 @@ export const EXPECTED_DATA = [
     level: 'ERROR',
   },
   {
-    timestamp: '1700729421735088803',
+    timestamp: '2023-11-23T08:50:21.735088803Z',
     value: 'error multiline\nline2\nline3',
     level: 'ERROR',
   },
   {
-    timestamp: '1700729421735069653',
+    timestamp: '2023-11-23T08:50:21.735069653Z',
     value: 'error line',
     level: 'ERROR',
   },
   {
-    timestamp: '1700729421735049603',
+    timestamp: '2023-11-23T08:50:21.735049603Z',
     value: 'this is single line of warn',
     level: 'WARN',
   },
   {
-    timestamp: '1700729421735041142',
+    timestamp: '2023-11-23T08:50:21.735041142Z',
     value: "{ property: 'value', another: 'value2' }",
     level: 'LOG',
   },
   {
-    timestamp: '1700729421735005902',
+    timestamp: '2023-11-23T08:50:21.735005902Z',
     value: "%c ANother with colors and object background: yellow; color: black { property: 'value', another: 'value2' }",
     level: 'LOG',
   },
   {
-    timestamp: '1700729421734996212',
+    timestamp: '2023-11-23T08:50:21.734996212Z',
     value: '%c SPECIAL LINE WITH COLORS background: yellow; color: black',
     level: 'LOG',
   },
   {
-    timestamp: '1700729421734983002',
+    timestamp: '2023-11-23T08:50:21.734983002Z',
     value: 'this is single line',
     level: 'LOG',
   },
   {
-    timestamp: '1700726045733092195',
+    timestamp: '2023-11-23T07:54:05.733092195Z',
     value: 'Error: error object\n' +
       '    at testLogging (/workspace/index.js:82:19)\n' +
       '    at Object.handle (/workspace/index.js:88:26)\n' +
@@ -70,37 +70,37 @@ export const EXPECTED_DATA = [
     level: 'ERROR',
   },
   {
-    timestamp: '1700726045732883184',
+    timestamp: '2023-11-23T07:54:05.732883184Z',
     value: 'error multiline\nline2\nline3',
     level: 'ERROR',
   },
   {
-    timestamp: '1700726045732859554',
+    timestamp: '2023-11-23T07:54:05.732859554Z',
     value: 'error line',
     level: 'ERROR',
   },
   {
-    timestamp: '1700726045732828514',
+    timestamp: '2023-11-23T07:54:05.732828514Z',
     value: 'this is single line of warn',
     level: 'WARN',
   },
   {
-    timestamp: '1700726045732808444',
+    timestamp: '2023-11-23T07:54:05.732808444Z',
     value: "{ property: 'value', another: 'value2' }",
     level: 'LOG',
   },
   {
-    timestamp: '1700726045732790814',
+    timestamp: '2023-11-23T07:54:05.732790814Z',
     value: "%c ANother with colors and object background: yellow; color: black { property: 'value', another: 'value2' }",
     level: 'LOG',
   },
   {
-    timestamp: '1700726045732760004',
+    timestamp: '2023-11-23T07:54:05.732760004Z',
     value: '%c SPECIAL LINE WITH COLORS background: yellow; color: black',
     level: 'LOG',
   },
   {
-    timestamp: '1700726045732746024',
+    timestamp: '2023-11-23T07:54:05.732746024Z',
     value: 'this is single line',
     level: 'LOG',
   },
