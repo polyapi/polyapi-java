@@ -1,0 +1,62 @@
+package functions;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
+
+@SpringBootApplication
+public class CloudFunctionApplication {
+
+  public static void main(String[] args) {
+    SpringApplication.run(CloudFunctionApplication.class, args);
+  }
+
+  @Bean
+  public <T> Function<Message<String>, Message<T>> execute() {
+    var function = new PolyCustomFunction();
+    var objectMapper = new ObjectMapper();
+
+    return (inputMessage) -> {
+      var payload = inputMessage.getPayload();
+
+      try {
+        var body = objectMapper.readValue(payload, Body.class);
+        var execute = Arrays.stream(PolyCustomFunction.class.getDeclaredMethods())
+          .filter(method -> method.getName().equals("execute"))
+          .findFirst()
+          .get();
+        var result = execute.invoke(function, body.getArgs().toArray());
+
+        if (result instanceof String || result instanceof Number) {
+          return (Message<T>) MessageBuilder
+            .withPayload(result)
+            .build();
+        } else {
+          var jsonResult = objectMapper.writeValueAsString(result);
+          return (Message<T>) MessageBuilder
+            .withPayload(jsonResult)
+            .setHeader("Content-Type", "application/json")
+            .build();
+        }
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+  }
+
+  @Getter
+  @Setter
+  private static class Body {
+    private List<Object> args;
+  }
+}

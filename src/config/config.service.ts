@@ -119,6 +119,10 @@ export class ConfigService {
     return this.get('FAAS_DOCKER_IMAGE_FUNCTION_NODE');
   }
 
+  get faasDockerImageFunctionJava(): string {
+    return this.get('FAAS_DOCKER_IMAGE_FUNCTION_JAVA');
+  }
+
   get faasDockerUsername(): string {
     return this.get('FAAS_DOCKER_USERNAME');
   }

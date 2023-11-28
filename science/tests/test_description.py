@@ -8,7 +8,6 @@ from app.description import (
     get_variable_description,
     get_webhook_description,
 )
-from app.typedefs import ChatCompletionResponse, MessageDict
 from .testing import DbTestCase
 
 
@@ -164,30 +163,26 @@ class T(DbTestCase):
         print(data["name"])
         print(data["description"])
 
-    @patch("app.description.openai.ChatCompletion.create")
+    @patch("app.description.get_chat_completion")
     def test_get_function_description(self, mock_chat):
         mock_content = {"description": "foobar", "name": "foo", "context": "ba-r"}
-        mock_chat.return_value = {
-            "choices": [{"message": {"content": json.dumps(mock_content)}}]
-        }
+        mock_chat.return_value = json.dumps(mock_content)
         output = get_function_description(
             {
                 "url": "https://example.com",
                 "method": "POST",
                 "short_description": "Create a thing",
-            }
+            }  # type: ignore
         )
         self.assertEqual(mock_chat.call_count, 1)
         self.assertEqual(output["name"], "foo")
         self.assertEqual(output["context"], "baR")
         self.assertEqual(output["description"], "foobar")
 
-    @patch("app.description.openai.ChatCompletion.create")
+    @patch("app.description.get_chat_completion")
     def test_get_webhook_description(self, mock_chat):
         mock_content = {"description": "foobar", "name": "foo", "context": "ba-r"}
-        mock_chat.return_value = {
-            "choices": [{"message": {"content": json.dumps(mock_content)}}]
-        }
+        mock_chat.return_value = json.dumps(mock_content)
         output = get_webhook_description(
             {
                 "url": "https://example.com",
@@ -200,12 +195,10 @@ class T(DbTestCase):
         self.assertEqual(output["context"], "baR")
         self.assertEqual(output["description"], "foobar")
 
-    @patch("app.description.openai.ChatCompletion.create")
+    @patch("app.description.get_chat_completion")
     def test_get_variable_description(self, mock_chat):
         mock_content = {"description": "foobar"}
-        mock_chat.return_value = {
-            "choices": [{"message": {"content": json.dumps(mock_content)}}]
-        }
+        mock_chat.return_value = json.dumps(mock_content)
         output = get_variable_description(
             {
                 "name": "fromPhoneNumber",
@@ -233,7 +226,7 @@ class T(DbTestCase):
             "This API call retrieves a list of members subscribed...",
         )
 
-    @patch("app.description.openai.ChatCompletion.create")
+    @patch("app.description.get_chat_completion")
     def test_get_argument_descriptions(self, chat_create: Mock):
         completion = """Sure! Here is the JSON:
 
@@ -241,15 +234,7 @@ class T(DbTestCase):
         [{"name": "toNumber", "description": "The number to which the message will be sent, including country code."}]
         ```
 """
-        chat_create.return_value = ChatCompletionResponse(
-            choices=[
-                {
-                    "message": MessageDict(role="assistant", content=completion),
-                    "index": 0,
-                    "finish_reason": "stop",
-                }
-            ]
-        )
+        chat_create.return_value = completion
 
         arguments = get_argument_descriptions(
             None,
@@ -262,10 +247,3 @@ class T(DbTestCase):
             arguments[0]["description"],
             "The number to which the message will be sent, including country code.",
         )
-
-    # def test_get_contexts_and_names(self):
-    #     user = test_user_get_or_create
-    #     load_functions(user)
-    #     contexts = _get_context_and_names()
-    #     self.assertIn("hospitality.opera.getHotelDetails", contexts)
-    #     self.assertIn("travel.unitedAirlines.getFlights", contexts)

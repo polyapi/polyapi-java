@@ -1,7 +1,7 @@
 import re
 import json
 from typing import Generator, List, Optional, Tuple, Union, Dict
-from openai.error import InvalidRequestError
+from openai import BadRequestError
 from prisma import get_client
 from prisma.models import SystemPrompt, ConversationMessage
 from app.constants import QUESTION_TEMPLATE, MessageType
@@ -390,10 +390,10 @@ def get_best_function_example(
         resp = get_chat_completion(
             messages, temperature=0.5, stream=True, api_key=openai_api_key
         )
-    except InvalidRequestError as e:
+    except BadRequestError as e:
         if "maximum content length" in str(e) and prev_msgs:
             log(
-                f"InvalidRequestError due to maximum content length: {e}\ntrying again without prev_msgs"
+                f"BadRequestError due to maximum content length: {e}\ntrying again without prev_msgs"
             )
             messages = messages[
                 len(prev_msgs) + 1 :

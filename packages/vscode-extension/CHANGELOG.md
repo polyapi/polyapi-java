@@ -1,3 +1,6 @@
+### 0.6.2
+* Accommodating for the updated specs.json format.
+
 ### 0.6.1
 * Java support in poly assistant.
 

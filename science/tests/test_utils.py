@@ -674,6 +674,7 @@ GAPIKey: string,  // your api key
 
     def test_get_return_properties_string(self):
         spec = {
+            "type": "apiFunction",
             "function": {
                 "returnType": {
                     "kind": "string",
@@ -688,6 +689,7 @@ GAPIKey: string,  // your api key
 
     def test_get_return_properties_get_products(self):
         spec = {
+            "type": "apiFunction",
             "function": {
                 "returnType": {
                     "kind": "object",

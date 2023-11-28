@@ -1,6 +1,6 @@
 import uuid
 import json
-import openai
+
 from typing import Dict, List, Optional, Union
 from app.typedefs import (
     DescInputDto,
@@ -18,7 +18,6 @@ from app.utils import (
     get_chat_completion,
     get_tenant_openai_key,
 )
-from app.constants import CHAT_GPT_MODEL
 
 # this needs to be 300 or less for the OpenAPI spec
 # however, OpenAI counts characters slightly differently than us (html escaped entities like `&29;`)
@@ -139,19 +138,20 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         call_type="API call",
         format=FUNCTION_DESCRIPTION_RETURN_FORMAT,
     )
-    prompt_msg = {"role": "user", "content": prompt}
-    limitations = {
+    prompt_msg: MessageDict = {"role": "user", "content": prompt}
+    limitations: MessageDict = {
         "role": "user",
         "content": f"The description must be {DESCRIPTION_LENGTH_LIMIT} characters or less.",
     }
     messages = [prompt_msg, limitations]
-
     tenant_id = data.get("tenantId")
     openai_api_key = get_tenant_openai_key(tenant_id=tenant_id)
-    resp = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL, temperature=0.2, messages=messages, api_key=openai_api_key
-    )
-    completion = resp["choices"][0]["message"]["content"].strip()
+
+    # go
+    completion = get_chat_completion(messages, temperature=0.2, api_key=openai_api_key)
+    assert isinstance(completion, str)
+    completion = completion.strip()
+
     try:
         rv = _parse_openai_response(completion)
     except json.JSONDecodeError:
@@ -180,16 +180,16 @@ def get_function_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDt
         rv["description"],
         data.get("arguments", []),
     )
-    log("argument descriptions generated:", json.dumps(rv['arguments']))
+    log("argument descriptions generated:", json.dumps(rv["arguments"]))
 
-    if _arguments_missing_descriptions(rv['arguments']):
+    if _arguments_missing_descriptions(rv["arguments"]):
         rlog_desc_info(
             trace_id,
             "Some arguments did not get descriptions from OpenAI!",
             dict(data),
-            json.dumps(rv['arguments']),
+            json.dumps(rv["arguments"]),
         )
-        rv['trace_id'] = trace_id
+        rv["trace_id"] = trace_id
 
     return rv
 
@@ -234,15 +234,9 @@ def get_argument_descriptions(
     )
     prompt_msg = MessageDict(role="user", content=prompt)
 
-    resp = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL,
-        temperature=0.2,
-        messages=[prompt_msg],
-        api_key=api_key,
-    )
-
-    message: MessageDict = resp["choices"][0]["message"]
-    return extract_code(message["content"])
+    completion = get_chat_completion([prompt_msg], temperature=0.2, api_key=api_key)
+    assert isinstance(completion, str)
+    return extract_code(completion)
 
 
 def _get_code_prompt(code: Optional[str]) -> str:
@@ -270,18 +264,19 @@ def get_webhook_description(data: DescInputDto) -> Union[DescOutputDto, ErrorDto
         format=FUNCTION_DESCRIPTION_RETURN_FORMAT,
         # contexts="\n".join(contexts),
     )
-    limitations = {
+    limitations: MessageDict = {
         "role": "user",
         "content": f"The description must be {DESCRIPTION_LENGTH_LIMIT} characters or less.",
     }
-    prompt_msg = {"role": "user", "content": prompt}
-    resp = openai.ChatCompletion.create(
-        model=CHAT_GPT_MODEL,
+    prompt_msg: MessageDict = {"role": "user", "content": prompt}
+    completion = get_chat_completion(
+        [prompt_msg, limitations],
         temperature=0.2,
-        messages=[prompt_msg, limitations],
         api_key=openai_api_key,
     )
-    completion = resp["choices"][0]["message"]["content"].strip()
+    assert isinstance(completion, str)
+    completion = completion.strip()
+
     try:
         rv = _parse_openai_response(completion)
     except json.JSONDecodeError:

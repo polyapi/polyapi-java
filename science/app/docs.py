@@ -6,7 +6,9 @@ import os
 import json
 from typing import Dict, Generator, List, Optional, Union
 from flask import abort
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 from prisma import get_client
 from prisma.models import ConversationMessage, DocSection
 from prisma.types import DocSectionWhereInput
@@ -61,7 +63,7 @@ def documentation_question(
     docs_tenant_id: Optional[str],  # which tenantid to use for docs search?
     openai_tenant_id: Optional[str],  # which tenantid to use for openai key?
 ) -> Union[Generator, str]:
-    query_embed = openai.Embedding.create(
+    query_embed = client.embeddings.create(
         input=question, model="text-embedding-ada-002"
     )
     query_vector = query_embed["data"][0]["embedding"]
@@ -109,7 +111,7 @@ def update_vector(doc_id: str) -> str:
     db = get_client()
     doc = db.docsection.find_unique(where={"id": doc_id})
     assert doc
-    resp = openai.Embedding.create(input=doc.text, model="text-embedding-ada-002")
+    resp = client.embeddings.create(input=doc.text, model="text-embedding-ada-002")
     vector = resp["data"][0]["embedding"]
     db.docsection.update(where={"id": doc_id}, data={"vector": json.dumps(vector)})
     return "updated!"

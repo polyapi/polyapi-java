@@ -59,7 +59,7 @@ def test_environment_get_or_create() -> Environment:
 
 def test_variable_get_or_create(environment_id, variable_id) -> Variable:
     db = get_client()
-    variable = db.variable.delete_many(where={"id": variable_id})
+    db.variable.delete_many(where={"id": variable_id})
     variable = db.variable.create(
         data={
             "environmentId": environment_id,

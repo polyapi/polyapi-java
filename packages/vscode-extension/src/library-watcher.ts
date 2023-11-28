@@ -4,6 +4,7 @@ import fs, { Stats } from 'fs';
 import { polySpecsChanged } from './events';
 import { getCredentialsFromExtension, isPolyLibraryInstalled, saveCredentialsInExtension, saveLibraryConfig } from './common';
 import { saveLastOpenedFileName } from './chat/language';
+import { getContextData } from '@poly/common/specs';
 
 const CHECK_INTERVAL = 5000;
 
@@ -114,7 +115,7 @@ const getPolySpecs = (folder: vscode.WorkspaceFolder) => {
   if (!fs.existsSync(polyDataPath)) {
     return {};
   }
-  return JSON.parse(fs.readFileSync(polyDataPath, 'utf8'));
+  return getContextData(JSON.parse(fs.readFileSync(polyDataPath, 'utf8')));
 };
 
 const getLibraryCredentialsPathFromWorkspace = (folder: vscode.WorkspaceFolder) => `${folder.uri.fsPath}/node_modules/.poly/.config.env`;

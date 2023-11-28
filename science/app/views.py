@@ -2,7 +2,7 @@
 import json
 from typing import Any, Dict, Generator, Optional, Union
 from flask import Blueprint, Response, request, jsonify
-from openai.error import OpenAIError, RateLimitError, APIError
+from openai import OpenAIError, RateLimitError, APIError
 from app.completion import general_question, get_completion_answer
 from app.constants import MessageType, PerfLogType
 from app.conversation import get_chat_conversation_lookback, get_recent_messages
@@ -13,6 +13,7 @@ from app.description import (
 )
 from app.docs import documentation_question, update_vector
 from app.help import help_question
+from app.log import log_exception
 from app.plugin import get_plugin_chat
 from app.typedefs import DescInputDto, MessageDict, VarDescInputDto
 from app.utils import (
@@ -116,13 +117,14 @@ def function_completion() -> Response:
             )
         elif route == "error":
             # mock error for testing
-            raise RateLimitError("That model is currently overloaded...")
+            raise OpenAIError("That model is currently overloaded...")
         else:
             resp = "unexpected category: {route}"
     except Exception as e:
         if isinstance(e, OpenAIError):
             msg = handle_open_ai_error(e)
         else:
+            log_exception(e)
             msg = str(e)
 
         err_data = {"message": msg}
@@ -149,8 +151,8 @@ def function_completion() -> Response:
             )
         else:
             answer_content = ""
-            for chunk in resp:
-                content = chunk["choices"][0].get("delta", {}).get("content")
+            for part in resp:
+                content = part.choices[0].delta.content
                 if content is not None:
                     answer_content += content
                     # still have data to send back
@@ -280,13 +282,6 @@ def error_api():
     )
 
 
-@bp.route("/error-rate-limit")
-def error_rate_limit():
-    raise RateLimitError(
-        "That model is currently overloaded with other requests. You can retry your request, or contact us through our help center at help.openai.com if the error persists. (Please include the request ID 1a63543dd9855ee708b9020f73d50a38 in your message."
-    )
-
-
 @bp.errorhandler(OpenAIError)
 def openai_error_view(e):
     # now you're handling non-HTTP exceptions only
@@ -296,8 +291,6 @@ def openai_error_view(e):
 
 def handle_open_ai_error(e: OpenAIError) -> str:
     # now you're handling non-HTTP exceptions only
-    from flask import current_app
-
     if isinstance(e, RateLimitError) and str(e).startswith(
         "That model is currently overloaded"
     ):
@@ -306,7 +299,7 @@ def handle_open_ai_error(e: OpenAIError) -> str:
     else:
         # just pass along whatever
         msg = "OpenAI Error: {}".format(str(e))
-    current_app.log_exception(msg)
+    log_exception(msg)
     return msg
 
 

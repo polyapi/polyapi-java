@@ -7,12 +7,13 @@ from app.conversation import get_plugin_conversation_lookback, get_recent_messag
 
 assert requests
 from typing import Dict, List
-import openai
+from openai import OpenAI
+from openai.types.chat.chat_completion import Choice
 from prisma import get_client
 from prisma.models import ConversationMessage, ApiKey
 
-from app.constants import CHAT_GPT_MODEL, MessageType
-from app.typedefs import ChatGptChoice, MessageDict
+from app.constants import MessageType
+from app.typedefs import MessageDict
 from app.log import log
 from app.utils import (
     get_tenant_openai_key,
@@ -69,7 +70,9 @@ def openapi_to_openai_functions(openapi: Dict) -> List[Dict]:
     return rv
 
 
-def _get_previous_messages(conversation_id: str, db_api_key: ApiKey) -> List[ConversationMessage]:
+def _get_previous_messages(
+    conversation_id: str, db_api_key: ApiKey
+) -> List[ConversationMessage]:
     db = get_client()
     conversation = db.conversation.find_first(where={"id": conversation_id})
     if conversation:
@@ -80,7 +83,10 @@ def _get_previous_messages(conversation_id: str, db_api_key: ApiKey) -> List[Con
                     "message": "Not authorized. User id and conversation user id mismatch."
                 },
             )
-        elif conversation.applicationId and conversation.applicationId != db_api_key.applicationId:
+        elif (
+            conversation.applicationId
+            and conversation.applicationId != db_api_key.applicationId
+        ):
             abort(
                 401,
                 {
@@ -88,7 +94,9 @@ def _get_previous_messages(conversation_id: str, db_api_key: ApiKey) -> List[Con
                 },
             )
 
-        prev_msgs = get_recent_messages(conversation_id, None, get_plugin_conversation_lookback())
+        prev_msgs = get_recent_messages(
+            conversation_id, None, get_plugin_conversation_lookback()
+        )
     else:
         conversation = db.conversation.create(
             data={
@@ -99,6 +107,11 @@ def _get_previous_messages(conversation_id: str, db_api_key: ApiKey) -> List[Con
         )
         prev_msgs = []
     return prev_msgs
+
+
+def _function_call(openai_api_key: str | None, **kwargs):
+    client = OpenAI(api_key=openai_api_key)
+    return client.chat.completions.create(**kwargs)
 
 
 def get_plugin_chat(
@@ -121,39 +134,39 @@ def get_plugin_chat(
     messages = [
         MessageDict(role="user", content=message, type=MessageType.plugin.value)
     ]
-    openai_api_key = get_tenant_openai_key(user_id=db_api_key.userId, application_id=db_api_key.applicationId)
-    resp = openai.ChatCompletion.create(
-        api_key=openai_api_key,
-        model=CHAT_GPT_MODEL,
-        messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),
-        functions=functions,
+    openai_api_key = get_tenant_openai_key(
+        user_id=db_api_key.userId, application_id=db_api_key.applicationId
+    )
+    resp = _function_call(
+        openai_api_key,
+        messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),  # type: ignore
+        functions=functions,  # type: ignore
         temperature=0.2,
     )
 
     for _ in range(4):
         # resp is the variable that should change every iteration of this loop
-        choice: ChatGptChoice = resp["choices"][0]
-        if not choice.get("message"):
+        choice: Choice = resp.choices[0]
+        if not choice.message:
             raise NotImplementedError(f"Got weird OpenAI response: {choice}")
 
-        function_call = choice["message"].get("function_call")
+        function_call = choice.message.function_call
         if function_call:
             # lets execute the function_call and return the results
-            function_call = dict(function_call)
-            function_call_msg = choice["message"]
-            function_msg = execute_function(api_key, openapi, function_call)
-            messages.extend([function_call_msg, function_msg])
-            resp2 = openai.ChatCompletion.create(
-                model=CHAT_GPT_MODEL,
-                messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),
-                functions=functions,
+            function_msg = execute_function(api_key, openapi, function_call.model_dump())
+            function_call_msg = choice.message.model_dump()
+            messages.extend([function_call_msg, function_msg])  # type: ignore
+            resp2 = _function_call(
+                openai_api_key,
+                messages=strip_type_and_info(msgs_to_msg_dicts(prev_msgs) + messages),  # type: ignore
+                functions=functions,  # type: ignore
                 temperature=0.2,
             )
             # lets line up response for possible function_call execution
             resp = resp2
         else:
             # no function call so stop processing and return OpenAI's answer
-            answer_msg: MessageDict = choice["message"]  # type: ignore
+            answer_msg: MessageDict = choice.message.model_dump()  # type: ignore
             answer_msg["type"] = MessageType.plugin.value
             messages.append(answer_msg)
             break
@@ -165,10 +178,12 @@ def get_plugin_chat(
 def _serialize(messages: List[MessageDict]) -> List[Dict]:
     rv = []
     for message in messages:
-        rv.append({
-            'role': message['role'],
-            'content': message['content'],
-        })
+        rv.append(
+            {
+                "role": message["role"],
+                "content": message["content"],
+            }
+        )
     return rv
 
 

@@ -17,6 +17,7 @@ export interface FaasService {
     environmentId: string,
     name: string,
     code: string,
+    language: string,
     requirements: string[],
     apiKey: string,
     limits: ServerFunctionLimits,
@@ -25,19 +26,27 @@ export interface FaasService {
     sleepAfter?: number | null,
     logsEnabled?: boolean,
   ) => Promise<void>;
-  executeFunction: (id: string, tenantId: string, environmentId: string, args: any[], headers: Record<string, any>) => Promise<ExecuteFunctionResult>;
+  executeFunction: (
+    id: string,
+    functionEnvironmentId: string,
+    tenantId: string,
+    executionEnvironmentId: string,
+    args: any[],
+    headers: Record<string, any>
+  ) => Promise<ExecuteFunctionResult>;
   updateFunction: (
     id: string,
     tenantId: string,
     environmentId: string,
     name: string,
     code: string,
+    language: string,
     requirements: string[],
     apiKey: string,
     limits: ServerFunctionLimits,
     sleep?: boolean | null,
     sleepAfter?: number | null,
-    logsEnabled?: boolean
+    logsEnabled?: boolean,
   ) => Promise<void>;
   deleteFunction: (id: string, tenantId: string, environmentId: string) => Promise<void>;
 
