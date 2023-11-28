@@ -169,12 +169,12 @@ const generateServerVariableJSFiles = async (specifications: ServerVariableSpeci
 
   const arrPaths = [];
 
-  for(const specification of specifications) {
-    if(isPlainObjectPredicate(specification.variable.value) || Array.isArray(specification.variable.value)) {
+  for (const specification of specifications) {
+    if (isPlainObjectPredicate(specification.variable.value) || Array.isArray(specification.variable.value)) {
       arrPaths.push({
         context: specification.context || '',
         paths: getStringPaths(specification.variable.value),
-      })
+      });
     }
   }
 
@@ -184,7 +184,7 @@ const generateServerVariableJSFiles = async (specifications: ServerVariableSpeci
       specifications,
       contextPaths,
       apiKey: getApiKey(),
-      arrPaths: JSON.stringify(arrPaths)
+      arrPaths: JSON.stringify(arrPaths),
     }),
   );
 };

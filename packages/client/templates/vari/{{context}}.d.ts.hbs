@@ -43,14 +43,14 @@ declare module vari {
          * await poly.products.addItem(vari.products.shopId.inject(), 'Toy car', 1)
          */
         {{#if secret}}
-          inject(): {{{type}}};
+          inject(path?: string): any;
         {{else}}
           {{#if isObjectType}}
           inject(): {{{type}}};
-          inject(path: string): any;
-          inject(path?: {{pathUnionType}}): {{{type}}};
+          inject(path?: {{pathUnionType}}): any;
+          inject(path?: string): any;
           {{else}}
-          inject(): {{{type}}};
+          inject(path?: string): {{{type}}};
           {{/if}}
         {{/if}}
       }
