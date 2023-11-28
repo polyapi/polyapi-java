@@ -1,6 +1,6 @@
 import { Visibility } from '../../specs';
 
-export type ValueType = string | number | boolean | object | null;
+export type ValueType = string | number | boolean | object | null | any[];
 
 export interface VariableDto {
   id: string;

@@ -3,11 +3,35 @@ const set = require('lodash/set');
 const get = require('lodash/get');
 const merge = require('lodash/merge');
 
+const parts = Symbol('parts');
+const pathState = Symbol('pathState');
+const injectValue = Symbol('injectValue');
+
+function getStringPath(pathParts) {
+    const stringPaths = [];
+    for (let i = 0; i < pathParts.length; i++) {
+        let stringPath = '';
+        for (const part of pathParts[i]) {
+          const isString = typeof part === 'string';
+          const delimiter = (stringPath.length > 0 && isString) ? '.' : '';
+          if (isString) {
+            stringPath = `${stringPath}${delimiter}${part}`;
+          } else {
+            stringPath = `${stringPath}${delimiter}[${part}]`;
+          }
+        }
+        stringPaths.push(stringPath);
+    }
+    return stringPaths
+}
+
 const variables = [
 {{#each specifications}}
   ['{{#if context}}{{context}}.{{/if}}{{name}}', '{{id}}', {{variable.secret}}],
 {{/each}}
 ];
+
+const paths = {{{arrPaths}}};
 
 const contextPaths = [
 {{#each contextPaths}}
@@ -17,8 +41,8 @@ const contextPaths = [
 
 const getVariableHandlers = (clientID, getSocket, getApiKey) => {
   const variableHandlers = {};
-  variables.forEach(([path, id, secret]) => {
-    set(variableHandlers, path, {
+  variables.forEach(([contextPath, id, secret]) => {
+    set(variableHandlers, contextPath, {
       get: () => {
         if (secret) {
           throw new Error('Cannot access secret variable from client. Use .inject() instead within Poly function.');
@@ -68,11 +92,82 @@ const getVariableHandlers = (clientID, getSocket, getApiKey) => {
 
         return unregisterEventHandler;
       },
-      inject: (path) => ({
-        type: 'PolyVariable',
-        id,
-        path
-      }),
+      inject: (path) => {
+
+        if(typeof path !== 'undefined' || secret) {
+          return {
+            type: 'PolyVariable',
+            id,
+            path
+          };
+        }
+
+        return new Proxy({}, {
+          get(target, prop) {
+            const pathParts = target[parts] || [];
+
+            if(prop === 'toJSON') {
+                return () => ({
+                    type: 'PolyVariable',
+                    id,
+                    path: target[pathState]
+                })
+            }
+
+            if(pathParts.length >= 20) {
+                throw new Error('Maximum path chain limit reached.');
+            }
+
+            if(prop === Symbol.toPrimitive) {
+              return (hint) => {
+                if (hint === "number") {
+                  return 1;
+                }
+                if (hint === "string") {
+                  return '[object Object]';
+                }
+                return true;
+              };
+            }
+
+            if(prop === Symbol.toStringTag) {
+              return '[object Object]';
+            }
+
+            if(prop === injectValue) {
+              return {
+                type: 'PolyVariable',
+                id,
+                path: getStringPath([pathParts])[0],
+              };
+            }
+
+            if(prop.match(/\d+/)) {
+                
+                if(paths.find(currentPath => {
+                  const arrContextPath = contextPath.split('.');
+                  arrContextPath.pop();
+
+                  return currentPath.context === arrContextPath.join('.')
+
+                })?.paths?.find(currentPath => currentPath.includes(`${target[pathState]}[`))) {
+                    pathParts.push(Number(prop));
+                } else {
+                    pathParts.push(prop);
+                }
+
+            } else {
+                pathParts.push(prop);
+            }
+            
+
+            return new Proxy({
+                [parts]: pathParts,
+                [pathState]: getStringPath([pathParts])[0]
+            }, this);
+          }
+        });
+      },
     });
   });
   return variableHandlers;
@@ -125,6 +220,7 @@ module.exports = (clientID, getSocket) => merge(
       });
 
       return unregisterEventHandler;
-    }
+    },
+    injectValue
   }
 );

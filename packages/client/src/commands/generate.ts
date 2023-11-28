@@ -7,6 +7,7 @@ import { toCamelCase, toPascalCase } from '@guanghechen/helper-string';
 import prettier from 'prettier';
 import { compile } from 'json-schema-to-typescript';
 import { v4 as uuidv4 } from 'uuid';
+import jp from 'jsonpath';
 
 import {
   ApiFunctionSpecification,
@@ -22,11 +23,10 @@ import {
   SpecificationWithVariable,
   WebhookHandleSpecification,
 } from '@poly/model';
-import { toTypeDeclaration } from '@poly/common/utils';
+import { toTypeDeclaration, isPlainObjectPredicate } from '@poly/common/utils';
 import { getSpecs } from '../api';
 import { POLY_USER_FOLDER_NAME } from '../constants';
 import { loadConfig } from '../config';
-import { isPlainObject } from 'lodash';
 
 const POLY_LIB_PATH = `${__dirname}/../../../../../${POLY_USER_FOLDER_NAME}/lib`;
 
@@ -166,12 +166,25 @@ const generateServerVariableJSFiles = async (specifications: ServerVariableSpeci
   const contextData = getContextData(specifications);
   const contextPaths = getContextPaths(contextData);
   const template = handlebars.compile(await loadTemplate('vari/index.js.hbs'));
+
+  const arrPaths = [];
+
+  for(const specification of specifications) {
+    if(isPlainObjectPredicate(specification.variable.value) || Array.isArray(specification.variable.value)) {
+      arrPaths.push({
+        context: specification.context || '',
+        paths: getStringPaths(specification.variable.value),
+      })
+    }
+  }
+
   fs.writeFileSync(
     `${POLY_LIB_PATH}/vari/index.js`,
     template({
       specifications,
       contextPaths,
       apiKey: getApiKey(),
+      arrPaths: JSON.stringify(arrPaths)
     }),
   );
 };
@@ -294,12 +307,36 @@ const generateTSIndexDeclarationFile = async (contexts: Context[], pathPrefix: s
   );
 };
 
+const getStringPaths = (data: Record<string, any> | any[]) => {
+  const paths = jp.paths(data, '$..*', 100);
+
+  const stringPaths: string[] = [];
+
+  for (let i = 0; i < paths.length; i++) {
+    let stringPath = '';
+    for (const part of paths[i]) {
+      const isString = typeof part === 'string';
+      const delimiter = (stringPath.length > 0 && isString) ? '.' : '';
+      if (isString) {
+        stringPath = `${stringPath}${delimiter}${part}`;
+      } else {
+        stringPath = `${stringPath}${delimiter}[${part}]`;
+      }
+    }
+    stringPaths.push(stringPath);
+  }
+
+  return stringPaths;
+};
+
 const schemaToDeclarations = async (namespace: string, typeName: string, schema: Record<string, any>, value?: any | undefined) => {
   const wrapToNamespace = (code: string) => `namespace ${namespace} {\n  ${code}\n}`;
 
-  const appendConstValue = (code: string, value: any) => {
-    if (Array.isArray(value) || isPlainObject(value)) {
-      return `${code}\nexport type ConstValue = Readonly<${JSON.stringify(value)}>`;
+  const appendPathUnionType = (code: string, value: any) => {
+    if (Array.isArray(value) || isPlainObjectPredicate(value)) {
+      const unionPath = getStringPaths(value).map(value => `'${value}'`);
+
+      return `${code}\nexport type PathValue = ${unionPath.join(' | ')}`;
     }
 
     return code;
@@ -311,7 +348,7 @@ const schemaToDeclarations = async (namespace: string, typeName: string, schema:
     bannerComment: '',
   });
 
-  return wrapToNamespace(appendConstValue(result, value));
+  return wrapToNamespace(appendPathUnionType(result, value));
 };
 
 const getReturnTypeDeclarations = async (
@@ -500,10 +537,9 @@ const generateTSContextDeclarationFile = async (
 
   const toVariableDeclaration = (specification: SpecificationWithVariable) => {
     const type = toTypeDeclaration(specification.variable.valueType);
+    const pathUnionType = type.split('.');
 
-    const constType = type.split('.');
-
-    constType[constType.length - 1] = 'ConstValue';
+    pathUnionType[pathUnionType.length - 1] = 'PathValue';
 
     return {
       name: specification.name.split('.').pop(),
@@ -511,7 +547,7 @@ const generateTSContextDeclarationFile = async (
       type,
       secret: specification.variable.secret,
       isObjectType: specification.variable.valueType.kind === 'object',
-      constType: constType.join('.'),
+      pathUnionType: pathUnionType.join('.'),
     };
   };
 

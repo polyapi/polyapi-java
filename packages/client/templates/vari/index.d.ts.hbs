@@ -3,16 +3,6 @@
 {{/each}}
 
 declare module vari {
-  type ArrayChain<K extends string, PrevChain extends string = ''> = `${PrevChain}[${K}]`;
-  type ObjChain<Key extends string, PrevChain extends string = '', RootLevel extends boolean = true> = `${PrevChain}${RootLevel extends true ? '' : '.'}${Key}`;
-  type Keys<T> = Exclude<keyof T, keyof [] | keyof string | keyof number>;
-
-  type PathValue<T extends Record<string, any>, PrevChain extends string = '', RootLevel extends boolean = true, K extends keyof T = Keys<T>> = K extends string ?
-      T extends readonly any[] ? ArrayChain<K, PrevChain> | PathValue<T[K],ArrayChain<K, PrevChain>, false> :
-      T extends Record<string, any> ? ObjChain<K, PrevChain, RootLevel> | PathValue<T[K], ObjChain<K, PrevChain, RootLevel>, false> :
-      `${K & string}`
-  : never;
-
   type UnregisterOnUpdateHandler = () => void;
   interface VariableChangeEvent<T> {
     type: 'update' | 'delete';
@@ -61,5 +51,6 @@ declare module vari {
      * @param path context path to listen to (example: 'products' or 'products.shopId'). Can be '' to listen to all variables.
      */
     onUpdate: (path: string, callback: (event: VariableChangeEvent<any>) => void, options?: OnUpdateOptions) => UnregisterOnUpdateHandler;
+    injectValue: unique symbol;
   }
 }
