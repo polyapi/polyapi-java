@@ -28,7 +28,7 @@ export class JobsController {
       status = JobStatus.ENABLED,
     } = data;
 
-    await Promise.all([this.checkFunctions(req.user.environment, data.functions)]);
+    await Promise.all([this.checkFunctions(req.user.environment, data.functions), this.checkSchedule(req.user.environment, schedule)]);
 
     const functionsJob = this.processJobFunctions(functions);
 
