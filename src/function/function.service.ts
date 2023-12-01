@@ -1026,6 +1026,7 @@ export class FunctionService implements OnModuleInit {
                 userId,
                 functionPath,
                 this.eventService.getEventError(error),
+                true,
               );
 
               if (error.response) {
@@ -1810,6 +1811,7 @@ export class FunctionService implements OnModuleInit {
         userId,
         functionPath,
         this.eventService.getEventError(error),
+        true,
       )) {
         return;
       }

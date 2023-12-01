@@ -321,7 +321,7 @@ export class VariableService {
           ].filter(Boolean) as ('value' | 'secret')[],
           secret: secret as boolean,
           path: `${context ? `${context}.` : ''}${name}`,
-        });
+        }, true);
       }
 
       return updatedVariable;
@@ -367,7 +367,7 @@ export class VariableService {
         updatedFields: [],
         secret: variable.secret,
         path: `${variable.context ? `${variable.context}.` : ''}${variable.name}`,
-      });
+      }, true);
     }, {
       timeout: 10_000,
     });

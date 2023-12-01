@@ -7,7 +7,7 @@ import {
   WebhookEventHandlerDto,
 } from '@poly/model';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import { EventService } from 'event/event.service';
 import { AuthService } from 'auth/auth.service';
 import { WebhookService } from 'webhook/webhook.service';
@@ -15,11 +15,12 @@ import { VariableService } from 'variable/variable.service';
 import { AuthProviderService } from 'auth-provider/auth-provider.service';
 import { ApplicationService } from 'application/application.service';
 import { EnvironmentService } from 'environment/environment.service';
+import { EmitterEvents } from './emitter/events-map';
 
 @WebSocketGateway({ namespace: 'events' })
-export class EventGateway {
+export class EventGateway implements OnModuleInit {
   @WebSocketServer()
-  private server: Server;
+  private server: Server<any, any, EmitterEvents>;
 
   private logger: Logger = new Logger(EventGateway.name);
 
@@ -32,6 +33,10 @@ export class EventGateway {
     private readonly applicationService: ApplicationService,
     private readonly environmentService: EnvironmentService,
   ) {
+  }
+
+  onModuleInit() {
+    this.listenForPropagatedEvents();
   }
 
   @SubscribeMessage('registerErrorHandler')
@@ -309,5 +314,31 @@ export class EventGateway {
       return false;
     }
     return true;
+  }
+
+  private logPropagatedAction(action: keyof EmitterEvents) {
+    this.logger.debug(`Received propagated action "${action}"`);
+  }
+
+  private listenForPropagatedEvents() {
+    this.server.on('sendWebhookEvent', (...args) => {
+      this.logPropagatedAction('sendWebhookEvent');
+      this.eventService.sendWebhookEvent(...args, false);
+    });
+
+    this.server.on('sendAuthFunctionEvent', (...args) => {
+      this.logPropagatedAction('sendAuthFunctionEvent');
+      this.eventService.sendAuthFunctionEvent(...args, false);
+    });
+
+    this.server.on('sendVariableChangeEvent', (...args) => {
+      this.logPropagatedAction('sendVariableChangeEvent');
+      this.eventService.sendVariableChangeEvent(...args, false);
+    });
+
+    this.server.on('sendErrorEvent', (...args) => {
+      this.logPropagatedAction('sendErrorEvent');
+      this.eventService.sendErrorEvent(...args, false);
+    });
   }
 }

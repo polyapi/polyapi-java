@@ -1,11 +1,15 @@
 import crypto from 'crypto';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { ErrorEvent, VariableChangeEvent, VariableChangeEventType, Visibility } from '@poly/model';
 import { AxiosError } from 'axios';
 import { Environment, Variable } from '@prisma/client';
 import { AuthService } from 'auth/auth.service';
 import { AuthData } from 'common/types';
+import { EMITTER } from './emitter/emitter.provider';
+import { Emitter } from '@socket.io/redis-emitter';
+import { EmitterEvents } from './emitter/events-map';
+import { EventNames, EventParams } from '@socket.io/redis-emitter/dist/typed-events';
 
 type ClientID = string;
 type Path = string;
@@ -37,6 +41,7 @@ type VariableSocketListener = {
 @Injectable()
 export class EventService {
   private logger: Logger = new Logger(EventService.name);
+
   private errorHandlers: ErrorHandler[] = [];
   private readonly webhookHandleListeners: Record<WebhookHandleID, WebhookHandleListener[]> = {};
   // TODO: future: use flat array structure for this
@@ -46,6 +51,7 @@ export class EventService {
 
   constructor(
     private readonly authService: AuthService,
+    @Inject(EMITTER) private readonly emitter: Emitter,
   ) {
   }
 
@@ -93,6 +99,7 @@ export class EventService {
     userId: string | null,
     path: string,
     error: ErrorEvent,
+    propagateActionThroughNodes,
   ): Promise<boolean> {
     const handlerEvent = {
       ...error,
@@ -135,6 +142,10 @@ export class EventService {
       socket.emit(`handleError:${id}`, handlerEvent);
       return true;
     }));
+
+    if (propagateActionThroughNodes) {
+      this.propagateActionThroughNodes('sendErrorEvent', id, environmentId, tenantId, visibility, applicationId, userId, path, error);
+    }
 
     // counted only if default handlers are used
     return defaultHandlers.length > 0 && sentInfos.some(sent => sent);
@@ -182,7 +193,7 @@ export class EventService {
       .filter(listener => listener.clientID !== clientID);
   }
 
-  sendWebhookEvent(webhookHandleID: string, executionEnvironment: Environment | null, eventPayload: any, eventHeaders: Record<string, any>, subpathParams: Record<string, string>) {
+  sendWebhookEvent(webhookHandleID: string, executionEnvironment: Environment | null, eventPayload: any, eventHeaders: Record<string, any>, subpathParams: Record<string, string>, propagateActionThroughNodes: boolean) {
     this.logger.debug(`Sending webhook event: '${webhookHandleID}'`, eventPayload);
 
     this.webhookHandleListeners[webhookHandleID]?.forEach(({ socket, authData }) => {
@@ -196,6 +207,10 @@ export class EventService {
         params: subpathParams,
       });
     });
+
+    if (propagateActionThroughNodes) {
+      this.propagateActionThroughNodes('sendWebhookEvent', webhookHandleID, executionEnvironment, eventPayload, eventHeaders, subpathParams);
+    }
   }
 
   registerAuthFunctionEventHandler(client: Socket, clientID: string, authFunctionId: string): boolean {
@@ -230,7 +245,7 @@ export class EventService {
       .filter(socket => socket.id !== client.id);
   }
 
-  sendAuthFunctionEvent(authFunctionId: string, clientID: string | null, eventPayload: any) {
+  sendAuthFunctionEvent(authFunctionId: string, clientID: string | null, eventPayload: any, propagateActionThroughNodes: boolean) {
     this.logger.debug(`Sending auth function event: '${authFunctionId}'`, eventPayload);
 
     const handlers = clientID ? [this.authFunctionHandlers[clientID]] : Object.values(this.authFunctionHandlers);
@@ -242,6 +257,10 @@ export class EventService {
         this.logger.debug(`Sending auth function event: '${authFunctionId}'`, eventPayload);
         socket.emit(`handleAuthFunctionEvent:${authFunctionId}`, eventPayload);
       });
+
+      if (propagateActionThroughNodes) {
+        this.propagateActionThroughNodes('sendAuthFunctionEvent', authFunctionId, clientID, eventPayload);
+      }
     });
   }
 
@@ -321,7 +340,7 @@ export class EventService {
       .filter(socket => socket.id !== client.id);
   }
 
-  async sendVariableChangeEvent(variable: Variable, event: VariableChangeEvent) {
+  async sendVariableChangeEvent(variable: Variable, event: VariableChangeEvent, propagateActionThroughNodes: boolean) {
     this.logger.debug(`Sending variable update event: '${variable.id}'=${event.currentValue}`);
 
     const handlerEvent = {
@@ -366,6 +385,10 @@ export class EventService {
         }));
       }
     }
+
+    if (propagateActionThroughNodes) {
+      this.propagateActionThroughNodes('sendVariableChangeEvent', variable, event);
+    }
   }
 
   private filterByPath(path: string, mapToPath: (handler: any) => Path = handler => handler) {
@@ -373,5 +396,9 @@ export class EventService {
       const handlerPath = mapToPath(handler);
       return handlerPath === '' || path === handlerPath || path.startsWith(`${handlerPath}.`) || path.endsWith(`.${handlerPath}`);
     };
+  }
+
+  private propagateActionThroughNodes<Ev extends EventNames<EmitterEvents>>(ev: Ev, ...args: EventParams<EmitterEvents, Ev>) {
+    this.emitter.serverSideEmit(ev, ...args);
   }
 }

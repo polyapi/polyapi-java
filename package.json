@@ -45,6 +45,8 @@
     "@nestjs/websockets": "^9.3.9",
     "@openapi-contrib/json-schema-to-openapi-schema": "^2.2.5",
     "@prisma/client": "4.10.1",
+    "@socket.io/redis-adapter": "^8.2.1",
+    "@socket.io/redis-emitter": "^5.1.0",
     "@types/mailchimp__mailchimp_transactional": "^1.0.5",
     "axios": "^1.5.0",
     "bull": "^4.11.4",

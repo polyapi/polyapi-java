@@ -438,7 +438,7 @@ export class AuthProviderService {
       this.logger.debug(`Auth function callback error: ${error}`);
       this.eventService.sendAuthFunctionEvent(id, authToken.eventsClientId, {
         error,
-      });
+      }, true);
       return null;
     }
 
@@ -475,7 +475,7 @@ export class AuthProviderService {
             this.eventService.sendAuthFunctionEvent(id, authToken.eventsClientId, {
               url: this.getAuthProviderAuthorizationUrl(authProvider, authToken),
               error: error.response ? error.response.data : error.message,
-            });
+            }, true);
 
             return of(null);
           }),
@@ -500,7 +500,7 @@ export class AuthProviderService {
     this.eventService.sendAuthFunctionEvent(id, updatedAuthToken.eventsClientId, {
       token: tokenData.access_token,
       url: this.getAuthProviderAuthorizationUrl(authProvider, updatedAuthToken),
-    });
+    }, true);
 
     return updatedAuthToken.callbackUrl;
   }

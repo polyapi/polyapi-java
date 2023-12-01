@@ -485,6 +485,7 @@ export class WebhookService {
       eventPayload,
       eventHeaders,
       subpathParams,
+      true,
     );
 
     const response = await this.triggerService.triggerWebhookEvent(

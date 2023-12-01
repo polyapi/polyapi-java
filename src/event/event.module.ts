@@ -7,6 +7,7 @@ import { AuthProviderModule } from 'auth-provider/auth-provider.module';
 import { VariableModule } from 'variable/variable.module';
 import { ApplicationModule } from 'application/application.module';
 import { EnvironmentModule } from 'environment/environment.module';
+import emitterProvider from './emitter/emitter.provider';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { EnvironmentModule } from 'environment/environment.module';
     ApplicationModule,
     EnvironmentModule,
   ],
-  providers: [EventGateway, EventService],
+  providers: [EventGateway, EventService, emitterProvider],
   exports: [EventService],
 })
 export class EventModule {}
