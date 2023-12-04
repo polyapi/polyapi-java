@@ -21,7 +21,9 @@ const getSocket = () => {
   }
 
   if (!socket) {
-    socket = io(`${apiBaseUrl}/events`);
+    socket = io(`${apiBaseUrl}/events`, {
+      transports: ['websocket']
+    });
   }
   return socket;
 };
