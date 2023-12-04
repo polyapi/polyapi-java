@@ -99,7 +99,7 @@ export class EventService {
     userId: string | null,
     path: string,
     error: ErrorEvent,
-    propagateActionThroughNodes,
+    propagateActionThroughNodes: boolean,
   ): Promise<boolean> {
     const handlerEvent = {
       ...error,
