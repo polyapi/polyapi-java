@@ -7,6 +7,10 @@ import { authServiceMock } from '../mocks';
 import { Environment, Variable } from '@prisma/client';
 import { AuthData } from 'common/types';
 import { Visibility } from '@poly/model';
+import { EMITTER } from 'event/emitter/emitter.provider';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import cacheManagerMock from '../mocks/cache-manager';
+import emitterProvider from '../mocks/emitter.provider';
 
 describe('EventService', () => {
   let service: EventService;
@@ -20,6 +24,14 @@ describe('EventService', () => {
         {
           provide: AuthService,
           useValue: authServiceMock,
+        },
+        {
+          provide: EMITTER,
+          useValue: emitterProvider,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: cacheManagerMock,
         },
       ],
     }).compile();
@@ -161,7 +173,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).not.toBeCalled();
@@ -184,7 +196,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).not.toBeCalled();
       expect(socket2.emit).not.toBeCalled();
@@ -210,7 +222,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).not.toBeCalled();
       expect(socket2.emit).not.toBeCalled();
@@ -248,7 +260,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).not.toBeCalled();
@@ -286,7 +298,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).toBeCalled();
@@ -324,7 +336,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).toBeCalled();
@@ -363,7 +375,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).not.toBeCalled();
@@ -402,7 +414,7 @@ describe('EventService', () => {
           data: {},
           status: 69,
           statusText: 'Test Error',
-        });
+        }, false);
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).not.toBeCalled();
@@ -501,6 +513,7 @@ describe('EventService', () => {
         { payload: 'data' },
         { header1: 'value1' },
         { param: 'value2' },
+        false,
       );
 
       // check socket emits called
@@ -524,6 +537,7 @@ describe('EventService', () => {
         { payload: 'data' },
         { header1: 'value1' },
         { param: 'value2' },
+        false,
       );
 
       // check nothing emitted
@@ -582,7 +596,7 @@ describe('EventService', () => {
       service.registerAuthFunctionEventHandler(socket1, 'client1', 'func1');
 
       // send event
-      service.sendAuthFunctionEvent('func1', 'client1', { payload: 'data' });
+      service.sendAuthFunctionEvent('func1', 'client1', { payload: 'data' }, false);
 
       // check socket emit called
       expect(socket1.emit).toBeCalledWith('handleAuthFunctionEvent:func1', { payload: 'data' });
@@ -594,7 +608,7 @@ describe('EventService', () => {
       service.registerAuthFunctionEventHandler(socket2, 'client2', 'func1');
 
       // send event without clientId
-      service.sendAuthFunctionEvent('func1', null, { payload: 'data' });
+      service.sendAuthFunctionEvent('func1', null, { payload: 'data' }, false);
 
       // check all sockets emit called
       expect(socket1.emit).toBeCalledWith('handleAuthFunctionEvent:func1', { payload: 'data' });
@@ -603,7 +617,7 @@ describe('EventService', () => {
 
     it('does not send event if no matching handlers', () => {
       // send event
-      service.sendAuthFunctionEvent('func1', 'client1', { payload: 'data' });
+      service.sendAuthFunctionEvent('func1', 'client1', { payload: 'data' }, false);
 
       // check nothing emitted
       expect(socket1.emit).not.toBeCalled();
@@ -679,7 +693,7 @@ describe('EventService', () => {
         updateTime: 123456789,
         updatedBy: 'user',
         updatedFields: ['value'],
-      });
+      }, false);
 
       // check socket emit called
       expect(socket1.emit).toBeCalledWith('handleVariableChangeEvent:var1', {
@@ -713,7 +727,7 @@ describe('EventService', () => {
         updateTime: 123456789,
         updatedBy: 'user',
         updatedFields: ['value'],
-      });
+      }, false);
 
       // check all sockets emit called
       expect(socket1.emit).toBeCalledWith('handleVariableChangeEvent:var1', {
@@ -753,7 +767,7 @@ describe('EventService', () => {
         secret: false,
         path: 'path',
         updatedFields: ['value'],
-      });
+      }, false);
 
       // check nothing emitted
       expect(socket1.emit).not.toBeCalled();
@@ -788,7 +802,7 @@ describe('EventService', () => {
         secret: false,
         path: 'path1.var123',
         updatedFields: ['value'],
-      });
+      }, false);
 
       // check socket1 emitted
       expect(socket1.emit).toBeCalled();
@@ -823,7 +837,7 @@ describe('EventService', () => {
         secret: false,
         path: 'path2.var123',
         updatedFields: ['value'],
-      });
+      }, false);
 
       // check nothing emitted
       expect(socket1.emit).not.toBeCalled();

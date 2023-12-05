@@ -317,7 +317,7 @@ describe('VariableService', () => {
         path: 'context12345.name12345',
         secret: false,
         updatedFields: ['value', 'secret'],
-      });
+      }, true);
     });
 
     it('should call eventService.sendVariableChangeEvent when variable value is passed and variable is secret with masked values', async () => {
@@ -343,7 +343,7 @@ describe('VariableService', () => {
         path: 'context12345.name12345',
         secret: true,
         updatedFields: ['value'],
-      });
+      }, true);
     });
 
     it('should call eventService.sendVariableChangeEvent when variable value is object not equal to previous value', async () => {
@@ -382,7 +382,7 @@ describe('VariableService', () => {
         path: 'context12345.name12345',
         secret: false,
         updatedFields: ['value'],
-      });
+      }, true);
     });
 
     it('should not call eventService.sendVariableChangeEvent when variable value is object equal to previous value', async () => {
@@ -460,7 +460,7 @@ describe('VariableService', () => {
         path: 'context12345.name12345',
         secret: false,
         updatedFields: [],
-      });
+      }, true);
     });
 
     it('should call eventService.updateVariableChangeEvent when variable is deleted and secret with masked value', async () => {
@@ -479,7 +479,7 @@ describe('VariableService', () => {
         path: 'context12345.name12345',
         secret: true,
         updatedFields: [],
-      });
+      }, true);
     });
   });
 
