@@ -1,5 +1,12 @@
-module.exports = function(poly, ...mainArgs) {
+module.exports = function(poly, sendLocalErrorMessage, ...mainArgs) {
   {{{code}}}
 
-  return {{name}}.call(this, ...mainArgs);
+  try {
+    return {{name}}.call(this, ...mainArgs);
+  } catch (e) {
+    if (sendLocalErrorMessage(e.message)) {
+      return;
+    }
+    throw e;
+  }
 }

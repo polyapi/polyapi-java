@@ -71,9 +71,14 @@ export class JsonTemplate implements JsonTemplateProcessor {
             return `${argValue}`;
           }
 
+          if (typeof argValue === 'undefined') {
+            // In this case, argument is quoted in json template and user sent `undefined`, we should send an empty string to respect user decision.
+            return '';
+          }
+
           /*
           If user sends an object or an array (because it patched the argument after training)
-          we should return it here as native object/array
+          we should return it here as native object/array.
         */
           return argValue;
         }
@@ -99,6 +104,8 @@ export class JsonTemplate implements JsonTemplateProcessor {
 
             if (typeof args[argName] !== 'undefined') {
               newValue = newValue.replace(`{{${argName}}}`, argValue);
+            } else {
+              newValue = newValue.replace(`{{${argName}}}`, '');
             }
           }
 

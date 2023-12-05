@@ -7,6 +7,7 @@ from app.plugin import (
     get_plugin_chat,
     openapi_to_openai_functions,
 )
+from openai.types.chat.chat_completion import ChatCompletion
 from load_fixtures import test_plugin_get_or_create
 from .testing import DbTestCase
 
@@ -130,8 +131,12 @@ MOCK_OPENAPI = {
 }
 
 
-MOCK_NO_FUNCTION_STEP_1_RESP = {
-    "choices": [
+MOCK_NO_FUNCTION_STEP_1_RESP = ChatCompletion(
+    id="123",
+    created=123,
+    model="gpt-4-0613",
+    object="chat.completion",
+    choices=[
         {
             "index": 0,
             "message": {
@@ -141,10 +146,10 @@ MOCK_NO_FUNCTION_STEP_1_RESP = {
             "finish_reason": "stop",
         }
     ]
-}
+)
 
 
-MOCK_STEP_1_RESP = {
+MOCK_STEP_1_RESP = ChatCompletion(**{
     "id": "chatcmpl-7iokRKBFPOec9EQmKDLBigFSEznpc",
     "object": "chat.completion",
     "created": 1690915863,
@@ -164,11 +169,11 @@ MOCK_STEP_1_RESP = {
         }
     ],
     "usage": {"prompt_tokens": 80, "completion_tokens": 33, "total_tokens": 113},
-}
+})
 
 
 class T(DbTestCase):
-    @patch("app.plugin.openai.ChatCompletion.create")
+    @patch("app.plugin._function_call")
     @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
     def test_get_plugin_chat(
@@ -200,7 +205,7 @@ class T(DbTestCase):
         convo = self.db.conversation.find_unique(where={"id": conversation_id})
         self.assertTrue(convo)
 
-    @patch("app.plugin.openai.ChatCompletion.create")
+    @patch("app.plugin._function_call")
     @patch("app.plugin.requests.post")
     @patch("app.plugin.requests.get")
     def test_get_plugin_chat_general(

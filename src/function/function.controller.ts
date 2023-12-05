@@ -18,7 +18,7 @@ import {
   Req,
   Res,
   UseGuards,
-  UseInterceptors,
+  UseInterceptors, UsePipes, ValidationPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { ASSISTANCE_TRAINING_SCRIPT_VERSION_HEADER, TRAINING_SCRIPT_VERSION_HEADER } from '@poly/common/utils';
@@ -40,7 +40,9 @@ import {
   FunctionPublicBasicDto,
   FunctionPublicDetailsDto,
   Permission,
+  PrebuiltBaseImageOptions,
   Role,
+  ServerFunctionLogsQueryParams,
   TrainingFunctionDto,
   UpdateApiFunctionDto,
   UpdateClientCustomFunctionDto,
@@ -58,7 +60,7 @@ import { StatisticsService } from 'statistics/statistics.service';
 import { FUNCTIONS_LIMIT_REACHED } from '@poly/common/messages';
 import { CommonService } from 'common/common.service';
 import { API_TAG_INTERNAL } from 'common/constants';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { EnvironmentService } from 'environment/environment.service';
 import { PerfLog } from 'statistics/perf-log.decorator';
 import { PerfLogType } from 'statistics/perf-log-type';
@@ -424,8 +426,10 @@ export class FunctionController {
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Post('/server/prebuilt-base-image')
   @Header('Content-Type', 'text/plain')
-  async createOrUpdatePrebuiltBaseImage(@Req() req: AuthRequest) {
-    return this.service.createOrUpdatePrebuiltBaseImage(req.user);
+  async createOrUpdatePrebuiltBaseImage(@Req() req: AuthRequest, @Body() data: PrebuiltBaseImageOptions) {
+    const { language = 'javascript' } = data;
+
+    return this.service.createOrUpdatePrebuiltBaseImage(req.user, language);
   }
 
   @UseGuards(PolyAuthGuard)
@@ -560,8 +564,13 @@ export class FunctionController {
   }
 
   @UseGuards(PolyAuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true }))
   @Get('/server/:id/logs')
-  async getServerFunctionLogs(@Req() req: AuthRequest, @Param('id') id: string, @Query('keyword') keyword): Promise<any> {
+  async getServerFunctionLogs(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Query() { keyword, lastHours, lastDays, limit }: ServerFunctionLogsQueryParams,
+  ): Promise<any> {
     const serverFunction = await this.service.findServerFunction(id);
     if (!serverFunction) {
       throw new NotFoundException(`Function with ID ${id} not found.`);
@@ -577,7 +586,14 @@ export class FunctionController {
 
     await this.authService.checkEnvironmentEntityAccess(serverFunction, req.user);
 
-    return await this.service.getServerFunctionLogs(id, keyword, serverFunction.logsEnabled);
+    const hours = lastHours && lastDays
+      ? Math.min(lastHours, lastDays * 24)
+      : lastHours || (lastDays && lastDays * 24);
+    const logs = await this.service.getServerFunctionLogs(id, req.user.tenant.id, req.user.environment.id, keyword, hours, limit);
+    return {
+      logsEnabled: serverFunction.logsEnabled,
+      logs,
+    };
   }
 
   @PerfLog(PerfLogType.ServerFunctionExecution)
@@ -677,11 +693,11 @@ export class FunctionController {
     }
   }
 
-  private async resolveExecutionEnvironment(customFunction: CustomFunction & {environment: Environment}, req: Request) {
+  private async resolveExecutionEnvironment(customFunction: CustomFunction & {environment: Environment}, req: AuthRequest) {
     let executionEnvironment: Environment | null = null;
 
     if (customFunction.visibility !== Visibility.Environment) {
-      executionEnvironment = await this.environmentService.findByHost(req.hostname);
+      executionEnvironment = await this.environmentService.findByHost(req.hostname) || req.user.environment;
     }
 
     if (!executionEnvironment) {

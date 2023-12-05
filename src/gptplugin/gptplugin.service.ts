@@ -80,6 +80,10 @@ const slugify = (str: string): string => {
 export const getSlugSubdomain = (host: string): [string, string] => {
   const slugEnv = host.split('.')[0];
   const parts = rsplit(slugEnv, '-', 1);
+  if (parts.length !== 2) {
+    // user is probably getting something like `na1.polyapi.io` instead of using proper plugin subdomain
+    return ['', ''];
+  }
   let slug = parts[0];
   let subdomain = parts[1];
   if (subdomain === LOCALHOST_PAGEKITE) {
@@ -342,7 +346,12 @@ export class GptPluginService {
   }
 
   async getOpenApiSpec(hostname: string, slug: string): Promise<string> {
-    const [, subdomain] = getSlugSubdomain(hostname);
+    const [hostSlug, subdomain] = getSlugSubdomain(hostname);
+    if (!subdomain || hostSlug !== slug) {
+      throw new BadRequestException(
+        'You must use the plugin subdomain to access the OpenAPI spec. The format is like this: `https://{slug}-{envSubDomain}.{instanceUrl}/plugins/{slug}/openapi`. Go to /plugins to get your `plugin_url` then append "/plugins/{slug}/openapi" to it.',
+      );
+    }
     const environment = await this.prisma.environment.findUniqueOrThrow({ where: { subdomain } });
     const plugin = await this.prisma.gptPlugin.findUniqueOrThrow({
       where: { slug_environmentId: { slug, environmentId: environment.id } },

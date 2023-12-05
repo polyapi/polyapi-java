@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ProviderResult, TreeItem } from 'vscode';
 import { merge } from 'lodash';
 import { PropertySpecification, VariableSpecification } from '@poly/model';
-import { toTypeDeclaration } from '@poly/common/utils';
+import { toTypeDeclaration } from '@poly/common/specs';
 import { toCamelCase } from '@guanghechen/helper-string';
 import { getCredentialsFromExtension, getLibraryVersionFromApiHost } from './common';
 

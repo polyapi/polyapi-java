@@ -25,12 +25,13 @@ export class LokiLogsService implements FaasLogsService {
 
   constructor(private readonly config: ConfigService, private readonly httpService: HttpService) {}
 
-  async getLogs(functionId: string, keyword = ''): Promise<FunctionLog[]> {
+  async getLogs(functionId: string, keyword = '', lastHours = 24, limit = 100): Promise<FunctionLog[]> {
     this.logger.debug(`Getting logs for function with id ${functionId}`);
     const logQuery = this.constructQuery(functionId, keyword);
-    const dateMinus24hs = getDateMinusXHours(new Date(), 24);
-    const url = `${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}&start=${getNanosecondsFromDate(dateMinus24hs)}`;
-    this.logger.debug(`Sending request to ${url}`);
+    const startDate = getDateMinusXHours(new Date(), lastHours);
+    const url = `${this.config.faasPolyServerLogsUrl}/loki/api/v1/query_range?query=${encodeURIComponent(logQuery)}&start=${getNanosecondsFromDate(startDate)}`;
+    this.logger.debug(`Last ${lastHours} hours of logs will be retrieved`);
+    this.logger.debug(`Sending request to Loki: ${url}`);
     return await lastValueFrom(
       this.httpService
         .get(url)
@@ -44,6 +45,7 @@ export class LokiLogsService implements FaasLogsService {
           }),
           map((lokiData) => this.toFunctionLogs(lokiData)),
           map((logs) => this.sortLogsByNewestFirst(logs)),
+          map((sortedLogs) => sortedLogs.slice(0, limit)),
           map((sortedLogs) => this.getUserFriendlyLogs(sortedLogs)),
           catchError(this.processLogsRetrievalError()),
         ),

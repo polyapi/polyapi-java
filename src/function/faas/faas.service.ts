@@ -6,7 +6,7 @@ export interface ExecuteFunctionResult {
 }
 
 export interface FaasLogsService {
-  getLogs: (functionId: string, keyword: string) => Promise<FunctionLog[]>;
+  getLogs: (functionId: string, keyword: string | undefined, hours: number | undefined, limit: number | undefined) => Promise<FunctionLog[]>;
 }
 
 export interface FaasService {
@@ -17,10 +17,11 @@ export interface FaasService {
     environmentId: string,
     name: string,
     code: string,
+    language: string,
     requirements: string[],
     apiKey: string,
     limits: ServerFunctionLimits,
-    createFromScratch?: boolean,
+    forceCustomImage?: boolean,
     sleep?: boolean | null,
     sleepAfter?: number | null,
     logsEnabled?: boolean,
@@ -39,12 +40,13 @@ export interface FaasService {
     environmentId: string,
     name: string,
     code: string,
+    language: string,
     requirements: string[],
     apiKey: string,
     limits: ServerFunctionLimits,
     sleep?: boolean | null,
     sleepAfter?: number | null,
-    logsEnabled?: boolean
+    logsEnabled?: boolean,
   ) => Promise<void>;
   deleteFunction: (id: string, tenantId: string, environmentId: string) => Promise<void>;
 

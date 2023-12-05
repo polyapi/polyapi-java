@@ -119,6 +119,10 @@ export class ConfigService {
     return this.get('FAAS_DOCKER_IMAGE_FUNCTION_NODE');
   }
 
+  get faasDockerImageFunctionJava(): string {
+    return this.get('FAAS_DOCKER_IMAGE_FUNCTION_JAVA');
+  }
+
   get faasDockerUsername(): string {
     return this.get('FAAS_DOCKER_USERNAME');
   }
@@ -227,8 +231,12 @@ export class ConfigService {
     return this.get('SIGN_UP_VERIFICATION_CODE_TEMPLATE_NAME', 'sign-up-verification-code');
   }
 
-  get prebuiltBaseImageName(): string {
-    return this.get('PREBUILT_BASE_IMAGE_NAME', 'prebuiltBaseImage');
+  get prebuiltBaseNodeImageName(): string {
+    return this.get('PREBUILT_BASE_NODE_IMAGE_NAME', 'prebuiltBaseImage');
+  }
+
+  get prebuiltBaseJavaImageName(): string {
+    return this.get('PREBUILT_BASE_JAVA_IMAGE_NAME', 'java');
   }
 
   get swaggerStatsUsername(): string {

@@ -46,8 +46,9 @@ jobs:
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -t ${{ env.IMAGE }}:latest -f docker/Dockerfile .
         docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+        docker push ${{ env.IMAGE }}:latest
 
     - uses: dorny/paths-filter@v2
       id: changes
@@ -114,5 +115,6 @@ jobs:
     - name: Build the Docker image
       run: |
         echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u USERNAME --password-stdin
-        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -f docker/Dockerfile .
+        docker build -t ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }} -t ${{ env.IMAGE }}:latest -f docker/Dockerfile .
         docker push ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
+        docker push ${{ env.IMAGE }}:latest

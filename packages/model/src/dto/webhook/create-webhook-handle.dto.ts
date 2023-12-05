@@ -29,7 +29,6 @@ export class CreateWebhookHandleDto {
   visibility?: Visibility;
 
   @IsOptional()
-  @IsObject()
   responsePayload?: any;
 
   @IsOptional()

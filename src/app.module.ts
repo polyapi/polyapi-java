@@ -36,6 +36,8 @@ import { StatisticsModule } from 'statistics/statistics.module';
 import { EmailModule } from 'email/email.module';
 import { TosModule } from 'tos/tos.module';
 import { HealthModule } from 'health/health.module';
+import { JobsModule } from './jobs/jobs.module';
+import { BullModule } from '@nestjs/bull';
 
 const logger = new Logger('AppModule');
 
@@ -92,6 +94,24 @@ const logger = new Logger('AppModule');
     EmailModule,
     TosModule,
     HealthModule,
+    JobsModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        const password = configService.redisPassword;
+        return {
+          redis: {
+            host: configService.redisUrl.split('redis://')[1].split(':')[0],
+            ...(password
+              ? {
+                  password,
+                }
+              : null),
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
   ],
   exports: [ConfigModule],
   controllers: [],

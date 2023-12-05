@@ -292,12 +292,14 @@ public class CodeParser {
             var classCompilationUnit = parser.parse(classCode).getResult().get();
             classCompilationUnit.accept(new TypeResolver(cu, parser), generatedCode);
 
+            var mainClass = generatedCode.getType(0).asClassOrInterfaceDeclaration();
             classCompilationUnit.getImports()
               .forEach(generatedCode::addImport);
-            classCompilationUnit.getTypes()
-              .forEach(classType -> {
-                generatedCode.getType(0).asClassOrInterfaceDeclaration().addMember(classType);
-              });
+            classCompilationUnit.getTypes().stream()
+              .filter(classType -> mainClass.getMembers().stream()
+                .noneMatch(member -> member instanceof ClassOrInterfaceDeclaration && ((ClassOrInterfaceDeclaration) member).getNameAsString().equals(classType.getNameAsString()))
+              )
+              .forEach(mainClass::addMember);
           }
         }
       } catch (IllegalStateException e) {

@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -53,10 +53,10 @@ public class AddFunctionMojo extends AbstractMojo {
   @Parameter(property = "description")
   private String description;
 
-  @Parameter(property = "client", defaultValue = "true")
+  @Parameter(property = "client")
   private Boolean client;
 
-  @Parameter(property = "server", defaultValue = "false")
+  @Parameter(property = "server")
   private Boolean server;
 
   public void execute() throws MojoExecutionException {
@@ -86,23 +86,31 @@ public class AddFunctionMojo extends AbstractMojo {
       }
 
       var function = functionData.get(0);
-      var response = postCustomFunction(function);
-      System.out.println("Function created successfully: " + response.getId());
-      System.out.println("Response: " + response);
-
+      if (Boolean.TRUE.equals(client)) {
+        System.out.println("Deploying client function...");
+        var response = postCustomFunction(function, false);
+        System.out.println("Function deployed successfully: " + response.getId());
+      }
+      if (Boolean.TRUE.equals(server)) {
+        System.out.println("Deploying server function...");
+        var response = postCustomFunction(function, true);
+        System.out.println("Function deployed successfully: " + response.getId());
+      }
     } catch (Exception e) {
       throw new MojoExecutionException("Error parsing file", e);
     }
-
-
-    System.out.println("Executing addFunction");
   }
 
-  private PostCustomFunctionResponse postCustomFunction(FunctionData function) throws IOException, MojoExecutionException {
-    var client = new OkHttpClient();
+  private PostCustomFunctionResponse postCustomFunction(FunctionData function, boolean server) throws IOException, MojoExecutionException {
+    var client = new OkHttpClient.Builder()
+      .connectTimeout(10, TimeUnit.MINUTES)
+      .readTimeout(10, TimeUnit.MINUTES)
+      .writeTimeout(10, TimeUnit.MINUTES)
+      .build();
+
     var bodyString = new PostCustomFunctionBody(function).toString();
     var request = new Request.Builder()
-      .url(apiBaseUrl + "/functions/client")
+      .url(apiBaseUrl + "/functions/" + (server ? "server" : "client"))
       .header("Authorization", "Bearer " + apiKey)
       .post(RequestBody.create(bodyString, MediaType.parse("application/json; charset=utf-8")))
       .build();

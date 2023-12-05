@@ -1,7 +1,7 @@
 import json
 import uuid
 from mock import patch, Mock
-from openai.error import ServiceUnavailableError
+from openai import OpenAIError
 
 from .testing import DbTestCase
 
@@ -73,7 +73,7 @@ class T(DbTestCase):
         user = test_user_get_or_create()
         route_question.return_value = "function", "hi world"
 
-        get_answer.side_effect = ServiceUnavailableError(
+        get_answer.side_effect = OpenAIError(
             "The server is overloaded or not ready yet."
         )
         mock_input = {
@@ -89,8 +89,8 @@ class T(DbTestCase):
         self.assertStatus(resp, 200)
         self.assertEqual(get_answer.call_count, 1)
 
-    @patch("app.description.openai.ChatCompletion.create")
-    def test_function_description(self, chat_create: Mock) -> None:
+    @patch("app.description.get_chat_completion")
+    def test_function_description(self, get_chat_completion: Mock) -> None:
         # setup
         mock_output = json.dumps(
             {
@@ -99,7 +99,7 @@ class T(DbTestCase):
                 "description": "This API call...",
             }
         )
-        chat_create.return_value = {"choices": [{"message": {"content": mock_output}}]}
+        get_chat_completion.return_value = mock_output
         mock_input: DescInputDto = {
             "url": "http://example.com",
             "method": "GET",
@@ -108,20 +108,21 @@ class T(DbTestCase):
             "response": "I am the response",
             "code": None,
             "arguments": None,
+            "tenantId": "123",
         }
 
         # execute
         resp = self.client.post("/function-description", json=mock_input)
 
         # test
-        self.assertEqual(chat_create.call_count, 1)
+        self.assertEqual(get_chat_completion.call_count, 1)
         output = resp.get_json()
         self.assertEqual(output["context"], "booking.reservations")
         self.assertEqual(output["name"], "createReservation")
         self.assertEqual(output["description"], "This API call...")
 
-    @patch("app.description.openai.ChatCompletion.create")
-    def test_webhook_description(self, chat_create: Mock) -> None:
+    @patch("app.description.get_chat_completion")
+    def test_webhook_description(self, get_chat_completion: Mock) -> None:
         # setup
         mock_output = json.dumps(
             {
@@ -130,7 +131,7 @@ class T(DbTestCase):
                 "description": "This Event handler...",
             }
         )
-        chat_create.return_value = {"choices": [{"message": {"content": mock_output}}]}
+        get_chat_completion.return_value = mock_output
         mock_input: DescInputDto = {
             "url": "http://example.com",
             "method": "GET",
@@ -139,22 +140,18 @@ class T(DbTestCase):
             "response": "I am the response",
             "code": None,
             "arguments": None,
+            "tenantId": "123",
         }
 
         # execute
         resp = self.client.post("/webhook-description", json=mock_input)
 
         # test
-        self.assertEqual(chat_create.call_count, 1)
+        self.assertEqual(get_chat_completion.call_count, 1)
         output = resp.get_json()
         self.assertEqual(output["context"], "booking.reservations")
         self.assertEqual(output["name"], "createReservation")
         self.assertEqual(output["description"], "This Event handler...")
-
-    def test_rate_limit_error(self):
-        resp = self.client.get("/error-rate-limit")
-        self.assertStatus(resp, 500)
-        self.assertTrue(resp.text.startswith("OpenAI is overloaded"))
 
     def test_plugin_chat_error(self):
         resp = self.client.post("/plugin-chat", json={"conversationId": "foo"})

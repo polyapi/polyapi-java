@@ -25,6 +25,8 @@ class MessageType(IntEnum):
 
 @unique
 class PerfLogType(IntEnum):
+    """ types for rows stored in PerfLog table
+    """
     science_generate_description = 1
     science_api_execute = 2
     science_chat_code = 3

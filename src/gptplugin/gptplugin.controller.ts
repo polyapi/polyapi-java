@@ -85,7 +85,7 @@ export class GptPluginController {
 
   @UseGuards(new PolyAuthGuard([Role.SuperAdmin]))
   @Delete('api/conversations/:slug')
-  public async apiConversationDelete(@Req() req: AuthRequest, @Param('id') conversationSlug: string): Promise<unknown> {
+  public async apiConversationDelete(@Req() req: AuthRequest, @Param('slug') conversationSlug: string): Promise<unknown> {
     return this.chatService.deleteConversation(req.user, conversationSlug);
   }
 

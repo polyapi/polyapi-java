@@ -6,19 +6,19 @@ const MISSING_MODULE_ERROR_PATTERN = /Cannot find module '(.*)'/;
 const customFunctions = [
 {{#each specifications}}
   {{#if context}}
-    ['{{context}}.{{name}}', require('./{{context}}-{{name}}')],
+    ['{{id}}', '{{context}}.{{name}}', require('./{{context}}-{{name}}')],
   {{else}}
-    ['{{name}}', require('./{{name}}')],
+    ['{{id}}', '{{name}}', require('./{{name}}')],
   {{/if}}
 {{/each}}
 ];
 
-module.exports = (poly) => merge(
+module.exports = (poly, sendLocalErrorEvent) => merge(
   {},
   customFunctions.reduce(
-    (acc, [name, fn]) => set(acc, name, (...args) => {
+    (acc, [id, name, fn]) => set(acc, name, (...args) => {
       try {
-        return fn(poly, ...args);
+        return fn(poly, (message) => sendLocalErrorEvent(id, name, message), ...args);
       } catch (e) {
         const match = e.message.match(MISSING_MODULE_ERROR_PATTERN);
         if (match) {

@@ -1,6 +1,6 @@
 FROM node:18
 RUN apt-get update && apt-get install -y \
-    python3-pip postgresql-client jq
+    python3-pip postgresql-client jq openjdk-17-jdk-headless
 
 ENV DOCKER_VERSION=20.10.9
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz -C /tmp && \
@@ -11,7 +11,7 @@ RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-$DO
 RUN mkdir -p /poly/funcs/bin && \
     mkdir -p /poly/funcs/serverfx && \
     curl -Lo /poly/funcs/bin/kn https://github.com/knative/client/releases/download/knative-v1.11.0/kn-linux-amd64 && \
-    curl -Lo /poly/funcs/bin/kn-func https://github.com/knative/func/releases/download/knative-v1.11.0/func_linux_amd64 && \    
+    curl -Lo /poly/funcs/bin/kn-func https://github.com/knative/func/releases/download/knative-v1.11.0/func_linux_amd64 && \
     chmod -R +x /poly/funcs
 COPY . /poly/app
 WORKDIR /poly/app

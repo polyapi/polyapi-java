@@ -1,6 +1,5 @@
 import fs from 'fs';
 import handlebars from 'handlebars';
-import set from 'lodash/set';
 import chalk from 'chalk';
 import shell from 'shelljs';
 import { toCamelCase, toPascalCase } from '@guanghechen/helper-string';
@@ -23,7 +22,8 @@ import {
   SpecificationWithVariable,
   WebhookHandleSpecification,
 } from '@poly/model';
-import { toTypeDeclaration, isPlainObjectPredicate } from '@poly/common/utils';
+import { isPlainObjectPredicate } from '@poly/common/utils';
+import { toTypeDeclaration, getContextData } from '@poly/common/specs';
 import { getSpecs } from '../api';
 import { POLY_USER_FOLDER_NAME } from '../constants';
 import { loadConfig } from '../config';
@@ -68,6 +68,7 @@ const generateJSFiles = async (specs: Specification[]) => {
   await generateIndexJSFile();
   await generatePolyCustomJSFile();
   await generateAxiosJSFile();
+  await generateErrorHandlerFile();
   await generateApiFunctionJSFiles(apiFunctions);
   await generateCustomFunctionJSFiles(customFunctions);
   await generateWebhooksJSFiles(webhookHandles);
@@ -106,6 +107,15 @@ const generateAxiosJSFile = async () => {
     axiosJSTemplate({
       apiBaseUrl: getApiBaseUrl(),
       apiKey: getApiKey(),
+    }),
+  );
+};
+
+const generateErrorHandlerFile = async () => {
+  const errorHandlerJSTemplate = handlebars.compile(await loadTemplate('error-handler.js.hbs'));
+  fs.writeFileSync(
+    `${POLY_LIB_PATH}/error-handler.js`,
+    errorHandlerJSTemplate({
     }),
   );
 };
@@ -583,15 +593,6 @@ const getContextDataFileContent = () => {
   }
 };
 
-const getContextData = (specs: Specification[]) => {
-  const contextData = {} as Record<string, any>;
-  specs.forEach((spec) => {
-    const path = spec.context ? `${spec.context}.${spec.name}` : spec.name;
-    set(contextData, path, spec);
-  });
-  return contextData;
-};
-
 const getContextPaths = (contextData: Record<string, any>) => {
   const paths: string[] = [];
   const traverseAndAddPath = (data, path = '') => {
@@ -780,7 +781,7 @@ const generateSpecs = async (specs: Specification[]) => {
     await generateJSFiles(specs);
     await generateFunctionsTSDeclarationFile(specs);
     await generateVariablesTSDeclarationFile(specs);
-    generateContextDataFile(getContextData(specs));
+    generateContextDataFile(specs);
   } catch (error) {
     showErrGeneratingFiles(error);
   }

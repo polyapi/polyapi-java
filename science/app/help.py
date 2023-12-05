@@ -1,9 +1,8 @@
-from typing import Generator, List, Optional, Union
-from app.completion import general_question
-
-from app.typedefs import MessageDict
-
+from typing import List, Optional, Union
+from openai import Stream
 from prisma.models import ConversationMessage
+from app.completion import general_question
+from app.typedefs import MessageDict
 
 
 HELP_ANSWER = """Poly conversation special commands
@@ -22,7 +21,7 @@ def help_question(
     conversation_id: str,
     question: str,
     prev_msgs: Optional[List[ConversationMessage]] = None,
-) -> Union[Generator, str]:
+) -> Union[Stream, str]:
     if not question:
         return HELP_ANSWER
 

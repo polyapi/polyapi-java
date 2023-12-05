@@ -913,6 +913,17 @@ describe('FunctionService', () => {
         name: 'Poly'
       });
 
+      const argumentsMetadata = {
+        name: {
+          type: 'string'
+        },
+        lastName: {
+          type: 'string',
+          required: false,
+          removeIfNotPresentOnExecute: true
+        }
+      }
+
       const apiFunction = {
         url: 'https://jsonplaceholder.typicode.com/posts',
         body: JSON.stringify({
@@ -922,16 +933,7 @@ describe('FunctionService', () => {
         method: 'POST',
         headers: '[]',
         auth: '{}',
-        argumentsMetadata: JSON.stringify({
-          name: {
-            type: 'string'
-          },
-          lastName: {
-            type: 'string',
-            required: false,
-            removeIfNotPresentOnExecute: true
-          }
-        }),
+        argumentsMetadata: JSON.stringify(argumentsMetadata),
       } as ApiFunction & { environment: Environment };
 
       const result = await functionService.executeApiFunction(apiFunction, args);
@@ -950,7 +952,7 @@ describe('FunctionService', () => {
           },
           1
         ]
-      }, args)
+      }, args);
 
       expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({
         data: {

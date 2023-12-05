@@ -396,13 +396,13 @@ export class WebhookService {
           }
 
           if (!name || !description || !context) {
-            const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(
+            const trainingDataCfgVariable = await this.configVariableService.getEffectiveValue<TrainingDataGeneration>(
               ConfigVariableName.TrainingDataGeneration,
               environment.tenantId,
               environment.id,
             );
 
-            if (trainingDataCfgVariable?.value.webhooks) {
+            if (trainingDataCfgVariable?.webhooks) {
               const aiResponse = await this.getAIWebhookData(
                 webhookHandle,
                 description,
@@ -777,13 +777,13 @@ export class WebhookService {
   }
 
   private async isWebhookAITrainingEnabled(environment: Environment) {
-    const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(
+    const trainingDataCfgVariable = await this.configVariableService.getEffectiveValue<TrainingDataGeneration>(
       ConfigVariableName.TrainingDataGeneration,
       environment.tenantId,
       environment.id,
     );
 
-    return trainingDataCfgVariable?.value.webhooks;
+    return trainingDataCfgVariable?.webhooks;
   }
 
   async deleteWebhookHandle(id: string) {

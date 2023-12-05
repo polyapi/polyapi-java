@@ -309,8 +309,26 @@ export class WebhookController {
       });
     }
 
+    let response: unknown;
+
+    if (webhookResponse?.data) {
+      response = webhookResponse?.data;
+    } else if (webhookHandle.responsePayload) {
+      const parsedResponsePayload = JSON.parse(webhookHandle.responsePayload);
+
+      if (typeof parsedResponsePayload === 'string' || typeof parsedResponsePayload === 'number' || typeof parsedResponsePayload === 'boolean') {
+        res.setHeader('Content-Type', 'text/plain');
+      }
+
+      if (typeof parsedResponsePayload === 'number') {
+        response = `${parsedResponsePayload}`;
+      } else {
+        response = parsedResponsePayload;
+      }
+    }
+
     res.status(webhookHandle.responseStatus || webhookResponse?.statusCode || 200)
-      .send(webhookResponse?.data || (webhookHandle.responsePayload ? JSON.parse(webhookHandle.responsePayload) : undefined));
+      .send(response);
   }
 
   @Delete(':id')

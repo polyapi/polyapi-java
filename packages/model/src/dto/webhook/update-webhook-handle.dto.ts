@@ -47,7 +47,6 @@ export class UpdateWebhookHandleDto {
   eventPayloadTypeSchema?: Record<string, any>;
 
   @IsOptional()
-  @IsObject()
   responsePayload?: any;
 
   @IsOptional()

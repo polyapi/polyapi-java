@@ -1,5 +1,5 @@
 # Java Client Library (beta)
-### v0.1.6
+### v0.1.7
 
 ## Introduction
 This is a Java client library for Poly API. It is generated from the [Poly specification](https://develop-k8s.polyapi.io/specs). It is based on its Typescript counterpart [polyapi](https://www.npmjs.com/package/polyapi)
@@ -11,10 +11,10 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
 
 ## Setting up project
 1. Create a new Java Maven project
-4. Add the following to your project's `pom.xml` to add the dependencies:
+2. Add the following to your project's `pom.xml` to add the dependencies:
 ```xml
 <properties>
-  <poly.version>0.1.6</poly.version>
+  <poly.version>0.1.7</poly.version>
 </properties>
 <dependencies>
   <dependency>
@@ -66,7 +66,7 @@ This is a Java client library for Poly API. It is generated from the [Poly speci
 ```
 Make sure you replace `{API_KEY}` with valid API key to access the Poly API.
 
-5. Run `mvn clean compile` to generate the Poly functions and compile the project (this needs to be done everytime you update your Poly functions)
+3. Run `mvn clean compile` to generate the Poly functions and compile the project (this needs to be done everytime you update your Poly functions)
 
 ## Using the library
 ### Poly Functions
@@ -144,15 +144,24 @@ var result = Poly.test.client.sayHello("John");
 System.out.println(result);
 ```
 
+### Server Functions
+Similar to Custom Functions, you can create Server Functions. To do so, you need to create a class with desired function same as with Custom Functions.
+Then to add it to Poly, you need to add run the following Maven goal:
+```bash
+mvn library:addFunction -Dname=sayHello -Dfile=src/main/java/custom/CustomFunction.java -Dcontext=test.server -Dserver -Ddescription="This says hello to you from server"
+```
+Note the use of `-Dserver` flag. This is used to specify that the function is a server function.
+
 ## Limitations
 Comparing to its Typescript counterpart, the Java library is still missing the following features:
 - Error handlers
 - Fetching multiple Poly Variables from context
-- Java Server functions
 
 These features will be added in the future releases.
 
 ## Changelog
+### v0.1.7
+- Added support for Java server functions
 ### v0.1.6
 - Added support for Java client functions
 ### v0.1.5

@@ -1,15 +1,16 @@
 import os
 import json
 import copy
-import openai
+from openai import OpenAI, Stream
+
 import string
 import requests
 import redis
 import numpy as np
 from requests import Response
 from flask import current_app, abort
-import jsonref
-from typing import Any, Dict, Generator, List, Optional, Union
+import jsonref  # type: ignore[import-untyped]
+from typing import Any, Dict, List, Optional, Union
 from app.constants import CHAT_GPT_MODEL, MessageType, VarName
 from app.log import log
 from app.typedefs import (
@@ -51,7 +52,7 @@ def _process_schema_property(property: Dict) -> str:
     elif property_type == "null":
         rv = "null,"
     elif property_type == "array":
-        child = _process_schema_property(property['items'])
+        child = _process_schema_property(property["items"])
         rv = f"[{child}],"
     elif property_type == "object":
         sub_props = []
@@ -65,7 +66,9 @@ def _process_schema_property(property: Dict) -> str:
     return rv
 
 
-def _process_property_spec(arg: PropertySpecification, *, include_argument_schema=True) -> str:
+def _process_property_spec(
+    arg: PropertySpecification, *, include_argument_schema=True
+) -> str:
     kind = arg["type"]["kind"]
     if kind == "void":
         # seems weird to have a void argument...
@@ -88,7 +91,7 @@ def _process_property_spec(arg: PropertySpecification, *, include_argument_schem
             sub_props = "{\n" + sub_props + "\n}"
             rv = "{name}: {sub_props}".format(name=arg["name"], sub_props=sub_props)
         elif arg_type.get("schema"):
-            schema = jsonref.loads(json.dumps(arg_type['schema']))
+            schema = jsonref.loads(json.dumps(arg_type["schema"]))
             sub_props = _process_schema_property(schema)
             sub_props = sub_props.rstrip(",")
             rv = f"{arg['name']}: {sub_props}"
@@ -119,7 +122,9 @@ def func_args(spec: SpecificationDto, *, include_argument_schema=True) -> List[s
     func = spec.get("function")
     if func:
         for idx, arg in enumerate(func["arguments"]):
-            arg_string = _process_property_spec(arg, include_argument_schema=include_argument_schema)
+            arg_string = _process_property_spec(
+                arg, include_argument_schema=include_argument_schema
+            )
             # if idx == 0 and spec['type'] == "webhookHandle":
             #     # the first argument to webhookHandle callback functions is the eventPayload
             #     # let's add a comment explaining to chatGPT that's what this is!
@@ -143,8 +148,7 @@ def url_function_path(func: AnyFunction) -> str:
 
 
 def insert_internal_step_info(messages: List[MessageDict], step: str) -> None:
-    """ insert an internal message just for our own tracking purposes
-    """
+    """insert an internal message just for our own tracking purposes"""
     messages.insert(
         0,
         MessageDict(
@@ -153,9 +157,7 @@ def insert_internal_step_info(messages: List[MessageDict], step: str) -> None:
     )
 
 
-def store_messages(
-    conversation_id: str, messages: List[MessageDict]
-) -> None:
+def store_messages(conversation_id: str, messages: List[MessageDict]) -> None:
     for message in messages:
         store_message(conversation_id, message)
 
@@ -170,8 +172,8 @@ def store_message(
         "content": _get_content(data),
         "type": data.get("type", MessageType.gpt.value),
     }
-    if data.get('name'):
-        create_input['name'] = data['name']
+    if data.get("name"):
+        create_input["name"] = data["name"]
 
     rv = db.conversationmessage.create(data=create_input)  # type: ignore
     return rv
@@ -179,10 +181,10 @@ def store_message(
 
 def _get_content(data: MessageDict):
     content = ""
-    function_call = data.get('function_call')
+    function_call = data.get("function_call")
     if function_call:
         content += f"function_call: {json.dumps(function_call)}\n"
-    functions = data.get('functions')
+    functions = data.get("functions")
     if functions:
         content += f"function: {json.dumps(functions)}\n"
     content += data.get("content") or ""
@@ -196,18 +198,31 @@ def get_conversations_for_user(user_id: str) -> List[Conversation]:
     )
 
 
-def get_last_conversation(user_id: Optional[str] = None, application_id: Optional[str] = None, workspace_folder: str = "") -> Optional[Conversation]:
+def get_last_conversation(
+    user_id: Optional[str] = None,
+    application_id: Optional[str] = None,
+    workspace_folder: str = "",
+) -> Optional[Conversation]:
     assert user_id or application_id
     db = get_client()
     return db.conversation.find_first(
-        where={"userId": user_id, "applicationId": application_id, "workspaceFolder": workspace_folder}, order={"createdAt": "desc"}
+        where={
+            "userId": user_id,
+            "applicationId": application_id,
+            "workspaceFolder": workspace_folder,
+        },
+        order={"createdAt": "desc"},
     )
 
 
-def create_new_conversation(user_id: Optional[str], workspace_folder: str = "") -> Conversation:
+def create_new_conversation(
+    user_id: Optional[str], workspace_folder: str = ""
+) -> Conversation:
     assert user_id
     db = get_client()
-    return db.conversation.create(data={"userId": user_id, "workspaceFolder": workspace_folder})
+    return db.conversation.create(
+        data={"userId": user_id, "workspaceFolder": workspace_folder}
+    )
 
 
 def clear_conversations(user_id: str) -> None:
@@ -342,8 +357,7 @@ def camel_case(text: str) -> str:
 
 
 def strip_type_and_info(messages: List[MessageDict]) -> List[MessageDict]:
-    """ strip type and info from the messages before we forward to openai
-    """
+    """strip type and info from the messages before we forward to openai"""
     stripped = copy.deepcopy(messages)
     stripped = [
         m for m in stripped if m["role"] != "info"
@@ -354,7 +368,12 @@ def strip_type_and_info(messages: List[MessageDict]) -> List[MessageDict]:
     return stripped
 
 
-def get_tenant_openai_key(*, user_id: Optional[str] = None, application_id: Optional[str] = None, tenant_id: Optional[str] = None) -> Optional[str]:
+def get_tenant_openai_key(
+    *,
+    user_id: Optional[str] = None,
+    application_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+) -> Optional[str]:
     # log(f"trying to get open_ai key for user {user_id}, app {application_id}, tenant {tenant_id}...")
     db = get_client()
     if tenant_id:
@@ -370,7 +389,9 @@ def get_tenant_openai_key(*, user_id: Optional[str] = None, application_id: Opti
     else:
         return None
 
-    config_var = db.configvariable.find_first(where={"tenantId": tenant_id, "name": VarName.openai_tenant_api_key.value})
+    config_var = db.configvariable.find_first(
+        where={"tenantId": tenant_id, "name": VarName.openai_tenant_api_key.value}
+    )
     if not config_var:
         return None
 
@@ -384,30 +405,36 @@ def get_tenant_openai_key(*, user_id: Optional[str] = None, application_id: Opti
 
 
 def _ensure_environment_matches_tenant(environment_id: str, tenant_id: str) -> None:
-    """ throw an exception if environment is outside tenant"""
+    """throw an exception if environment is outside tenant"""
     db = get_client()
     environment = db.environment.find_unique(where={"id": environment_id})
     assert environment
     if environment.tenantId != tenant_id:
-        raise NotImplementedError(f"Someone from {tenant_id} tenant is attempting cross-tenant access to environment {environment_id}. Investigate!")
+        raise NotImplementedError(
+            f"Someone from {tenant_id} tenant is attempting cross-tenant access to environment {environment_id}. Investigate!"
+        )
 
 
 def get_chat_completion(
-    messages: List[MessageDict], *, temperature=1.0, stream=False, api_key=None,
-) -> Union[Generator, str]:
+    messages: List[MessageDict],
+    *,
+    temperature=1.0,
+    stream=False,
+    api_key=None,
+) -> Union[Stream, str]:
     """send the messages to OpenAI and get a response"""
     messages = strip_type_and_info(messages)
-    resp = openai.ChatCompletion.create(
-        api_key=api_key,
+    client = OpenAI(api_key=api_key)
+    resp = client.chat.completions.create(
+        messages=messages,  # type: ignore
         model=CHAT_GPT_MODEL,
-        messages=messages,
         temperature=temperature,
         stream=stream,
     )
-    if isinstance(resp, Generator):
+    if isinstance(resp, Stream):
         return resp
     else:
-        return resp["choices"][0]["message"]["content"]
+        return resp.choices[0].message.content or ''
 
 
 def cosine_similarity(a, b):
@@ -473,7 +500,10 @@ def get_return_type_properties(spec: SpecificationDto) -> Union[Dict, None]:
 
     if "title" in return_type:
         return_type["title"] = "data"
-    return {"data": return_type}
+    if spec["type"] == "apiFunction":
+        return {"data": return_type}
+    else:
+        return return_type
 
 
 # HACK technically there might be MessageDict in the List, buy mypy does poorly with that
@@ -484,7 +514,7 @@ def msgs_to_msg_dicts(msgs: Optional[List[ConversationMessage]]) -> List[Message
             if isinstance(msg, ConversationMessage):
                 md = MessageDict(role=msg.role, content=msg.content)
                 if msg.name:
-                    md['name'] = msg.name
+                    md["name"] = msg.name
                 rv.append(md)
             else:  # MessageDict
                 rv.append(msg)
@@ -510,7 +540,10 @@ def extract_code(content: Optional[str]) -> Any:
 
 
 def redis_get(key: str) -> str:
-    redis_client = redis.Redis(os.environ.get("REDIS_URL", "localhost"), password=os.environ.get("REDIS_PASSWORD"))
+    redis_client = redis.Redis(
+        os.environ.get("REDIS_URL", "localhost"),
+        password=os.environ.get("REDIS_PASSWORD"),
+    )
     val = redis_client.get(key)
     if val:
         return val.decode()
@@ -521,5 +554,7 @@ def redis_get(key: str) -> str:
 def verify_required_fields(data: Dict, required: List[str]) -> None:
     missing_fields = [field for field in required if field not in data]
     if missing_fields:
-        msg = {"message": "Required fields missing: {}".format(", ".join(missing_fields))}
+        msg = {
+            "message": "Required fields missing: {}".format(", ".join(missing_fields))
+        }
         abort(400, msg)

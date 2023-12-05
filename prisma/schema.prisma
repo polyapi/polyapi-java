@@ -91,6 +91,7 @@ model Environment {
   variables       Variable[]
   webhookHandles  WebhookHandle[]
   logsDefault     Boolean          @default(false) @map("logs_default")
+  jobs            Job[]
 
   @@map("environment")
 }
@@ -431,13 +432,48 @@ model PerfLog {
 }
 
 model CustomFunctionWebhookHandle {
-  id                  String @id @default(uuid())
+  id                  String         @id @default(uuid())
   createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   webhookHandle       WebhookHandle  @relation(fields: [webhook_handle_id], references: [id], onDelete: Cascade)
   customFunction      CustomFunction @relation(fields: [custom_function_id], references: [id], onDelete: Cascade)
-  custom_function_id  String @map("function_id")
+  custom_function_id  String         @map("function_id")
   webhook_handle_id   String
   message             String?
 
   @@map("custom_function_webhook_handle")
+}
+
+model Job {
+  id                          String @id @default(uuid())
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  name                        String
+  scheduleType                String @map("schedule_type")
+  scheduleOnTimeValue         DateTime? @map("schedule_one_time_value")
+  schedulePeriodicalValue     String? @map("schedule_periodical_value")
+  scheduleIntervalValue       Int? @map("schedule_interval_value")
+  functions                   String
+  functionsExecutionType      String @map("functions_execution_type")
+  executions                  JobExecution[]
+  environment                 Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  environmentId               String @map("environment_id")
+  status                      String
+
+  @@map("job")
+}
+
+
+model JobExecution {
+  id                      String @id @default(uuid())
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  job                     Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId                   String @map("job_id")
+  results                 String
+  processedOn             DateTime? @map("processed_on")
+  finishedOn              DateTime? @map("finished_on")
+  functions               String
+  type                    String
+  status                  String
+  schedule                String
+
+  @@map("job_execution")
 }

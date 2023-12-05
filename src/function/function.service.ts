@@ -27,9 +27,11 @@ import {
   Body,
   ConfigVariableName,
   CustomFunctionSpecification,
+  FormDataEntry,
   FunctionArgument,
   FunctionBasicDto,
   FunctionDetailsDto,
+  FunctionLog,
   FunctionPublicBasicDto,
   FunctionPublicDetailsDto,
   GraphQLBody,
@@ -39,17 +41,15 @@ import {
   PropertySpecification,
   PropertyType,
   PublicVisibilityValue,
+  RawBody,
   Role,
   ServerFunctionSpecification,
   TrainingDataGeneration,
+  UpdateSourceFunctionDto,
+  UpdateSourceNullableEntry,
   Variables,
   Visibility,
   VisibilityQuery,
-  UpdateSourceFunctionDto,
-  UpdateSourceNullableEntry,
-  FormDataEntry,
-  RawBody,
-  FunctionLog,
 } from '@poly/model';
 import { EventService } from 'event/event.service';
 import { AxiosError } from 'axios';
@@ -58,7 +58,7 @@ import { PathError } from 'common/path-error';
 import { ConfigService } from 'config/config.service';
 import { AiService } from 'ai/ai.service';
 import { compareArgumentsByRequired } from 'function/comparators';
-import { FaasService, FaasLogsService } from 'function/faas/faas.service';
+import { FaasLogsService, FaasService } from 'function/faas/faas.service';
 import { KNativeFaasService } from 'function/faas/knative/knative-faas.service';
 import { transpileCode } from 'function/custom/transpiler';
 import { SpecsService } from 'specs/specs.service';
@@ -467,7 +467,7 @@ export class FunctionService implements OnModuleInit {
           this.logger.debug(`Setting argument descriptions to arguments metadata from AI: ${JSON.stringify(aiArguments)}...`);
 
           (aiArguments || [])
-            .filter((aiArgument) => !argumentsMetadata[aiArgument.name].description)
+            .filter((aiArgument) => argumentsMetadata[aiArgument.name] && !argumentsMetadata[aiArgument.name].description)
             .forEach((aiArgument) => {
               argumentsMetadata[aiArgument.name].description = aiArgument.description;
             });
@@ -902,19 +902,21 @@ export class FunctionService implements OnModuleInit {
     if (parsedBody.mode === 'urlencoded' || parsedBody.mode === 'formdata') {
       argumentValueMap = await this.getArgumentValueMap(apiFunction, args);
       const filterOptionalArgs = (entry: PostmanVariableEntry) => {
-        if (!entry.value.match(ARGUMENT_PATTERN)) {
+        const args = entry.value.match(ARGUMENT_PATTERN);
+
+        if (!args) {
           return true;
         }
 
-        const argName = entry.value.replace('{{', '').replace('}}', '');
+        return args.some(argName => {
+          if (argumentsMetadata[argName].required === false &&
+            argumentsMetadata[argName].removeIfNotPresentOnExecute === true &&
+            typeof argumentValueMap[argName] === 'undefined') {
+            return false;
+          }
 
-        if (argumentsMetadata[argName].required === false &&
-          argumentsMetadata[argName].removeIfNotPresentOnExecute === true &&
-          typeof argumentValueMap[argName] === 'undefined') {
-          return false;
-        }
-
-        return true;
+          return true;
+        });
       };
 
       const filteredBody = parsedBody.mode === 'formdata'
@@ -1130,7 +1132,7 @@ export class FunctionService implements OnModuleInit {
           {
             name: {
               not: {
-                equals: this.config.prebuiltBaseImageName,
+                equals: this.config.prebuiltBaseNodeImageName,
               },
             },
           },
@@ -1435,6 +1437,7 @@ export class FunctionService implements OnModuleInit {
           environment.id,
           name,
           code,
+          language,
           requirements,
           apiKey,
           await this.limitService.getTenantServerFunctionLimits(environment.tenantId),
@@ -1538,6 +1541,7 @@ export class FunctionService implements OnModuleInit {
         customFunction.environment.id,
         customFunction.name,
         customFunction.code,
+        customFunction.language,
         JSON.parse(customFunction.requirements || '[]'),
         customFunction.apiKey!,
         await this.limitService.getTenantServerFunctionLimits(customFunction.environment.tenantId),
@@ -1686,7 +1690,7 @@ export class FunctionService implements OnModuleInit {
           {
             name: {
               not: {
-                equals: this.config.prebuiltBaseImageName,
+                equals: this.config.prebuiltBaseNodeImageName,
               },
             },
           },
@@ -1848,10 +1852,13 @@ export class FunctionService implements OnModuleInit {
         serverFunction.environment.id,
         serverFunction.name,
         serverFunction.code,
+        serverFunction.language,
         JSON.parse(serverFunction.requirements || '[]'),
         apiKey,
         await this.limitService.getTenantServerFunctionLimits(serverFunction.environment.tenantId),
         serverFunction.logsEnabled,
+        undefined,
+        undefined,
       );
     }
   }
@@ -1904,12 +1911,29 @@ export class FunctionService implements OnModuleInit {
     };
   }
 
-  async getServerFunctionLogs(id: string, keyword: string, logsEnabled: boolean): Promise<{ logsEnabled: boolean, logs: FunctionLog[] }> {
-    const logs = await this.faasLogsService.getLogs(id, keyword);
-    return {
-      logsEnabled,
-      logs,
-    };
+  async getServerFunctionLogs(
+    id: string,
+    tenantId: string,
+    environmentId: string,
+    keyword: string | undefined,
+    hours: number | undefined,
+    limit: number | undefined,
+  ): Promise<FunctionLog[]> {
+    const logRetentionDays = await this.configVariableService.getEffectiveValue<number>(
+      ConfigVariableName.LogRetentionDays,
+      tenantId,
+      environmentId,
+    );
+    if (logRetentionDays != null) {
+      hours = hours ? Math.min(hours, logRetentionDays * 24) : logRetentionDays * 24;
+    }
+
+    return await this.faasLogsService.getLogs(
+      id,
+      keyword,
+      hours,
+      limit,
+    );
   }
 
   private isGraphQLBody(body: Body): body is GraphQLBody {
@@ -1927,31 +1951,69 @@ export class FunctionService implements OnModuleInit {
     });
   }
 
-  async createOrUpdatePrebuiltBaseImage(user: AuthData) {
-    const functionName = this.config.prebuiltBaseImageName;
+  async createOrUpdatePrebuiltBaseImage(user: AuthData, language: string) {
+    switch (language) {
+      case 'javascript': {
+        // TODO: we might try to refactor this, so it does not store the function in the database
+        const functionName = this.config.prebuiltBaseNodeImageName;
+        const code = `function ${functionName}(): void {};`;
+        const customFunction = await this.createOrUpdateServerFunction(
+          user.environment,
+          '',
+          functionName,
+          '',
+          code,
+          'javascript',
+          {},
+          undefined,
+          undefined,
+          undefined,
+          user.key,
+          false,
+          () => Promise.resolve(),
+          true,
+        );
 
-    const code = `
-      function ${functionName}(): void {};
-    `;
+        return this.faasService.getFunctionName(customFunction.id);
+      }
+      case 'java': {
+        await this.faasService.createFunction(
+          this.config.prebuiltBaseJavaImageName,
+          user.tenant.id,
+          user.environment.id,
+          this.config.prebuiltBaseJavaImageName,
+          'public class PolyCustomFunction {}',
+          'java',
+          [],
+          user.key,
+          {},
+          true,
+        );
+        return this.faasService.getFunctionName(this.config.prebuiltBaseJavaImageName);
+      }
+    }
+  }
 
-    const customFunction = await this.createOrUpdateServerFunction(
-      user.environment,
-      '',
-      functionName,
-      '',
-      code,
-      'javascript',
-      {},
-      undefined,
-      undefined,
-      undefined,
-      user.key,
-      false,
-      () => Promise.resolve(),
-      true,
-    );
+  /**
+   * Retrieve functions.
+   * Second element from array are not found functions.
+   */
+  async retrieveFunctions(environment: Environment, jobFunctions: { id: string }[] = []): Promise<[Array<CustomFunction>, Array<string>]> {
+    const ids = jobFunctions.map(({ id }) => id);
 
-    return this.faasService.getFunctionName(customFunction.id);
+    const customFunctions = await this.getServerFunctions(environment.id, undefined, undefined, ids);
+
+    const notFoundFunctions: string[] = [];
+
+    if (customFunctions.length !== jobFunctions.length) {
+      for (const jobFunction of jobFunctions) {
+        if (!customFunctions.find(currentFunction => currentFunction.id === jobFunction.id || currentFunction.visibility === Visibility.Tenant)) {
+          notFoundFunctions.push(jobFunction.id);
+        }
+      }
+    }
+
+    return [customFunctions, notFoundFunctions];
   }
 
   private filterDisabledValues<T extends PostmanVariableEntry>(values: T[]) {
@@ -2600,15 +2662,15 @@ export class FunctionService implements OnModuleInit {
   }
 
   private async isApiFunctionAITrainingEnabled(environment: Environment) {
-    const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+    const trainingDataCfgVariable = await this.configVariableService.getEffectiveValue<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-    return trainingDataCfgVariable?.value.apiFunctions;
+    return trainingDataCfgVariable?.apiFunctions;
   }
 
   private async isCustomFunctionAITrainingEnabled(environment: Environment, serverFunction: boolean) {
-    const trainingDataCfgVariable = await this.configVariableService.getOneParsed<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
+    const trainingDataCfgVariable = await this.configVariableService.getEffectiveValue<TrainingDataGeneration>(ConfigVariableName.TrainingDataGeneration, environment.tenantId, environment.id);
 
-    return (trainingDataCfgVariable?.value.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.value.serverFunctions && serverFunction);
+    return (trainingDataCfgVariable?.clientFunctions && !serverFunction) || (trainingDataCfgVariable?.serverFunctions && serverFunction);
   }
 
   private async getResponseType(response: any, payload: string | null): Promise<string> {
