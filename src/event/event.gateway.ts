@@ -341,7 +341,7 @@ export class EventGateway implements OnModuleInit {
 
       try {
         const response = await this.eventService.sendErrorEvent(id, environmentId, tenantId, visibility, applicationId, userId, path, error, false);
-        await this.eventService.saveEventAck(ackKey, Boolean(response).toString());
+        await this.eventService.pushEventAck(ackKey, Boolean(response).toString());
       } catch (err) {
         this.logger.error('Error propagating "sendErrorEvent":', err);
       }

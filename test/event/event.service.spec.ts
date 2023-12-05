@@ -10,7 +10,8 @@ import { Visibility } from '@poly/model';
 import { EMITTER } from 'event/emitter/emitter.provider';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import cacheManagerMock from '../mocks/cache-manager';
-import emitterProvider from '../mocks/emitter.provider';
+import emitterProviderMock from '../mocks/emitter.provider';
+import crypto from 'crypto';
 
 describe('EventService', () => {
   let service: EventService;
@@ -27,7 +28,7 @@ describe('EventService', () => {
         },
         {
           provide: EMITTER,
-          useValue: emitterProvider,
+          useValue: emitterProviderMock,
         },
         {
           provide: CACHE_MANAGER,
@@ -418,6 +419,78 @@ describe('EventService', () => {
 
       expect(socket1.emit).toBeCalled();
       expect(socket2.emit).not.toBeCalled();
+    });
+
+    it('Should propagate event through rest of nodes and evaluate their ack responses and return true.', async () => {
+      jest.spyOn(crypto, 'randomUUID').mockReturnValue('foo');
+
+      const lRangeMock = jest.fn().mockReturnValue([
+        'true',
+        'false',
+        'false',
+        'false',
+      ]);
+
+      cacheManagerMock.store.getClient?.mockReturnValue({
+        lRange: lRangeMock,
+      } as any);
+
+      const error = {
+        message: 'errorMessage',
+        data: {},
+        status: 69,
+        statusText: 'Test Error',
+      };
+
+      const result = await service.sendErrorEvent(
+        environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        null,
+        null,
+        'path1',
+        error, true);
+
+      expect(emitterProviderMock.serverSideEmit).toHaveBeenCalledWith('sendErrorEvent', environmentEntity.id, environmentEntity.environmentId, environmentEntity.environment.tenantId, environmentEntity.visibility, null, null, 'path1', error, 'ack:foo');
+      expect(lRangeMock).toHaveBeenCalledTimes(4);
+      expect(result).toBe(true);
+    });
+
+    it('Should propagate event through rest of nodes and evaluate their ack responses and return false', async () => {
+      jest.spyOn(crypto, 'randomUUID').mockReturnValue('foo');
+
+      const lRangeMock = jest.fn().mockReturnValue([
+        'false',
+        'false',
+        'false',
+        'false',
+      ]);
+
+      cacheManagerMock.store.getClient?.mockReturnValue({
+        lRange: lRangeMock,
+      } as any);
+
+      const error = {
+        message: 'errorMessage',
+        data: {},
+        status: 69,
+        statusText: 'Test Error',
+      };
+
+      const result = await service.sendErrorEvent(
+        environmentEntity.id,
+        environmentEntity.environmentId,
+        environmentEntity.environment.tenantId,
+        environmentEntity.visibility,
+        null,
+        null,
+        'path1',
+        error, true);
+
+      expect(emitterProviderMock.serverSideEmit).toHaveBeenCalledWith('sendErrorEvent', environmentEntity.id, environmentEntity.environmentId, environmentEntity.environment.tenantId, environmentEntity.visibility, null, null, 'path1', error, 'ack:foo');
+      expect(lRangeMock).toHaveBeenCalledTimes(4);
+      expect(result).toBe(false);
     });
   });
 

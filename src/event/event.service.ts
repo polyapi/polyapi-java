@@ -404,18 +404,18 @@ export class EventService {
     }
   }
 
-  saveEventAck(calleeId: string, value: string) {
-    return this.redisClient.lPush(calleeId, value);
+  pushEventAck(ackKey: string, value: string) {
+    return this.redisClient.lPush(ackKey, value);
   }
 
-  async getEventAck(calleeId: string): Promise<string[]> {
+  private async getEventAck(ackKey: string): Promise<string[]> {
     let ackList: string[] = [];
 
     let seconds = 4;
 
     while (seconds > 0) {
       try {
-        ackList = await this.redisClient.lRange(calleeId, 0, -1);
+        ackList = await this.redisClient.lRange(ackKey, 0, -1);
 
         await sleep(1000);
       } catch (err) {
