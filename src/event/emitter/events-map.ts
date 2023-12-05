@@ -6,5 +6,5 @@ export interface EmitterEvents {
     sendWebhookEvent(...params: OmitLastParameter<Parameters<EventService['sendWebhookEvent']>>): void
     sendAuthFunctionEvent(...params: OmitLastParameter<Parameters<EventService['sendAuthFunctionEvent']>>): void
     sendVariableChangeEvent(...params: OmitLastParameter<Parameters<EventService['sendVariableChangeEvent']>>): void
-    sendErrorEvent(...params: OmitLastParameter<Parameters<EventService['sendErrorEvent']>>): void;
+    sendErrorEvent(...params: [...params: OmitLastParameter<Parameters<EventService['sendErrorEvent']>>, ackKey: string]): void;
 };

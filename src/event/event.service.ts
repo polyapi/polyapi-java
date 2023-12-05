@@ -4,12 +4,16 @@ import { Socket } from 'socket.io';
 import { ErrorEvent, VariableChangeEvent, VariableChangeEventType, Visibility } from '@poly/model';
 import { AxiosError } from 'axios';
 import { Environment, Variable } from '@prisma/client';
+import { Cache } from 'cache-manager';
 import { AuthService } from 'auth/auth.service';
 import { AuthData } from 'common/types';
 import { EMITTER } from './emitter/emitter.provider';
 import { Emitter } from '@socket.io/redis-emitter';
 import { EmitterEvents } from './emitter/events-map';
 import { EventNames, EventParams } from '@socket.io/redis-emitter/dist/typed-events';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { RedisStore } from 'cache-manager-redis-store';
+import { sleep } from '@poly/common/utils';
 
 type ClientID = string;
 type Path = string;
@@ -52,6 +56,7 @@ export class EventService {
   constructor(
     private readonly authService: AuthService,
     @Inject(EMITTER) private readonly emitter: Emitter,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {
   }
 
@@ -128,9 +133,8 @@ export class EventService {
       ...functionHandlers,
       ...defaultHandlers,
     ];
-    if (allHandlers.length === 0) {
-      return false;
-    }
+
+    const responses: boolean[] = [];
 
     const sentInfos = await Promise.all(allHandlers.map(async ({ id, authData, socket }) => {
       // currently allowing Tenant access by default
@@ -143,12 +147,21 @@ export class EventService {
       return true;
     }));
 
-    if (propagateActionThroughNodes) {
-      this.propagateActionThroughNodes('sendErrorEvent', id, environmentId, tenantId, visibility, applicationId, userId, path, error);
+    // counted only if default handlers are used
+    if (defaultHandlers.length > 0 && sentInfos.some(sent => sent)) {
+      responses.push(true);
     }
 
-    // counted only if default handlers are used
-    return defaultHandlers.length > 0 && sentInfos.some(sent => sent);
+    if (propagateActionThroughNodes) {
+      const ackKey = this.getAckKey();
+      this.propagateActionThroughNodes('sendErrorEvent', id, environmentId, tenantId, visibility, applicationId, userId, path, error, ackKey);
+
+      const ackResponses = (await this.getEventAck(ackKey)).map(v => v === 'true');
+
+      responses.push(...ackResponses);
+    }
+
+    return responses.some(response => response);
   }
 
   getEventError(error: AxiosError): ErrorEvent {
@@ -391,6 +404,34 @@ export class EventService {
     }
   }
 
+  saveEventAck(calleeId: string, value: string) {
+    return this.redisClient.lPush(calleeId, value);
+  }
+
+  async getEventAck(calleeId: string): Promise<string[]> {
+    let ackList: string[] = [];
+
+    let seconds = 4;
+
+    while (seconds > 0) {
+      try {
+        ackList = await this.redisClient.lRange(calleeId, 0, -1);
+
+        await sleep(1000);
+      } catch (err) {
+        this.logger.error(err);
+      }
+
+      seconds--;
+    }
+
+    return ackList;
+  }
+
+  private getAckKey() {
+    return `ack:${crypto.randomUUID()}`;
+  }
+
   private filterByPath(path: string, mapToPath: (handler: any) => Path = handler => handler) {
     return handler => {
       const handlerPath = mapToPath(handler);
@@ -400,5 +441,9 @@ export class EventService {
 
   private propagateActionThroughNodes<Ev extends EventNames<EmitterEvents>>(ev: Ev, ...args: EventParams<EmitterEvents, Ev>) {
     this.emitter.serverSideEmit(ev, ...args);
+  }
+
+  private get redisClient() {
+    return (this.cacheManager.store as unknown as RedisStore).getClient();
   }
 }

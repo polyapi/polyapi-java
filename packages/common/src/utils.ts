@@ -63,3 +63,7 @@ export const getDateMinusXHours = (date: Date, hours: number): Date => {
   date.setHours(date.getHours() - hours);
   return date;
 };
+
+// sleep function from SO
+// https://stackoverflow.com/a/39914235
+export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

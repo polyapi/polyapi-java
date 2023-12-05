@@ -15,10 +15,7 @@ import { CoreV1Api, CustomObjectsApi } from '@kubernetes/client-node';
 import { getApiClient } from 'kubernetes/client';
 import { ServerFunctionLimits } from '@poly/model';
 import { ServerFunctionDoesNotExists } from './errors/ServerFunctionDoesNotExist';
-
-// sleep function from SO
-// https://stackoverflow.com/a/39914235
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+import { sleep } from '@poly/common/utils';
 
 const exec = util.promisify(execAsync);
 const exists = util.promisify(fs.exists);

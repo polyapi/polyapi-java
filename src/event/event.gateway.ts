@@ -316,8 +316,8 @@ export class EventGateway implements OnModuleInit {
     return true;
   }
 
-  private logPropagatedAction(action: keyof EmitterEvents) {
-    this.logger.debug(`Received propagated action "${action}"`);
+  private logPropagatedAction(action: keyof EmitterEvents, ackKey?: string) {
+    this.logger.debug(`Received propagated action "${action}" ${ackKey ? `with ack key "${ackKey}"` : ''}`);
   }
 
   private listenForPropagatedEvents() {
@@ -336,9 +336,15 @@ export class EventGateway implements OnModuleInit {
       this.eventService.sendVariableChangeEvent(...args, false);
     });
 
-    this.server.on('sendErrorEvent', (...args) => {
-      this.logPropagatedAction('sendErrorEvent');
-      this.eventService.sendErrorEvent(...args, false);
+    this.server.on('sendErrorEvent', async (id, environmentId, tenantId, visibility, applicationId, userId, path, error, ackKey) => {
+      this.logPropagatedAction('sendErrorEvent', ackKey);
+
+      try {
+        const response = await this.eventService.sendErrorEvent(id, environmentId, tenantId, visibility, applicationId, userId, path, error, false);
+        await this.eventService.saveEventAck(ackKey, Boolean(response).toString());
+      } catch (err) {
+        this.logger.error('Error propagating "sendErrorEvent":', err);
+      }
     });
   }
 }
