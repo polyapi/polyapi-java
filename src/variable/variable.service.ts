@@ -375,9 +375,6 @@ export class VariableService {
 
   async toServerVariableSpecification(variable: Variable): Promise<ServerVariableSpecification> {
     const value = await this.secretService.get<any>(variable.environmentId, variable.id);
-
-    console.log('value: ', value);
-
     const [type, typeSchema] = await this.commonService.resolveType('ValueType', value, undefined, false);
 
     return {
