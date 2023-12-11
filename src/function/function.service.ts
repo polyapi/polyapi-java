@@ -1444,7 +1444,6 @@ export class FunctionService implements OnModuleInit {
           createFromScratch,
           customFunction.sleep,
           customFunction.sleepAfter,
-          logsEnabled,
         );
 
         return customFunction;
@@ -1547,7 +1546,6 @@ export class FunctionService implements OnModuleInit {
         await this.limitService.getTenantServerFunctionLimits(customFunction.environment.tenantId),
         sleep ?? customFunction.sleep,
         sleepAfter ?? customFunction.sleepAfter,
-        logsEnabled,
       );
     }
 
@@ -1785,14 +1783,15 @@ export class FunctionService implements OnModuleInit {
 
     const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => typeof args[arg.key] === 'undefined' ? '$poly-undefined-value' : args[arg.key]);
 
+    const logsEnabled = customFunction.logsEnabled && customFunction.environmentId === executionEnvironment.id;
+
     try {
       const result = await this.faasService.executeFunction(
         customFunction.id,
-        customFunction.environmentId,
         executionEnvironment.tenantId,
-        executionEnvironment.id,
         argumentsList,
         headers,
+        logsEnabled,
       );
       this.logger.debug(
         `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
@@ -1857,8 +1856,6 @@ export class FunctionService implements OnModuleInit {
         apiKey,
         await this.limitService.getTenantServerFunctionLimits(serverFunction.environment.tenantId),
         serverFunction.logsEnabled,
-        undefined,
-        undefined,
       );
     }
   }
