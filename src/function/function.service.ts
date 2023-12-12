@@ -1785,20 +1785,7 @@ export class FunctionService implements OnModuleInit {
 
     const argumentsList = Array.isArray(args) ? args : functionArguments.map((arg: FunctionArgument) => typeof args[arg.key] === 'undefined' ? '$poly-undefined-value' : args[arg.key]);
 
-    try {
-      const result = await this.faasService.executeFunction(
-        customFunction.id,
-        customFunction.environmentId,
-        executionEnvironment.tenantId,
-        executionEnvironment.id,
-        argumentsList,
-        headers,
-      );
-      this.logger.debug(
-        `Server function ${customFunction.id} executed successfully with result: ${JSON.stringify(result)}`,
-      );
-      return result;
-    } catch (error) {
+    const processError = async (error: any) => {
       this.logger.error(`Error executing server function ${customFunction.id}: ${error.message}`);
       const functionPath = `${customFunction.context ? `${customFunction.context}.` : ''}${customFunction.name}`;
       if (await this.eventService.sendErrorEvent(
@@ -1815,6 +1802,35 @@ export class FunctionService implements OnModuleInit {
       }
 
       throw new HttpException(error.response?.data || error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+
+    try {
+      const result = await this.faasService.executeFunction(
+        customFunction.id,
+        customFunction.environmentId,
+        executionEnvironment.tenantId,
+        executionEnvironment.id,
+        argumentsList,
+        headers,
+      );
+      this.logger.debug(
+        `Server function ${customFunction.id} executed with result: ${JSON.stringify(result)}`,
+      );
+
+      if (result.statusCode < 200 || result.statusCode >= 300) {
+        return await processError({
+          message: result.body,
+          status: result.statusCode,
+          response: {
+            data: result.body,
+            status: result.statusCode,
+          },
+        });
+      }
+
+      return result;
+    } catch (error) {
+      return await processError(error);
     }
   }
 

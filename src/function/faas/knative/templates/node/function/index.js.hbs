@@ -51,9 +51,6 @@ const handle = async (context, body) => {
     const result = await {{name}}(...processedArgs);
     const statusCode = polyCustom.responseStatusCode || 200;
 
-    // revert polyCustom to preset values
-    poly.polyCustom = polyCustomPreset;
-
     if (context.cloudevent) {
       const executionId = context.cloudevent.executionid;
       if (executionId) {
@@ -84,8 +81,11 @@ const handle = async (context, body) => {
         message: e.message,
         stack: e.stack
       },
-      statusCode: 500
+      statusCode: polyCustom.responseStatusCode || 500,
     };
+  } finally {
+    // revert polyCustom to preset values
+    poly.polyCustom = polyCustomPreset;
   }
 }
 
