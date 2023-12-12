@@ -290,7 +290,7 @@ export class KNativeFaasService implements FaasService {
     executionEnvironmentId: string,
     args: any[],
     headers = {},
-    maxRetryCount = 3,
+    maxRetryCount = 1,
   ): Promise<ExecuteFunctionResult> {
     let functionUrl = '';
     try {
@@ -320,7 +320,7 @@ export class KNativeFaasService implements FaasService {
         )))
         .pipe(
           catchError(async (error: AxiosError) => {
-            if (error.response?.status !== 500) {
+            if (error.response?.status && error.response.status !== 503) {
               return {
                 body: error.response?.data,
                 statusCode: error.response?.status || 500,
@@ -334,7 +334,7 @@ export class KNativeFaasService implements FaasService {
             );
             if (maxRetryCount > 0) {
               await sleep(2000);
-              return this.executeFunction(id, functionEnvironmentId, tenantId, executionEnvironmentId, args, headers, 0);
+              return this.executeFunction(id, functionEnvironmentId, tenantId, executionEnvironmentId, args, headers, maxRetryCount - 1);
             }
 
             throw error;
