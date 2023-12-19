@@ -1,13 +1,16 @@
-import { ConflictException, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConflictException, forwardRef, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import crypto from 'crypto';
 import { ConfigService } from 'config/config.service';
 import { TriggerProvider } from 'trigger/provider/trigger-provider';
 import { KNativeTriggerProvider } from 'trigger/provider/knative-trigger-provider';
-import { TriggerDestination, TriggerDto, TriggerSource } from '@poly/model';
+import { TriggerDestination, TriggerDto, TriggerSource, Visibility } from '@poly/model';
 import { delay } from '@poly/common/utils';
 import { CommonError, NAME_CONFLICT } from 'common/common-error';
+import { EventService } from 'event/event.service';
+import { FunctionService } from 'function/function.service';
+import { EnvironmentService } from 'environment/environment.service';
 
 export interface TriggerResponse {
   data: unknown;
@@ -22,6 +25,10 @@ export class TriggerService implements OnModuleInit {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => FunctionService))
+    private readonly functionService: FunctionService,
+    private readonly environmentService: EnvironmentService,
+    private readonly eventService: EventService,
   ) {
     this.triggerProvider = new KNativeTriggerProvider(cacheManager, config);
   }
@@ -105,11 +112,40 @@ export class TriggerService implements OnModuleInit {
     return crypto.randomBytes(16).toString('hex');
   }
 
-  async processTriggerResponse(executionId: string, data: unknown, statusCode: number) {
+  async processTriggerResponse(
+    executionId: string,
+    data: any,
+    statusCode: number,
+    functionId?: string,
+    executionEnvironmentId?: string,
+  ) {
     const response: TriggerResponse = {
       data,
       statusCode,
     };
+
+    if (statusCode < 200 || statusCode >= 300) {
+      const serverFunction = functionId && await this.functionService.findServerFunction(functionId);
+      const executionEnvironment = executionEnvironmentId && await this.environmentService.findById(executionEnvironmentId);
+
+      if (serverFunction && executionEnvironment) {
+        const functionPath = `${serverFunction.context ? `${serverFunction.context}.` : ''}${serverFunction.name}`;
+        await this.eventService.sendErrorEvent(
+          serverFunction.id,
+          executionEnvironment.id,
+          executionEnvironment.tenantId,
+          serverFunction.visibility as Visibility,
+          null,
+          null,
+          functionPath,
+          {
+            message: data.message || data,
+            status: statusCode,
+          },
+        );
+      }
+    }
+
     await this.cacheManager.set(`execution-response:${executionId}`, response, this.config.knativeTriggerResponseTimeoutSeconds * 1000);
   }
 

@@ -1,6 +1,7 @@
 const poly = require('polyapi');
 const { CloudEvent } = require('cloudevents');
 
+const FUNCTION_ID = '{{id}}';
 const FUNCTION_ENVIRONMENT_ID = '{{environmentId}}';
 
 const originalConsole = {
@@ -62,6 +63,8 @@ const handle = async (context, body) => {
             data: result,
             statusCode,
             executionId,
+            functionId: FUNCTION_ID,
+            environmentId: context.cloudevent.environment,
           }
         });
       } else {
@@ -76,6 +79,24 @@ const handle = async (context, body) => {
       };
     }
   } catch (e) {
+    if (context.cloudevent) {
+      const executionId = context.cloudevent.executionid;
+      if (executionId) {
+        context.log.info('Returning error response CloudEvent...', CloudEvent);
+        return new CloudEvent({
+          source: context.cloudevent.source,
+          type: 'trigger.response',
+          data: {
+            data: e.message,
+            statusCode: polyCustom.responseStatusCode || 500,
+            executionId,
+            functionId: FUNCTION_ID,
+            environmentId: context.cloudevent.environment,
+          }
+        });
+      }
+    }
+
     return {
       body: {
         message: e.message,

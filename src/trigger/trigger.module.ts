@@ -4,6 +4,8 @@ import { TriggerService } from './trigger.service';
 import { WebhookModule } from 'webhook/webhook.module';
 import { FunctionModule } from 'function/function.module';
 import { AuthModule } from 'auth/auth.module';
+import { EventModule } from 'event/event.module';
+import { EnvironmentModule } from 'environment/environment.module';
 
 @Module({
   controllers: [TriggerController],
@@ -11,6 +13,8 @@ import { AuthModule } from 'auth/auth.module';
   imports: [
     forwardRef(() => WebhookModule),
     forwardRef(() => FunctionModule),
+    forwardRef(() => EventModule),
+    forwardRef(() => EnvironmentModule),
     AuthModule,
   ],
   exports: [TriggerService],

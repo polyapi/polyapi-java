@@ -178,10 +178,14 @@ export class KNativeFaasService implements FaasService {
       const content = handlebars.compile(template)({
         name,
         code,
+        id,
         environmentId,
       });
       this.logger.debug(`Writing function code to ${functionPath}/function/index.js`);
       await writeFile(`${functionPath}/function/index.js`, content);
+
+      await exec(`kubectl exec pvc-pod-2 -- mkdir -p /my-volume/${this.getFunctionPath(id, tenantId, environmentId, true)}/function`);
+      await exec(`kubectl cp ${functionPath}/function/index.js default/pvc-pod-2:/my-volume/${this.getFunctionPath(id, tenantId, environmentId, true)}/function/index.js`);
 
       await this.deployNodeFunction(id, tenantId, environmentId, imageName, apiKey, limits, sleep, sleepAfter);
     };
@@ -453,9 +457,11 @@ export class KNativeFaasService implements FaasService {
       },
     ];
     const command = ['/bin/sh', '-c'];
-    const cachedPolyGenerateCommand = `if [ -d "/workspace/function/.poly/lib" ];
-    then echo 'Cached Poly library found, reusing...' && cp -r /workspace/function/.poly /workspace/node_modules/;
-    else npx poly generate && cp -r /workspace/node_modules/.poly /workspace/function/; fi`;
+    // const cachedPolyGenerateCommand = `if [ -d "/workspace/function/.poly/lib" ];
+    // then echo 'Cached Poly library found, reusing...' && cp -r /workspace/function/.poly /workspace/node_modules/;
+    // else npx poly generate && cp -r /workspace/node_modules/.poly /workspace/function/; fi`;
+
+    const cachedPolyGenerateCommand = 'npx poly generate';
 
     const startUpCommand = `if [ -f "/workspace/function/function/index.js" ];
     then /cnb/lifecycle/launcher "cp -f /workspace/function/function/index.js /workspace/ && ${cachedPolyGenerateCommand} && npm start";
