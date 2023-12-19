@@ -1792,7 +1792,8 @@ export class FunctionService implements OnModuleInit {
     const processError = async (error: any) => {
       this.logger.error(`Error executing server function ${customFunction.id}: ${error.message}`);
       const functionPath = `${customFunction.context ? `${customFunction.context}.` : ''}${customFunction.name}`;
-      if (await this.eventService.sendErrorEvent(
+
+      await this.eventService.sendErrorEvent(
         customFunction.id,
         executionEnvironment.id,
         executionEnvironment.tenantId,
@@ -1801,9 +1802,7 @@ export class FunctionService implements OnModuleInit {
         userId,
         functionPath,
         this.eventService.getEventError(error),
-      )) {
-        return;
-      }
+      );
 
       throw new HttpException(error.response?.data || error.message, error.status || HttpStatus.INTERNAL_SERVER_ERROR);
     };
@@ -1834,7 +1833,7 @@ export class FunctionService implements OnModuleInit {
       return result;
     } catch (error) {
       return await processError(error);
-    };
+    }
   }
 
   async updateAllServerFunctions() {

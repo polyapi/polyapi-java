@@ -4,9 +4,7 @@ module.exports = function(poly, sendLocalErrorMessage, ...mainArgs) {
   try {
     return {{name}}.call(this, ...mainArgs);
   } catch (e) {
-    if (sendLocalErrorMessage(e.message)) {
-      return;
-    }
+    sendLocalErrorMessage(e.message);
     throw e;
   }
 }
