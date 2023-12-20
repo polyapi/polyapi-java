@@ -616,7 +616,9 @@ export class FunctionController {
 
     await this.service.deleteServerFunctionLogs(id);
 
-    res.status(HttpStatus.ACCEPTED).send('Logs scheduled for deletion, please wait a few minutes.');
+    res.status(HttpStatus.ACCEPTED).send({
+      message: 'Logs scheduled for deletion, please wait a few minutes.',
+    });
   }
 
   @PerfLog(PerfLogType.ServerFunctionExecution)
