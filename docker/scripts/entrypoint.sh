@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # yarn prisma migrate deploy
 # nohup yarn run start:prod &
 # cd science
@@ -10,7 +10,7 @@ yarn prisma migrate deploy
 handle_sigterm() 
 {
     echo "Received SIGTERM, shutting down gracefully"
-    kill -SIGTERM "$child_pid";
+    kill "$child_pid";
 }
 
 echo "Entrypoint process id: $$"
