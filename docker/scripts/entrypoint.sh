@@ -16,7 +16,7 @@ handle_sigterm()
 echo "Entrypoint process id: $$"
 
 # Run the application server and store its process ID
-nohup yarn run start:prod &
+nohup node dist/src/main &
 child_pid=$!
 
 echo "node process id: $child_pid"
