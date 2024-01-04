@@ -18,6 +18,7 @@ def main(context):
     """
     # poly
     logging_enabled = context.headers.get('x-poly-do-log')
+    logger = logging.getLogger("poly")
     logger.error(f"Poly DO LOG: {logging_enabled}")
     logger.error(f"Poly DO LOG == True: {logging_enabled == True}")
 
