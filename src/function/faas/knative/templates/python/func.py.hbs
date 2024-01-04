@@ -4,19 +4,6 @@ import logging
 import sys
 from typing import Any
 
-logging_enabled = context.headers.get('x-poly-do-log')
-
-# root
-logging.getLogger().setLevel(logging.DEBUG)
-
-# poly
-logger = logging.getLogger("poly")
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter("[%(levelname)s] %(message)s [/%(levelname)s]")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 FUNCTION_ENVIRONMENT_ID = "{{environmentId}}"
 
 {{{code}}}
@@ -29,8 +16,20 @@ def main(context):
     The context parameter contains the Flask request object and any
     CloudEvent received with the request.
     """
+    # poly
+    logging_enabled = context.headers.get('x-poly-do-log')
     logger.error(f"Poly DO LOG: {logging_enabled}")
     logger.error(f"Poly DO LOG == True: {logging_enabled == True}")
+
+    if logging_enabled == True:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger = logging.getLogger("poly")
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter("[%(levelname)s] %(message)s [/%(levelname)s]")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     # TODO there might be a context.cloudevent we need to handle here sometimes?
     args = _get_args(context.request)
