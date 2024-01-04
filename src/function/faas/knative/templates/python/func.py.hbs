@@ -18,16 +18,11 @@ def main(context):
     """
     # header is passed as string true
     logging_enabled = str(context.request.headers.get('x-poly-do-log')) == "true"
-    logger = logging.getLogger("foobar")
-    logger.error(f"Poly DO LOG: {logging_enabled}")
-    logger.error(f"Poly DO LOG == True: {logging_enabled == True}")
-
     if logging_enabled == True:
         logging.getLogger().setLevel(logging.DEBUG)
         logger = logging.getLogger("poly")
         handler = logging.StreamHandler()
         handler.setLevel(logging.DEBUG)
-
         formatter = logging.Formatter("[%(levelname)s] %(message)s [/%(levelname)s]")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
