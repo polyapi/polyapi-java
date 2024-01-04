@@ -17,7 +17,7 @@ def main(context):
     CloudEvent received with the request.
     """
     # poly
-    logging_enabled = context.headers.get('x-poly-do-log')
+    logging_enabled = context.request.headers.get('x-poly-do-log')
     logger = logging.getLogger("poly")
     logger.error(f"Poly DO LOG: {logging_enabled}")
     logger.error(f"Poly DO LOG == True: {logging_enabled == True}")
