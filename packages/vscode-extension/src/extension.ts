@@ -8,16 +8,17 @@ import { registerPolySpecsChangedListener } from './events';
 import DefaultView from './default-view';
 
 export const activate = (context: vscode.ExtensionContext) => {
-  const chatViewProvider = new ChatViewProvider(context);
   const libraryIndexViewProvider = new LibraryIndexViewProvider(context);
+  const chatViewProvider = new ChatViewProvider(context);
   const defaultView = new DefaultView();
 
-  const unregisterPolyFunctionsRegeneratedListener = registerPolySpecsChangedListener(contexData => {
+  const unregisterPolyFunctionsRegeneratedListener = registerPolySpecsChangedListener(contextData => {
     console.log('POLY: Restarting TS server...');
     vscode.commands.executeCommand('typescript.restartTsServer');
 
     console.log('POLY: Regenerating index tree data...');
-    libraryIndexViewProvider.refresh(contexData);
+
+    libraryIndexViewProvider.refresh(contextData);
   });
 
   const stopFileWatcher = startLibraryWatcher(context);
@@ -35,6 +36,8 @@ export const activate = (context: vscode.ExtensionContext) => {
     })),
     vscode.commands.registerCommand('poly.setupLibrary', () => defaultView.setupLibrary()),
     vscode.commands.registerCommand('poly.setupCredentials', () => defaultView.setupLibraryCredentials()),
+    vscode.commands.registerCommand('poly.restartAssistant', () => chatViewProvider.restartAssistant()),
+    vscode.commands.registerCommand('poly.openMarketplacePage', () => vscode.commands.executeCommand('extension.open', context.extension.id)),
     vscode.window.registerWebviewViewProvider(
       'poly.ai-view',
       chatViewProvider,

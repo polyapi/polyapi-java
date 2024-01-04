@@ -3,7 +3,7 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "publisher": "PolyAPICorp",
   "engines": {
     "vscode": "^1.75.0"
@@ -124,6 +124,11 @@
         "view": "poly.library-info",
         "contents": "Missing credentials, you have to set them to use Poly chat assistant.\n[Set Poly credentials](command:poly.setupCredentials)\n",
         "when": "polyLibraryInstalled == true && missingCredentials == true"
+      },
+      {
+        "view": "poly.library-index-view",
+        "contents": "There is an error in tree view, please check if you have installed the last version [here](command:poly.openMarketplacePage).",
+        "when": "polyTreeError == true"
       }
     ],
     "keybindings": [

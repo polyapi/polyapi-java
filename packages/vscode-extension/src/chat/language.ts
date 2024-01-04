@@ -10,6 +10,7 @@ export const SUPPORTED_FORMAT_LANGUAGE_MAP = {
   tsx: 'Typescript',
   ts: 'Typescript',
   java: 'Java',
+  py: 'Python',
 };
 
 export const saveLastOpenedFileName = (context: ExtensionContext, filePath: string) => {

@@ -1,3 +1,7 @@
+### 0.7.0
+* Add python support for assistant.
+* Add update version message in Assistant.
+
 ### 0.6.2
 * Accommodating for the updated specs.json format.
 

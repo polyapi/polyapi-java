@@ -34,6 +34,10 @@
   color: var(--vscode-terminal-ansiRed);
 }
 
+#conversation-list .response-text-error a {
+  color: var(--vscode-textLink-activeForeground);
+}
+
 .loading-container .dot1 {
   animation: loading 1s infinite;
 }

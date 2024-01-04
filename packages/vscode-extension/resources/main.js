@@ -2,6 +2,14 @@ const COMMANDS = [
   'clear', 'c',
 ];
 
+/**
+ * @typedef {{ type: 'error', value: { status?: number, message: string, code?: string }}} ErrorMessage
+ */
+
+/**
+ * @typedef {(ErrorMessage | { type: 'plain' | 'js' | 'markdown', value: string })} Message
+ */
+
 (function() {
   const vscode = acquireVsCodeApi();
 
@@ -77,6 +85,10 @@ const COMMANDS = [
   let scrollBarAtBottom = null;
 
   const patch = snabbdom.init([snabbdom.attributesModule, snabbdom.styleModule]);
+
+  const CUSTOM_ERRORS = {
+    WRONG_CLIENT_VERSION: 'Your extension is outdated, please update it <a href="#" class="open-extension-marketplace-page">here</a>',
+  }
 
   const setInitialMessageInputHeight = () => {
     messageInput.style.height = '38px';
@@ -174,30 +186,44 @@ const COMMANDS = [
       `;
     };
 
+    /**
+     * 
+     * @param {object} error
+     * @param {number} error.code
+     * @param {string} error.message
+     * @param {number} error.status
+     */
+    const getErrorMessage = (error) => {
+
+      const goToSettings = "Check your credentials <a href='/#' class='go-to-settings'>here</a>.";
+
+      const isCredentialsIssue = error.status === 401 || (error.status === 403 && typeof CUSTOM_ERRORS[error.code] === 'undefined)');
+
+      switch(error.status) {
+        case 401:
+        case 403:
+          return `${CUSTOM_ERRORS[error.code] || error.message || 'Something went wrong.'}. ${isCredentialsIssue ? goToSettings : ''}`;
+        case 429:
+          return 'Oops! Your tenant has exceeded the Starter Tier daily limit for prompts. To upgrade, please contact sales@polyapi.io. Thank you for using PolyAPI!';
+        default:
+          return error.message;
+      }
+    }
+
+    /**
+     * @param {Message} data 
+     */
     const convertToHtml = data => {
+
       switch (data.type) {
         case 'plain':return `<div>${data.value}</div>`;
         case 'error':
 
-          const goToSettings = `
-            <span>
-              Check your credentials <a href='/#' class='go-to-settings'>here</a>
-            </span>
-          `;
-
-          const getErrorMessage = () => {
-            switch (data.error?.status) {
-              case 401:
-              case 403:
-                return `${data.value}. ${isCredentialsIssue ? goToSettings : ''}`;
-              case 429:
-                return 'Oops! Your tenant has exceeded the Starter Tier daily limit for prompts. To upgrade, please contact sales@polyapi.io. Thank you for using PolyAPI!';
-              default:
-                return `${data.value}`;
-            }
-          }
-
-          return `<div class='response-text-error'>${getErrorMessage()}</div>`;
+          return `<div class='response-text-error'>${getErrorMessage({
+            code: data.value.code,
+            message: data.value.message,
+            status: data.value.status
+          })}</div>`;
         case 'js':
           return marked.parse(`\`\`\`\n${data.value}\n\`\`\``);
         case 'markdown':
@@ -321,12 +347,15 @@ const COMMANDS = [
         enableTextarea();
         break;
       }
-      case 'addMessage': {
+      case 'addErrorMessage': {
         const data = message.data;
 
         removeLoadingContainer();
 
-        conversationList.innerHTML += getResponseWrapper(convertToHtml(data));
+        conversationList.innerHTML += getResponseWrapper(convertToHtml({
+          type: 'error',
+          ...data
+        }));
         scrollToLastMessage();
         focusMessageInput();
 
@@ -394,12 +423,22 @@ const COMMANDS = [
         focusMessageInput();
         break;
       case 'prependConversationHistory':
+        const firstLoad = message.value.firstLoad;
+
+        if(firstLoad) {
+          clearConversation();
+        }
 
         if (message.value.type === 'error') {
+
           conversationList.innerHTML = `
-            <div id='conversation-load-error' class='response-text-error flex-col flex items-center py-5'>
+            <div id='conversation-load-error' class='response-text-error flex-col flex items-center py-5 text-center'>
               <span>
-                Error loading conversation messages.
+                ${getErrorMessage({
+                  code: message.value.code,
+                  status: message.value.status,
+                  message: `Failed to load messages (${message.value.statusText} error)`,
+                })}
               </span>
               <button class='load-conversation-messages mt-4'><span class='text-uppercase p-2 hover:!bg-[var(--vscode-button-hoverBackground)]' style='color: var(--vscode-button-foreground); background-color: var(--vscode-button-background);'><span>Try again</span></span></button>
             </div>
@@ -410,7 +449,6 @@ const COMMANDS = [
         }
 
         const messages = message.value.messages;
-        const firstLoad = message.value.firstLoad;
 
         let newMessagesHtmlContent = '';
 
@@ -530,6 +568,11 @@ const COMMANDS = [
         vscode.postMessage({
           type: 'goToExtensionSettings',
         });
+      } else if(linkButton.classList?.contains('open-extension-marketplace-page')) {
+        e.preventDefault();
+        vscode.postMessage({
+          type: 'openExtensionMarketplacePage'
+        })
       }
       return;
     }

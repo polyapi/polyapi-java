@@ -52,6 +52,8 @@ const updateMissingCredentialsContext = (credentials: ReturnType<typeof getCrede
 const watchCredentials = () => {
   return vscode.workspace.onDidChangeConfiguration(event => {
     if (event.affectsConfiguration('poly.apiBaseUrl') || event.affectsConfiguration('poly.apiKey')) {
+      vscode.commands.executeCommand('poly.restartAssistant');
+
       const credentials = getCredentialsFromExtension();
 
       updateMissingCredentialsContext(credentials);
