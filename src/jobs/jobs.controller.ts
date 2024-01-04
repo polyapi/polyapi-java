@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, HttpStatus, Logger, NotFoundException, Param, Patch, Post, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { AuthRequest } from 'common/types';
-import { ConfigVariableName, CreateJobDto, ExecutionDto, ExecutionFiltersDto, FunctionJob, CreateFunctionJob, Jobs, Schedule, ScheduleType, UpdateJobDto } from '@poly/model';
+import { ConfigVariableName, CreateJobDto, ExecutionDto, ExecutionFiltersDto, FunctionJob, CreateFunctionJob, Jobs, Schedule, ScheduleType, UpdateJobDto, Permission } from '@poly/model';
 import { Environment } from '@prisma/client';
 import { FunctionService } from 'function/function.service';
 import { PolyAuthGuard } from 'auth/poly-auth-guard.service';
@@ -8,12 +8,13 @@ import { JobsService } from './jobs.service';
 import { ConfigVariableService } from 'config-variable/config-variable.service';
 import * as cronParser from 'cron-parser';
 import { InvalidIntervalTimeException } from './errors/http';
+import { AuthService } from 'auth/auth.service';
 
 @Controller('jobs')
 export class JobsController {
   private logger: Logger = new Logger(JobsController.name);
 
-  constructor(private readonly service: JobsService, private readonly functionService: FunctionService, private readonly configVariableService: ConfigVariableService) {
+  constructor(private readonly service: JobsService, private readonly functionService: FunctionService, private readonly configVariableService: ConfigVariableService, private readonly authService: AuthService) {
 
   }
 
@@ -29,7 +30,7 @@ export class JobsController {
       enabled = true,
     } = data;
 
-    await Promise.all([this.checkFunctions(req.user.environment, data.functions), this.checkSchedule(req.user.environment, schedule)]);
+    await Promise.all([this.checkFunctions(req.user.environment, data.functions), this.checkSchedule(req.user.environment, schedule), this.authService.checkPermissions(req.user, [Permission.ManageJobs])]);
 
     const functionsJob = this.processJobFunctions(functions);
 
@@ -57,6 +58,8 @@ export class JobsController {
       enabled,
     } = data;
 
+    await this.authService.checkPermissions(req.user, [Permission.ManageJobs]);
+
     if (schedule) {
       await this.checkSchedule(req.user.environment, schedule);
     }
@@ -78,6 +81,8 @@ export class JobsController {
   @Delete(':id')
   @UseGuards(PolyAuthGuard)
   async deleteJob(@Req() req: AuthRequest, @Param('id') id: string) {
+    await this.authService.checkPermissions(req.user, [Permission.ManageJobs]);
+
     const job = await this.findJob(req.user.environment, id);
 
     await this.service.deleteJob(job);
@@ -107,7 +112,10 @@ export class JobsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(PolyAuthGuard)
   async deleteJobExecutions(@Req() req: AuthRequest, @Param('job') jobId: string) {
+    await this.authService.checkPermissions(req.user, [Permission.ManageJobs]);
+
     this.logger.debug(`Deleting job executions for job with id "${jobId}"`);
+
     await this.findJob(req.user.environment, jobId);
     await this.service.deleteJobExecutions(jobId);
   }
@@ -116,6 +124,8 @@ export class JobsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(PolyAuthGuard)
   async deleteJobExecution(@Req() req: AuthRequest, @Param('job') jobId: string, @Param('id') id: string) {
+    await this.authService.checkPermissions(req.user, [Permission.ManageJobs]);
+
     this.logger.debug(`Deleting job execution for job with id "${jobId}" and execution id "${id}"`);
     await this.findJob(req.user.environment, jobId);
     await this.findExecution(jobId, id);

@@ -8,6 +8,7 @@ import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
 import { CommonModule } from 'common/common.module';
 import { QUEUE_NAME } from './constants';
+import { AuthModule } from 'auth/auth.module';
 
 @Module({
   controllers: [JobsController],
@@ -17,6 +18,7 @@ import { QUEUE_NAME } from './constants';
       name: QUEUE_NAME,
     }),
     CommonModule,
+    AuthModule,
   ],
 })
 export class JobsModule {}

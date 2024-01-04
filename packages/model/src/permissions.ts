@@ -8,6 +8,7 @@ export enum Permission {
   ManageNonSecretVariables = 'manageVariables',
   ManageSecretVariables = 'manageSecretVariables',
   ManageTriggers = 'manageTriggers',
+  ManageJobs = 'manageJobs',
 }
 
 export type Permissions = {
@@ -20,4 +21,5 @@ export type Permissions = {
   [Permission.ManageNonSecretVariables]?: boolean;
   [Permission.ManageSecretVariables]?: boolean;
   [Permission.ManageTriggers]?: boolean;
+  [Permission.ManageJobs]?: boolean;
 }
