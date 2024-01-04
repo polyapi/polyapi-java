@@ -1,6 +1,6 @@
 const postmanCollection = require('postman-collection');
 
-const scriptVersion = '0.1.1';
+const scriptVersion = '0.1.2';
 const polyData = pm.environment.get('polyData');
 const apiKey = pm.environment.get('polyApiKey');
 const { method, description, url, body } = pm.request;
@@ -25,7 +25,7 @@ const responseStatusCode = pm.response.code;
 
 if(responseStatusCode === 204) {
   response = null;
-} else if (responseContentType.match(/application\/json/) !== null) {
+} else if (responseContentType.match(/application\/.*json/) !== null) {
   response = pm.response.json();
 } else {
   response = pm.response.text();
