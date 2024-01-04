@@ -31,5 +31,5 @@ RUN groupadd -r poly && \
     chown -R poly:poly /poly
 USER poly
 ENV PATH="/poly/funcs/bin:${PATH}"
-ENTRYPOINT [ "sh","./docker/scripts/entrypoint.sh" ]
+CMD [ "./docker/scripts/entrypoint.sh" ]
 EXPOSE 8000 5000 80
