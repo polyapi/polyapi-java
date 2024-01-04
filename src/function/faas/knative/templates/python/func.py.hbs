@@ -16,9 +16,9 @@ def main(context):
     The context parameter contains the Flask request object and any
     CloudEvent received with the request.
     """
-    # poly
-    logging_enabled = context.request.headers.get('x-poly-do-log')
-    logger = logging.getLogger("poly")
+    # header is passed as string true
+    logging_enabled = str(context.request.headers.get('x-poly-do-log')) == "true"
+    logger = logging.getLogger("foobar")
     logger.error(f"Poly DO LOG: {logging_enabled}")
     logger.error(f"Poly DO LOG == True: {logging_enabled == True}")
 
