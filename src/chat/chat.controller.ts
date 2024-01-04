@@ -97,7 +97,7 @@ export class ChatController {
     */
     if (!hasVersionHeader) {
       const observable = new Observable<string>(subscriber => {
-        subscriber.next('Your extension is outdated, please update it [here](https://marketplace.visualstudio.com/items?itemName=PolyAPICorp.polyapi-vscode-extension)');
+        subscriber.next('Your PolyAPI Vs Code extension is out of date, please update it [here](https://marketplace.visualstudio.com/items?itemName=PolyAPICorp.polyapi-vscode-extension)');
         subscriber.complete();
       });
 

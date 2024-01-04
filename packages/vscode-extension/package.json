@@ -3,7 +3,7 @@
   "displayName": "Poly Assistant",
   "description": "Poly AI assistant for VS Code",
   "icon": "resources/poly-logo.png",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "publisher": "PolyAPICorp",
   "engines": {
     "vscode": "^1.75.0"
@@ -127,7 +127,7 @@
       },
       {
         "view": "poly.library-index-view",
-        "contents": "There is an error in tree view, please check if you have installed the last version [here](command:poly.openMarketplacePage).",
+        "contents": "There is an error in tree view, your PolyAPI Vs Code extension may be out of date, please update it [here](command:poly.openMarketplacePage).",
         "when": "polyTreeError == true"
       }
     ],

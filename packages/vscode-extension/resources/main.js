@@ -87,7 +87,7 @@ const COMMANDS = [
   const patch = snabbdom.init([snabbdom.attributesModule, snabbdom.styleModule]);
 
   const CUSTOM_ERRORS = {
-    WRONG_CLIENT_VERSION: 'Your extension is outdated, please update it <a href="#" class="open-extension-marketplace-page">here</a>',
+    WRONG_CLIENT_VERSION: 'Your PolyAPI Vs Code extension is out of date, please update it <a href="#" class="open-extension-marketplace-page">here</a>',
   }
 
   const setInitialMessageInputHeight = () => {

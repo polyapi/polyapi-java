@@ -1,3 +1,6 @@
+### 0.7.1
+* Some text fixes.
+
 ### 0.7.0
 * Add python support for assistant.
 * Add update version message in Assistant.

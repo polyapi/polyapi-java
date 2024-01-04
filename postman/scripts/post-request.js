@@ -1,6 +1,6 @@
 const postmanCollection = require('postman-collection');
 
-const scriptVersion = '0.1.2';
+const scriptVersion = '0.2.0';
 const polyData = pm.environment.get('polyData');
 const apiKey = pm.environment.get('polyApiKey');
 const { method, description, url, body } = pm.request;
