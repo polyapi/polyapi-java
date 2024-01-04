@@ -417,6 +417,8 @@ def get_best_function_example(
 def _get_function_import_prompt(language: str) -> str:
     if language and language.lower() == "java":
         return "`import io.polyapi.Poly`"
+    elif language and language.lower() == "python":
+        return "`from polyapi import poly`"
     else:
         return "`import poly from 'polyapi'`"
 
@@ -424,6 +426,8 @@ def _get_function_import_prompt(language: str) -> str:
 def _get_variable_import_prompt(language: str) -> str:
     if language and language.lower() == "java":
         return "`import io.polyapi.Vari`"
+    elif language and language.lower() == "python":
+        return "`from polyapi import vari`"
     else:
         return "`import {vari} from 'polyapi'`"
 
