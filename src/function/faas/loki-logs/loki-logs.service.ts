@@ -90,18 +90,18 @@ export class LokiLogsService implements FaasLogsService {
 
   private toFunctionLogs(lokiData: LokiData): FunctionLog[] {
     const logValues = lokiData.result.flatMap(({ values }) => values);
-
-    return logValues
-      .map(([timestamp, logText]) => {
-        const [value, level] = this.getLogContentAndLevel(logText);
-
-        return ({
+    const rv: FunctionLog[] = [];
+    for (const [timestamp, logText] of logValues) {
+      const out = this.getLogContentAndLevel(logText);
+      for (const [value, level] of out) {
+        rv.push({
           timestamp,
           value,
           level,
         });
-      })
-      .filter(({ level }) => level !== 'UNKNOWN');
+      }
+    }
+    return rv;
   }
 
   private sortLogsByNewestFirst(logs: FunctionLog[]): FunctionLog[] {
@@ -132,19 +132,20 @@ export class LokiLogsService implements FaasLogsService {
     return `{pod=~"function-${functionId}.*",container="user-container"}${textContentQuery}`;
   }
 
-  private getLogContentAndLevel(rawLogText: string): [logContent: string, logLevel: string] {
+  getLogContentAndLevel(rawLogText: string): [logContent: string, logLevel: string][] {
     const polyLogPattern = /\[(ERROR|LOG|INFO|WARNING|WARN|DEBUG|CRITICAL)](.*?)\[\/\1]/gs;
     const timestampStdPipePattern = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z (stdout|stderr) F /g;
 
-    const [, level, logText] = polyLogPattern.exec(rawLogText) || [null, 'UNKNOWN', rawLogText];
-    const lines = logText.trim().split('\n');
+    const matches: [string, string][] = [];
+    let match: RegExpExecArray | null;
+    while ((match = polyLogPattern.exec(rawLogText)) !== null) {
+      const [, level, logText] = match;
+      const lines = logText.trim().split('\n');
+      const logContent = lines.map(line => line.replace(timestampStdPipePattern, '')).join('\n');
+      const logLevel = level === 'WARNING' ? 'WARN' : level;
+      matches.push([logContent, logLevel]);
+    }
 
-    return [
-      lines
-        .map(line => line.replace(timestampStdPipePattern, ''))
-        .join('\n'),
-      // Python uses WARNING instead of WARN. Coerce it here back to WARN.
-      level === 'WARNING' ? 'WARN' : level,
-    ];
+    return matches;
   }
 }

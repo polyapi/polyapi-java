@@ -78,23 +78,32 @@ describe('LokiLogsService', () => {
     it('should return the log content and level from single line log item', () => {
       const logText = '2023-11-23T08:50:21.715779515Z stderr F [ERROR] error line [/ERROR]';
       // @ts-ignore
-      const [value, level] = service.getLogContentAndLevel(logText);
+      const logs = service.getLogContentAndLevel(logText);
+      const [value, level] = logs[0];
       expect(value).toEqual('error line');
       expect(level).toEqual('ERROR');
     });
 
     it('should return the log content and level from multi line log item', () => {
-      const logText = '2023-11-23T08:50:21.715783455Z stderr F [ERROR] error multiline\n2023-11-23T08:50:21.715786785Z stderr F line2\n2023-11-23T08:50:21.715790195Z stderr F line3 [/ERROR]';
+      const logText = '2023-11-23T08:50:21.715783455Z stderr F [ERROR] error multiline\n2023-11-23T08:50:21.715786785Z stderr F line2\n2023-11-23T08:50:21.715790195Z stderr F line3 [/ERROR]\n[WARNING] I am warning [/WARNING]';
       // @ts-ignore
-      const [value, level] = service.getLogContentAndLevel(logText);
+      const logs = service.getLogContentAndLevel(logText);
+      expect(logs.length).toEqual(2);
+      const [value, level] = logs[0]
       expect(value).toEqual('error multiline\nline2\nline3');
       expect(level).toEqual('ERROR');
+
+      const [value2, level2] = logs[1]
+      expect(value2).toEqual('I am warning');
+      expect(level2).toEqual('WARN');
     });
 
     it('should return the log content and level from multi line log item keeping the empty spaces at beginning', () => {
       const logText = '2023-11-23T08:50:21.715783455Z stderr F [ERROR] error multiline\n2023-11-23T08:50:21.715786785Z stderr F     line2\n2023-11-23T08:50:21.715790195Z stderr F     line3 [/ERROR]';
       // @ts-ignore
-      const [value, level] = service.getLogContentAndLevel(logText);
+      const logs = service.getLogContentAndLevel(logText);
+      expect(logs.length).toEqual(1);
+      const [value, level] = logs[0];
       expect(value).toEqual('error multiline\n    line2\n    line3');
       expect(level).toEqual('ERROR');
     });
