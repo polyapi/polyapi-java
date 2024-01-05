@@ -25,7 +25,7 @@ cd science
 nohup uwsgi --ini ./uwsgi.ini
 
 # Set up signal trapping
-trap 'handle_sigterm' SIGTERM
+trap handle_sigterm TERM QUIT INT
 
 # Wait for the child process to exit
 wait $child_pid
