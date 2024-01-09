@@ -19,6 +19,6 @@ import io.polyapi.client.api.model.function.auth.{{~#if subResource}}Subresource
             audienceRequired}} "audience",{{~/if}}  "scopes", "eventsClientId", "callback", "options" },
     paramTypes = { "String", "String",{{#if
             audienceRequired}} "String",{{~/if}}  "String[]", "String", "io.polyapi.client.api.AuthTokenEventConsumer", "io.polyapi.client.api.AuthTokenOptions" })
-    public interface {{className}} extends{{#if audienceRequired}} Audience{{~/if}}TokenAuthFunction {
+    public interface {{className}} extends {{#if audienceRequired}}Audience{{~/if}}TokenAuthFunction {
 {{~/if}}
 }
