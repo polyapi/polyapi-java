@@ -33,7 +33,25 @@ public class ObjectPropertyType extends PropertyType {
 
     @Override
     public String getTypeSchema() {
-        return Optional.ofNullable(schema).map(Object::toString).orElse("");
+        String result = Optional.ofNullable(schema).map(Object::toString).orElse("")
+                // replace all > and < with underscores
+                .replace(">", "_").replace("<", "_");
+
+        // replace all dots with underscores, but only if they are within quotes
+        boolean withinQuotes = false;
+        StringBuilder sb = new StringBuilder();
+        for (char c : result.toCharArray()) {
+            if (c == '\"') {
+                withinQuotes = !withinQuotes;
+            }
+            if (c == '.' && withinQuotes) {
+                sb.append('_');
+            } else {
+                sb.append(c);
+            }
+        }
+
+        return sb.toString();
     }
 
     @Override

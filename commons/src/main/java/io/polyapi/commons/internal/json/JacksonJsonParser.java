@@ -15,6 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.util.Optional;
 
 import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
@@ -117,7 +118,14 @@ public class JacksonJsonParser implements JsonParser {
         logger.trace("ByteArrayInputStream created successfully.");
       }
       logger.debug("Parsing JSon InputStream to object of type {}.", expectedResponseType.getTypeName());
-      O result = objectMapper.readValue(json, defaultInstance().constructType(expectedResponseType));
+
+      O result;
+      if (expectedResponseType == String.class) {
+        result = (O) IOUtils.toString(json, Charset.defaultCharset());
+      } else {
+        result = objectMapper.readValue(json, defaultInstance().constructType(expectedResponseType));
+      }
+
       logger.debug("Parsing successful.");
       return result;
     } catch (IOException e) {

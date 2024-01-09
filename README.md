@@ -55,11 +55,6 @@ Nice to have some customers looking around here! So, you'll need to run the foll
 <properties>
   <poly.version>0.2.0-SNAPSHOT</poly.version>
 </properties>
-<resources>
-  <resource>
-    <directory>target/generated-resources</directory>
-  </resource>
-</resources>
 <dependencies>
   <dependency>
     <groupId>io.polyapi</groupId>
@@ -68,6 +63,11 @@ Nice to have some customers looking around here! So, you'll need to run the foll
   </dependency>
 </dependencies>
 <build>
+  <resources>
+    <resource>
+      <directory>target/generated-resources</directory>
+    </resource>
+  </resources>
   <plugins>
     <plugin>
       <groupId>io.polyapi</groupId>
