@@ -9,7 +9,7 @@ public interface InvocationService {
 
     <T> T invokeServerFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType);
 
-    <T> T invokeApiFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType);
+    <T> ApiFunctionResponse<T> invokeApiFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType);
 
     <T> T invokeCustomFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType);
 

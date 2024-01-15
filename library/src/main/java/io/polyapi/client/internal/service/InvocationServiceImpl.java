@@ -55,13 +55,13 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
     }
 
     @Override
-    public <T> T invokeApiFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType) {
+    public <T> ApiFunctionResponse<T> invokeApiFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType) {
         ApiFunctionResponse<T> response = invokeFunction("API", id, body, defaultInstance().constructParametricType(ApiFunctionResponse.class, defaultInstance().constructType(expectedResponseType)));
         if (response.getStatus() < 200 || response.getStatus() >= 400) {
             throw new UnexpectedHttpResponseException(new ResponseRecord(response.getHeaders().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue()))), Optional.ofNullable(response.getData()).map(jsonParser::toJsonInputStream).orElse(null), response.getStatus()));
         }
 
-        return response.getData();
+        return response;
     }
 
     @Override

@@ -3,6 +3,7 @@ package {{packageName}};
 import io.polyapi.client.api.model.function.PolyApiFunction;
 import io.polyapi.client.api.model.PolyEntity;
 import io.polyapi.client.api.model.PolyMetadata;
+import io.polyapi.client.api.ApiFunctionResponse;
 
 @PolyEntity("{{id}}")
 @PolyMetadata(paramNames = { {{~#each function.arguments}}"{{inCodeName}}"{{#unless @last}}, {{/unless}} {{~/each}} },
