@@ -3,7 +3,10 @@ package io.polyapi.plugin.service;
 import com.sun.codemodel.JCodeModel;
 import io.polyapi.plugin.error.PolyApiMavenPluginException;
 import io.polyapi.plugin.model.CustomType;
+import io.polyapi.plugin.model.property.ObjectPropertyType;
 import io.polyapi.plugin.model.property.PropertyType;
+
+import org.jetbrains.annotations.NotNull;
 import org.jsonschema2pojo.GenerationConfig;
 import org.jsonschema2pojo.Jackson2Annotator;
 import org.jsonschema2pojo.SchemaGenerator;
@@ -25,6 +28,18 @@ public class JsonSchemaParser {
     // FIXME: 1. More automated testing.
     // FIXME: 2. A refactor.
     public List<CustomType> parse(String defaultName, String packageName, PropertyType propertyType) {
+        if (propertyType.getTypeSchema() != null) {
+            return parseJsonSchema(defaultName, packageName, propertyType);
+        }
+        if (propertyType instanceof ObjectPropertyType objectPropertyType && objectPropertyType.getProperties() != null) {
+            return parseObjectProperties(defaultName, packageName, objectPropertyType);
+        }
+
+        return List.of();
+    }
+
+    @NotNull
+    private List<CustomType> parseJsonSchema(String defaultName, String packageName, PropertyType propertyType) {
         try {
             var codeModel = new JCodeModel();
             logger.trace("Generating Java code from JSon schema {}.", propertyType.getTypeSchema());
@@ -53,5 +68,23 @@ public class JsonSchemaParser {
             //FIXME: Throw the appropriate exception
             throw new PolyApiMavenPluginException(e);
         }
+    }
+
+    private List<CustomType> parseObjectProperties(String defaultName, String packageName, ObjectPropertyType objectPropertyType) {
+        var code = new StringBuilder();
+        code.append("package ").append(packageName).append(";\n\n");
+
+        code.append("@lombok.Getter\n");
+        code.append("@lombok.Setter\n");
+        code.append("public class ").append(defaultName).append(" {\n");
+        for (var property : objectPropertyType.getProperties()) {
+            code.append("  public ").append(property.getType().getInCodeType()).append(" ").append(property.getInCodeName()).append(";\n");
+        }
+        code.append("}");
+
+        // set the type name to the generated default name
+        objectPropertyType.setTypeName(defaultName);
+
+        return List.of(new CustomType(packageName, defaultName, code.toString()));
     }
 }

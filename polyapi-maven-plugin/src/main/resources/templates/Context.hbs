@@ -6,6 +6,7 @@ import io.polyapi.client.api.model.websocket.WebhookEventConsumer;
 import io.polyapi.client.api.AuthTokenEventConsumer;
 import io.polyapi.client.internal.proxy.WebhookHandlerFactory;
 import io.polyapi.client.api.model.PolyEntity;
+import io.polyapi.client.api.ApiFunctionResponse;
 {{~#each specifications}}
     {{~#ifIsType this "ServerFunctionSpecification"}}
         {{~#each this.imports}}

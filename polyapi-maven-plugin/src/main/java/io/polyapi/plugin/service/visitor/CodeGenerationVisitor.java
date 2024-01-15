@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static io.polyapi.plugin.utils.StringUtils.toPascalCase;
 import static java.lang.String.format;
 import static java.util.function.Predicate.not;
 import static java.util.stream.IntStream.range;
@@ -59,11 +60,17 @@ public class CodeGenerationVisitor implements PolyVisitor {
         Optional.ofNullable(functionMetadata.getReturnType())
                 .filter(not(VoidPropertyType.class::isInstance))
                 .filter(returnType -> Objects.nonNull(returnType.getTypeSchema()))
-                .map(returnType -> concat(jsonSchemaParser.parse(specification.getClassName() + "Response", specification.getPackageName(), functionMetadata.getReturnType()).stream(),
+                .map(returnType -> concat(
+                        jsonSchemaParser.parse(format("%sResponse", specification.getClassName()), specification.getPackageName(), functionMetadata.getReturnType()).stream(),
                         range(0, Optional.ofNullable(functionMetadata.getArguments()).orElseGet(ArrayList::new).size())
                                 .boxed()
-                                .map(i -> jsonSchemaParser.parse(format("%sArgument%s", specification.getClassName(), i), specification.getPackageName(), functionMetadata.getArguments().get(i).getType()))
-                                .flatMap(List::stream))
+                                .map(i -> jsonSchemaParser.parse(
+                                        format("%s$%s", specification.getClassName(), toPascalCase(functionMetadata.getArguments().get(i).getName())),
+                                        specification.getPackageName(),
+                                        functionMetadata.getArguments().get(i).getType()
+                                ))
+                                .flatMap(List::stream)
+                )
                 ).orElseGet(Stream::of)
                 .forEach(this::generate);
     }

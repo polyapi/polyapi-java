@@ -34,7 +34,11 @@ public class ObjectPropertyType extends PropertyType {
 
     @Override
     public String getTypeSchema() {
-        String result = Optional.ofNullable(schema).map(Object::toString).orElse("")
+        if (schema == null) {
+            return null;
+        }
+
+        String result = schema.toString()
                 // replace all > and < with underscores
                 .replace(">", "_").replace("<", "_");
 
@@ -70,6 +74,8 @@ public class ObjectPropertyType extends PropertyType {
                 case "boolean" -> Boolean.class.getSimpleName();
                 default -> defaultType;
             };
+        } else if (properties != null && !properties.isEmpty()) {
+            return defaultType;
         } else {
             return getInCodeType();
         }
@@ -99,7 +105,10 @@ public class ObjectPropertyType extends PropertyType {
                 case "integer", "string", "number", "boolean" -> Set.of();
                 default -> Set.of(format("%s.%s", basePackage, defaultType));
             };
+        } else if (properties != null && !properties.isEmpty()) {
+            return Set.of(format("%s.%s", basePackage, defaultType));
+        } else {
+            return Set.of();
         }
-        return new HashSet<>();
     }
 }
