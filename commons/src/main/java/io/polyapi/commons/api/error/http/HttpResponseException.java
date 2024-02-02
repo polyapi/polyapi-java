@@ -1,15 +1,17 @@
 package io.polyapi.commons.api.error.http;
 
-import io.polyapi.commons.api.error.PolyApiException;
+import io.polyapi.commons.api.error.PolyApiExecutionException;
 import io.polyapi.commons.api.http.Response;
 import lombok.Getter;
+
+import java.util.Optional;
 
 /**
  * Parent of exceptions thrown when the response from an HTTP request is different than 2XX.
  * This class contains an instance of the {@link Response} returned.
  */
 @Getter
-public class HttpResponseException extends PolyApiException {
+public class HttpResponseException extends PolyApiExecutionException {
 
   private final Response response;
 
@@ -22,5 +24,10 @@ public class HttpResponseException extends PolyApiException {
   public HttpResponseException(String message, Response response) {
     super(message);
     this.response = response;
+  }
+
+  @Override
+  public int getStatusCode() {
+    return Optional.ofNullable(response).map(Response::statusCode).orElse(500);
   }
 }

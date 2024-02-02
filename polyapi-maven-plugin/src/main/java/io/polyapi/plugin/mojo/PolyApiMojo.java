@@ -8,7 +8,6 @@ import io.polyapi.commons.internal.http.DefaultHttpClient;
 import io.polyapi.commons.internal.http.HardcodedTokenProvider;
 import io.polyapi.commons.internal.json.JacksonJsonParser;
 import io.polyapi.plugin.error.PolyApiMavenPluginException;
-import io.polyapi.plugin.mojo.validation.Validator;
 import io.polyapi.plugin.service.MavenService;
 import lombok.Setter;
 import okhttp3.OkHttpClient;
@@ -22,10 +21,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Optional;
-import java.util.function.Consumer;
 
-import static java.lang.String.format;
+import static io.polyapi.plugin.mojo.validation.Validator.validateNotEmpty;
+import static io.polyapi.plugin.mojo.validation.Validator.validatePortFormat;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -44,43 +42,42 @@ public abstract class PolyApiMojo extends AbstractMojo {
 
     @Parameter(property = "apiKey")
     private String apiKey;
+    private MavenService mavenService;
+    private TokenProvider tokenProvider;
+    private HttpClient httpClient;
+    private JsonParser jsonParser;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
             logger.debug("Setting up Maven service.");
-            MavenService mavenService = Optional.ofNullable(project).map(MavenService::new).orElse(null);
-            logger.info(mavenService == null ? "No Maven project." : format("Maven service set. Targeting artifact %s.%s:%s.", project.getGroupId(), project.getArtifactId(), project.getVersion()));
-
-            Optional.ofNullable(mavenService).ifPresent(getPropertyFromPlugin("host", host, this::setHost));
-            Validator.validateNotEmpty("host", host);
-
-            Optional.ofNullable(mavenService).ifPresent(getPropertyFromPlugin("port", port, this::setPort));
-            Validator.validatePortFormat("port", port);
-
-            Optional.ofNullable(mavenService).ifPresent(getPropertyFromPlugin("apiKey", apiKey, this::setApiKey));
-            Validator.validateNotEmpty("apiKey", apiKey);
-            TokenProvider tokenProvider = new HardcodedTokenProvider(apiKey);
-            execute(host, Integer.valueOf(port), tokenProvider, new DefaultHttpClient(new OkHttpClient.Builder()
-                            .connectTimeout(10, MINUTES)
-                            .readTimeout(10, MINUTES)
-                            .writeTimeout(10, MINUTES)
-                            .build(),
-                            tokenProvider),
-                    new JacksonJsonParser(),
-                    mavenService);
+            mavenService = new MavenService(project);
+            mavenService.getPropertyFromPlugin("host", host, this::setHost);
+            mavenService.getPropertyFromPlugin("port", port, this::setPort);
+            validatePortFormat("port", port);
+            mavenService.getPropertyFromPlugin("apiKey", apiKey, this::setApiKey);
+            validateNotEmpty("apiKey", apiKey);
+            tokenProvider = new HardcodedTokenProvider(apiKey);
+            httpClient = new DefaultHttpClient(new OkHttpClient.Builder()
+                    .connectTimeout(10, MINUTES)
+                    .readTimeout(10, MINUTES)
+                    .writeTimeout(10, MINUTES)
+                    .build(),
+                    tokenProvider);
+            jsonParser = new JacksonJsonParser();
+            execute(host, Integer.valueOf(port));
         } catch (PolyApiMavenPluginException e) {
             logger.error("An exception occurred during the plugin execution.", e);
             throw new MojoFailureException(e);
         } catch (UnexpectedHttpResponseException e) {
             logger.error("An unexpected HTTP response code {} was returned from the server.", e.getResponse().statusCode());
-            if (logger.isTraceEnabled()) {
+            //if (logger.isTraceEnabled()) {
                 try {
-                    logger.trace("Response from server is: {}", IOUtils.toString(e.getResponse().body(), defaultCharset()));
+                    logger.info("Response from server is: {}", IOUtils.toString(e.getResponse().body(), defaultCharset()));
                 } catch (IOException ex) {
                     throw new MojoExecutionException(ex);
                 }
-            }
+            //}
             throw new MojoFailureException(e);
         } catch (RuntimeException e) {
             logger.error("An unexpected exception occurred during the plugin execution.", e);
@@ -88,10 +85,21 @@ public abstract class PolyApiMojo extends AbstractMojo {
         }
     }
 
-    private Consumer<MavenService> getPropertyFromPlugin(String propertyName, String property, Consumer<String> callback) {
-        logger.debug("Retrieving property 'port'.");
-        return mavenService -> mavenService.getPropertyFromPlugin(propertyName, property, callback);
+    protected MavenService getMavenService() {
+        return this.mavenService;
     }
 
-    protected abstract void execute(String host, Integer port, TokenProvider tokenProvider, HttpClient httpClient, JsonParser jsonParser, MavenService mavenService);
+    protected TokenProvider getTokenProvider() {
+        return tokenProvider;
+    }
+
+    protected HttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    protected JsonParser getJsonParser() {
+        return jsonParser;
+    }
+
+    protected abstract void execute(String host, Integer port);
 }

@@ -25,6 +25,7 @@ public class PolyFunction {
     private String returnType;
     private Visibility visibility;
     private Boolean logsEnabled;
+    private List<String> requirements;
 
     private Map<String, Object> returnTypeSchema;
     private List<PolyFunctionArgument> arguments;
