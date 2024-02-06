@@ -29,7 +29,8 @@ import static java.util.stream.Collectors.joining;
 @Setter
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
-        property = "type"
+        property = "type",
+        visible = true
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ApiFunctionSpecification.class, name = "apiFunction"),
@@ -41,6 +42,7 @@ import static java.util.stream.Collectors.joining;
 })
 public abstract class Specification implements Generable {
     private String id;
+    private String type;
     private String context;
     private String name;
     private String description;
