@@ -22,7 +22,7 @@ public class ServerVariableSpecification extends Specification {
         return "variable.server";
     }
 
-    public String getType() {
+    public String getValueType() {
         return variable.getValueType().getType(getClassName());
     }
 

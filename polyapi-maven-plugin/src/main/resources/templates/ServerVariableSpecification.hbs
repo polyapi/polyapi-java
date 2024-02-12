@@ -5,14 +5,14 @@ import io.polyapi.client.api.model.PolyMetadata;
 import io.polyapi.client.api.model.variable.{{~#if variable.secret}}ServerVariable{{~else}}RetrievableServerVariable{{/if}}Handler;
 
 @PolyEntity("{{id}}")
-@PolyMetadata(paramTypes = "{{{type}}}")
-public interface {{className}}Handler extends{{~#if variable.secret}} ServerVariable{{~else}} RetrievableServerVariable{{/if}}Handler<{{type}}> {
+@PolyMetadata(paramTypes = "{{{valueType}}}")
+public interface {{className}}Handler extends{{~#if variable.secret}} ServerVariable{{~else}} RetrievableServerVariable{{/if}}Handler<{{valueType}}> {
 {{~#if variable.secret}}
 {{~else}}
     @Override
-    {{type}} get();
+    {{valueType}} get();
 {{/if}}
 
     @Override
-    void update({{type}} value);
+    void update({{valueType}} value);
 }

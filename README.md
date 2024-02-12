@@ -1,5 +1,5 @@
 # Java Client Library (beta)
-### v0.2.6
+### v0.2.7
 
 ## Introduction
 Welcome my friends! This is the Poly API Java client GitHub page. If you are here, then it means you're familiar with what we do at Poly. If you aren't, you can always check [here](https://github.com/polyapi/poly-alpha).
@@ -53,7 +53,7 @@ Nice to have some customers looking around here! So, you'll need to run the foll
 2. **Update the project.** Add the following to your project's `pom.xml`:
 ```xml
 <properties>
-  <poly.version>0.2.6</poly.version>
+  <poly.version>0.2.7</poly.version>
 </properties>
 <dependencies>
   <dependency>
@@ -301,6 +301,8 @@ Comparing to its Typescript counterpart, the Java library is still missing the f
 These features will be added in the future releases.
 
 ## Changelog
+### v0.2.7
+- Fixed 'type' property for Server variables
 ### v0.2.6
 - Added missing 'type' property to specs.json
 ### v0.2.5

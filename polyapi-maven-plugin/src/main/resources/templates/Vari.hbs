@@ -19,7 +19,7 @@ public final class Vari extends PolyContext {
 {{~#each specifications}}
     {{~#ifIsType this "ServerVariableSpecification"}}
         @PolyEntity("{{id}}")
-        private static final {{type}} {{name}};
+        private static final {{valueType}} {{name}};
     {{~/ifIsType}}
 {{~/each}}
 {{#each subcontexts}}
@@ -30,7 +30,7 @@ static {
 var vari = new Vari();
 {{~#each specifications}}
     {{~#ifIsType this "ServerVariableSpecification"}}
-        {{name}} = vari.createServerVariable("{{{type}}}", "{{{packageName}}}");
+        {{name}} = vari.createServerVariable("{{{valueType}}}", "{{{packageName}}}");
     {{~/ifIsType}}
 {{~/each}}
 {{#each subcontexts}}
@@ -39,13 +39,13 @@ var vari = new Vari();
 }
 
 {{~#ifIsType this "ServerVariableSpecification"}}
-    public static void update{{{className}}}Variable({{{type}}} value) {
+    public static void update{{{className}}}Variable({{{valueType}}} value) {
         this.{{name}}Handler.update(value);
     }
 
     {{~#if variable.secret}}
     {{~else}}
-    public static {{{type}}} get{{{className}}}Variable() {
+    public static {{{valueType}}} get{{{className}}}Variable() {
         return this.{{name}}Handler.get();
     }
     {{/if}}
