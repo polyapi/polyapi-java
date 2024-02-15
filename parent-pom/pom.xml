@@ -28,7 +28,7 @@
         <connection>scm:git:git@github.com:polyapi/polyapi-java.git</connection>
         <developerConnection>scm:git:git@github.com:polyapi/polyapi-java.git</developerConnection>
         <url>https://github.com/polyapi/polyapi-java</url>
-      <tag>polyapi-java-0.2.5</tag>
+      <tag>HEAD</tag>
   </scm>
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
