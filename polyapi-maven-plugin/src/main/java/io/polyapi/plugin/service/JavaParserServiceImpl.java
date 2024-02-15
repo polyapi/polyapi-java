@@ -147,7 +147,6 @@ public class JavaParserServiceImpl implements JavaParserService {
                     logger.trace("Parsed {} parameters.", function.getArguments().size());
                     codeObject.setCode(compilationUnit.toString());
                     function.setCode(jsonParser.toJsonString(codeObject));
-                    logger.info(function.getCode());
                     function.setRequirements(polyFunctionMetadata.dependencies());
                     return function;
                 })

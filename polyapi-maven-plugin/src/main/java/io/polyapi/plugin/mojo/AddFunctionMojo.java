@@ -66,7 +66,6 @@ public abstract class AddFunctionMojo extends PolyApiMojo {
             String className = path.substring(path.lastIndexOf("src/main/java/") + 14, path.length() - 5).replace("/", ".");
             try {
                 Class<?> clazz = classLoader.loadClass(className);
-                logger.info(clazz.getName());
                 List<Method> methods = Arrays.stream(clazz.getDeclaredMethods()).filter(method -> method.getName().equalsIgnoreCase(functionName)).toList();
                 if (methods.size() > 1) {
                     throw new RuntimeException(); // FIXME: Throw the appropriate exception

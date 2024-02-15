@@ -51,7 +51,7 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                 logger.debug("{} occurred while deploying {} function '{}' on context '{}'. Exception message is '{}'.", exception.getClass(), polyFunctionMetadata.getTypedType(), polyFunctionMetadata.name(), polyFunctionMetadata.context(), Optional.ofNullable(exception.getMessage()).orElse("No message"));
                 if (exception instanceof HttpResponseException) {
                     try {
-                        logger.info(IOUtils.toString(HttpResponseException.class.cast(exception).getResponse().body()));
+                        logger.error(IOUtils.toString(HttpResponseException.class.cast(exception).getResponse().body()));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
