@@ -3,13 +3,16 @@ package io.polyapi.plugin.service;
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.JavadocComment;
-import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.Name;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
@@ -23,6 +26,7 @@ import io.polyapi.commons.api.model.PolyGeneratedClass;
 import io.polyapi.plugin.error.PolyApiMavenPluginException;
 import io.polyapi.plugin.error.classloader.QualifiedNameNotFoundException;
 import io.polyapi.plugin.model.TypeData;
+import io.polyapi.plugin.model.function.CodeObject;
 import io.polyapi.plugin.model.function.PolyFunction;
 import io.polyapi.plugin.model.function.PolyFunctionArgument;
 import io.polyapi.plugin.model.function.PolyFunctionMetadata;
@@ -95,6 +99,11 @@ public class JavaParserServiceImpl implements JavaParserService {
                 .filter(methodDeclaration -> format("%s(%s)", methodDeclaration.getName(), methodDeclaration.getSignature().getParameterTypes().stream().map(Type::asString).collect(joining(", "))).equals(polyFunctionMetadata.signature()))
                 .peek(methodDeclaration -> logger.debug("Found matching method declaration: {}", methodDeclaration.getSignature()))
                 .map(methodDeclaration -> {
+                    CodeObject codeObject = new CodeObject();
+                    codeObject.setPackageName(compilationUnit.getPackageDeclaration().map(PackageDeclaration::getName).map(Name::asString).orElse(""));
+                    codeObject.setClassName(compilationUnit.getType(0).getNameAsString());
+                    codeObject.setMethodName(methodDeclaration.getNameAsString());
+
                     var resolvedMethodDeclaration = methodDeclaration.resolve();
                     ClassOrInterfaceDeclaration classOrInterfaceDeclaration = compilationUnit.getType(0).asClassOrInterfaceDeclaration()
                             .addAnnotation(PolyGeneratedClass.class);
@@ -110,19 +119,6 @@ public class JavaParserServiceImpl implements JavaParserService {
                     logger.trace("Adding JSon schema to return type.");
                     if (!resolvedMethodDeclaration.getReturnType().isVoid()) {
                         function.setReturnTypeSchema(jsonParser.parseString(typeData.jsonSchema(), defaultInstance().constructMapType(HashMap.class, String.class, Object.class)));
-                    }
-                    if (!resolvedMethodDeclaration.getName().equals("execute")) {
-                        logger.debug("Adding execute() method for server to invoke.");
-                        MethodDeclaration executeMethod = classOrInterfaceDeclaration.addMethod("execute", PUBLIC)
-                                .setType(resolvedMethodDeclaration.getReturnType().isVoid() ? "void" : resolvedMethodDeclaration.getReturnType().asReferenceType().getQualifiedName().substring(resolvedMethodDeclaration.getReturnType().asReferenceType().getQualifiedName().lastIndexOf('.') + 1))
-                                .setBody(new BlockStmt(NodeList.nodeList(Optional.of(new MethodCallExpr(resolvedMethodDeclaration.getName(), range(0, resolvedMethodDeclaration.getNumberOfParams()).boxed()
-                                                .map(resolvedMethodDeclaration::getParam)
-                                                .map(ResolvedParameterDeclaration::getName)
-                                                .map(NameExpr::new)
-                                                .toArray(Expression[]::new)))
-                                        .map(expression -> resolvedMethodDeclaration.getReturnType().isVoid() ? new ExpressionStmt(expression) : new ReturnStmt(expression)).get())));
-                        range(0, resolvedMethodDeclaration.getNumberOfParams()).boxed().map(resolvedMethodDeclaration::getParam)
-                                .forEach(param -> executeMethod.addParameter(param.asParameter().getType().asReferenceType().getQualifiedName().substring(param.asParameter().getType().asReferenceType().getQualifiedName().lastIndexOf('.') + 1), param.getName()));
                     }
                     logger.trace("Parsing parameters.");
                     range(0, resolvedMethodDeclaration.getNumberOfParams()).boxed().map(resolvedMethodDeclaration::getParam)
@@ -147,10 +143,10 @@ public class JavaParserServiceImpl implements JavaParserService {
                                 return argument;
                             })
                             .forEach(function.getArguments()::add);
+                    codeObject.setParams(function.getArguments().stream().map(PolyFunctionArgument::getType).collect(joining(",")));
                     logger.trace("Parsed {} parameters.", function.getArguments().size());
-                    compilationUnit.setPackageDeclaration("io.polyapi.knative.function");
-                    compilationUnit.getType(0).setName("PolyCustomFunction");
-                    function.setCode(compilationUnit.toString());
+                    codeObject.setCode(compilationUnit.toString());
+                    function.setCode(jsonParser.toJsonString(codeObject));
                     logger.info(function.getCode());
                     function.setRequirements(polyFunctionMetadata.dependencies());
                     return function;
