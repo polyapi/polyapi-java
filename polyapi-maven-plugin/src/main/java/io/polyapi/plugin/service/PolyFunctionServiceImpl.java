@@ -41,7 +41,6 @@ public class PolyFunctionServiceImpl extends PolyApiService implements PolyFunct
     public String deploy(PolyFunctionMetadata polyFunctionMetadata) {
         logger.info("Deploying {} function '{}' on context '{}'.", polyFunctionMetadata.getTypedType(), polyFunctionMetadata.name(), polyFunctionMetadata.context());
         PolyFunction function = post(format("functions/%s", polyFunctionMetadata.getTypedType()), javaParserService.parseFunction(polyFunctionMetadata), PolyFunction.class);
-        logger.info("{} -> {}", polyFunctionMetadata, function.getCode());
         logger.info("Deployment of {} function '{}' on context'{}' successful.", polyFunctionMetadata.getTypedType(), polyFunctionMetadata.name(), polyFunctionMetadata.context());
         return function.getId();
     }

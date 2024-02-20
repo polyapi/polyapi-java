@@ -1,8 +1,10 @@
 package io.polyapi.plugin.service.visitor;
 
+import io.polyapi.commons.api.json.JsonParser;
 import io.polyapi.commons.api.service.file.FileService;
 import io.polyapi.plugin.model.CustomType;
 import io.polyapi.plugin.model.Generable;
+import io.polyapi.plugin.model.function.CodeObject;
 import io.polyapi.plugin.model.property.PropertyType;
 import io.polyapi.plugin.model.property.VoidPropertyType;
 import io.polyapi.plugin.model.specification.Context;
@@ -29,9 +31,11 @@ public class CodeGenerationVisitor implements PolyVisitor {
 
     private final FileService fileService;
     private final JsonSchemaParser jsonSchemaParser;
+    private final JsonParser jsonParser;
 
-    public CodeGenerationVisitor(FileService fileService, JsonSchemaParser jsonSchemaParser) {
+    public CodeGenerationVisitor(FileService fileService, JsonParser jsonParser, JsonSchemaParser jsonSchemaParser) {
         this.fileService = fileService;
+        this.jsonParser = jsonParser;
         this.jsonSchemaParser = jsonSchemaParser;
     }
 
@@ -77,7 +81,18 @@ public class CodeGenerationVisitor implements PolyVisitor {
     public void visit(CustomFunctionSpecification specification) {
         if (specification.isJava()) {
             visit((FunctionSpecification) specification);
-            new CustomType(specification.getPackageName(), format("%sDelegate", specification.getClassName()), format("package %s;\n%s", specification.getPackageName(), specification.getCode().trim().startsWith("package ") ? specification.getCode().substring(specification.getCode().indexOf(';')) : specification.getCode()).replace("PolyCustomFunction", specification.getClassName() + "Delegate")).accept(this);
+            CodeObject codeObject = Optional.of(specification.getCode())
+                    .map(String::trim)
+                    .filter(code -> code.startsWith("{"))
+                    .map(code -> jsonParser.<CodeObject>parseString(specification.getCode(), CodeObject.class))
+                    .orElseGet(() -> {
+                        CodeObject result = new CodeObject();
+                        result.setCode(specification.getCode().replace("PolyCustomFunction", specification.getClassName()));
+                        result.setClassName(specification.getClassName());
+                        return result;
+                    });
+            codeObject.setPackageName(format("%s.delegate", specification.getPackageName()));
+            new CustomType(codeObject.getPackageName(), codeObject.getClassName(), format("package %s;\n%s", codeObject.getPackageName(), codeObject.getCode().trim().startsWith("package ") ? codeObject.getCode().substring(codeObject.getCode().indexOf(';') + 1) : codeObject.getCode())).accept(this);
         }
     }
 

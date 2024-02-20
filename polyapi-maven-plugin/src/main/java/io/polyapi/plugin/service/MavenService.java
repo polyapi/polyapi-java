@@ -185,7 +185,7 @@ public class MavenService {
                                 .toList();
                         logger.debug("Required dependencies found: {}", requiredDependencies);
                         return new PolyFunctionMetadata(functionName,
-                                format("%s(%s)", method.getName(), Arrays.stream(method.getParameters()).map(Parameter::getType).map(Class::getName).collect(joining(", "))),
+                                format("%s(%s)", method.getName(), Arrays.stream(method.getParameters()).map(Parameter::getParameterizedType).map(Type::getTypeName).collect(joining(", "))),
                                 polyFunction.type(),
                                 new FileInputStream(format("src/main/java/%s/%s.java",
                                         declaringClass.getPackageName().replace(".", "/"),

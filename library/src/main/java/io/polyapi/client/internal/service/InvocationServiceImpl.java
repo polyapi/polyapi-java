@@ -4,6 +4,7 @@ import io.polyapi.client.api.ApiFunctionResponse;
 import io.polyapi.client.api.AuthTokenEventConsumer;
 import io.polyapi.client.api.AuthTokenOptions;
 import io.polyapi.client.api.GetAuthTokenResponse;
+import io.polyapi.client.api.model.PolyMetadata;
 import io.polyapi.client.api.model.function.PolyAuthSubresource;
 import io.polyapi.client.error.generation.GeneratedClassInstantiationException;
 import io.polyapi.client.error.generation.GeneratedClassNotFoundException;
@@ -16,22 +17,22 @@ import io.polyapi.commons.api.error.http.UnexpectedHttpResponseException;
 import io.polyapi.commons.api.http.HttpClient;
 import io.polyapi.commons.api.http.ResponseRecord;
 import io.polyapi.commons.api.json.JsonParser;
+import io.polyapi.commons.api.model.FunctionType;
+import io.polyapi.commons.api.model.PolyFunction;
 import io.polyapi.commons.api.service.PolyApiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
+import static io.polyapi.commons.api.model.FunctionType.CLIENT;
 import static java.lang.String.format;
+import static java.util.function.Predicate.not;
 
 public class InvocationServiceImpl extends PolyApiService implements InvocationService {
     private static final Logger logger = LoggerFactory.getLogger(InvocationServiceImpl.class);
@@ -66,7 +67,7 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
     @Override
     public <T> T invokeCustomFunction(Class<?> invokingClass, String id, Map<String, Object> body, Type expectedResponseType) {
         try {
-            var delegateClass = Class.forName(format("%sDelegate", invokingClass.getName()));
+            var delegateClass = Class.forName(format("%s.delegate.%s", invokingClass.getPackageName(), Optional.ofNullable(invokingClass.getDeclaredAnnotation(PolyMetadata.class)).map(PolyMetadata::delegate).filter(not(String::isBlank)).orElseGet(invokingClass::getSimpleName)));
             Object delegate;
             try {
                 delegate = delegateClass.getConstructor().newInstance();
@@ -78,14 +79,30 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
             var method = Stream.of(invokingClass.getDeclaredMethods()).findFirst()
                     .orElseThrow(() -> new PolyApiException());
             try {
-                return (T) delegateClass.getDeclaredMethod(method.getName(), method.getParameterTypes()).invoke(delegate, body.values().toArray());
-            } catch (NoSuchMethodException | IllegalAccessException e) {
+                return (T) Arrays.stream(delegateClass.getDeclaredMethods())
+                        .filter(declaredMethod ->
+                                Optional.ofNullable(declaredMethod.getDeclaredAnnotation(PolyFunction.class))
+                                        .filter(annotation -> annotation.type().equals(CLIENT))
+                                        .filter(not(annotation -> annotation.name().isBlank()))
+                                        .filter(annotation -> annotation.name().equalsIgnoreCase(method.getName()))
+                                        .isPresent())
+                        .filter(declaredMethod -> declaredMethod.getParameterTypes().equals(method.getParameterTypes()))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            try {
+                                return delegateClass.getDeclaredMethod(method.getName(), method.getParameterTypes());
+                            } catch (NoSuchMethodException e) {
+                                throw new InvalidMethodDeclarationException(invokingClass, e);
+                            }
+                        })
+                        .invoke(delegate, body.values().toArray());
+            } catch (IllegalAccessException e) {
                 throw new InvalidMethodDeclarationException(invokingClass, e);
-
             } catch (InvocationTargetException e) {
                 throw new DelegateExecutionException(invokingClass, e);
             }
-        } catch (ClassNotFoundException e) {
+        } catch (
+                ClassNotFoundException e) {
             throw new GeneratedClassNotFoundException(invokingClass.getName(), e);
         }
     }

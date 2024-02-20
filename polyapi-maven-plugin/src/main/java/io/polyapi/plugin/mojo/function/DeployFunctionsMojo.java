@@ -37,6 +37,7 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                     logger.info("Deployed {} function '{}' on context '{}' with id '{}'", polyFunctionMetadata.getTypedType(), polyFunctionMetadata.name(), polyFunctionMetadata.context(), id);
                     logger.debug("Function can be accessed at {}:{}/functions/{}/{}", host, port, polyFunctionMetadata.getTypedType(), id);
                 } catch (HttpResponseException e) {
+                    logger.error("{} function '{}' deployment failed.", polyFunctionMetadata.getTypedType(), polyFunctionMetadata.name());
                     exceptions.put(polyFunctionMetadata, e);
                 }
             } else {

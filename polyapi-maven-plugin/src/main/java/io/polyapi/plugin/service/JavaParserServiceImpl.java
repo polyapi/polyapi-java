@@ -7,16 +7,16 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.JavadocComment;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.Name;
-import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
+import com.github.javaparser.metamodel.TypeMetaModel;
 import com.github.javaparser.resolution.declarations.ResolvedParameterDeclaration;
 import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
@@ -30,6 +30,8 @@ import io.polyapi.plugin.model.function.CodeObject;
 import io.polyapi.plugin.model.function.PolyFunction;
 import io.polyapi.plugin.model.function.PolyFunctionArgument;
 import io.polyapi.plugin.model.function.PolyFunctionMetadata;
+import lombok.SneakyThrows;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.util.*;
 
 import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
@@ -91,12 +94,25 @@ public class JavaParserServiceImpl implements JavaParserService {
     }
 
     @Override
+    @SneakyThrows(IOException.class)
     public PolyFunction parseFunction(PolyFunctionMetadata polyFunctionMetadata) {
+        logger.debug("Parsing poly function metadata {}", polyFunctionMetadata);
+        if (logger.isTraceEnabled()) {
+            logger.trace("Function code: {}", IOUtils.toString(polyFunctionMetadata.sourceCode(), Charset.defaultCharset()));
+            polyFunctionMetadata.sourceCode().reset();
+        }
         var compilationUnit = javaParser.parse(polyFunctionMetadata.sourceCode()).getResult().orElseThrow();
         return compilationUnit.getTypes().stream()
                 .map(TypeDeclaration::getMethods)
                 .flatMap(List::stream)
-                .filter(methodDeclaration -> format("%s(%s)", methodDeclaration.getName(), methodDeclaration.getSignature().getParameterTypes().stream().map(Type::asString).collect(joining(", "))).equals(polyFunctionMetadata.signature()))
+                .filter(methodDeclaration -> {
+                    String parsedMethodDeclaration = methodDeclaration.resolve().getSignature();
+                    // Replacing '$' for '.' in polyfunctionMetadata.signature() because ResolvedMethodLikeDeclaration#signature() doesn't distinguish between inner classes and classes and therefore doesn't include the $ in the signature.
+                    String fixedSignature = polyFunctionMetadata.signature().replace("$", ".");
+                    boolean result = parsedMethodDeclaration.equals(fixedSignature);
+                    logger.debug("'{}' compares to '{}'? {}", parsedMethodDeclaration, fixedSignature, result);
+                    return result;
+                })
                 .peek(methodDeclaration -> logger.debug("Found matching method declaration: {}", methodDeclaration.getSignature()))
                 .map(methodDeclaration -> {
                     CodeObject codeObject = new CodeObject();
@@ -143,7 +159,10 @@ public class JavaParserServiceImpl implements JavaParserService {
                                 return argument;
                             })
                             .forEach(function.getArguments()::add);
-                    codeObject.setParams(function.getArguments().stream().map(PolyFunctionArgument::getType).collect(joining(",")));
+                    codeObject.setParams(range(0, resolvedMethodDeclaration.getNumberOfParams()).boxed()
+                            .map(resolvedMethodDeclaration::getParam)
+                                    .map(ResolvedParameterDeclaration::describeType)
+                                            .collect(joining(",")));
                     logger.trace("Parsed {} parameters.", function.getArguments().size());
                     codeObject.setCode(compilationUnit.toString());
                     function.setCode(jsonParser.toJsonString(codeObject));

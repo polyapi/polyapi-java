@@ -76,7 +76,7 @@ public class GenerateSourcesMojo extends PolyApiMojo {
                         .anyMatch(Optional.ofNullable(specification.getContext()).orElse("").toLowerCase()::startsWith))
                 .peek(specification -> logger.trace("Generating context for specification {}.", specification.getName()))
                 .forEach(specification -> createContext(rootContext, Stream.of(specification.getContext().split("\\.")).filter(not(String::isEmpty)).toList(), specification));
-        rootContext.accept(new CodeGenerationVisitor(fileService, jsonSchemaParser));
+        rootContext.accept(new CodeGenerationVisitor(fileService, getJsonParser(), jsonSchemaParser));
     }
 
     private Context createContext(Context parent, List<String> contextList, Specification specification) {
