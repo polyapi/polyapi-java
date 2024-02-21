@@ -36,7 +36,7 @@ public class SpecificationServiceImpl extends PolyApiService implements Specific
         logger.debug("Validating for duplicate context/name pairs.");
         Map<String, Specification> uniquenessValidationMap = new HashMap<>();
         specifications.forEach(specification -> {
-            String key = format("%s.%s", specification.getContext(), specification.getName());
+            String key = format("%s.%s", specification.getContext(), specification.getName()).toLowerCase();
             if (uniquenessValidationMap.containsKey(key)) {
                 logger.warn("Skipping {} specification '{}' in context '{}' as it clashes with {} specification with the same name and context.", specification.getType(), specification.getName(), specification.getContext(), uniquenessValidationMap.get(key).getType());
             } else {
