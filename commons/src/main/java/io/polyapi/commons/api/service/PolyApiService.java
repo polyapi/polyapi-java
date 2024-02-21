@@ -96,7 +96,7 @@ public class PolyApiService {
       .withQueryParams(queryParams)
       .withBody(body)
       .build();
-    logger.debug("Executing authenticated {}} request with target {}", method, request.getUrl());
+    logger.debug("Executing authenticated {} request with target {}", method, request.getUrl());
     return client.send(request);
   }
 }

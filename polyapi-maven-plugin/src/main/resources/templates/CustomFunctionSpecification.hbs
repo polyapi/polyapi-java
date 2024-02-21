@@ -5,7 +5,8 @@ import io.polyapi.client.api.model.PolyEntity;
 import io.polyapi.client.api.model.PolyMetadata;
 
 @PolyEntity("{{id}}")
-@PolyMetadata(paramNames = { {{~#each function.arguments}}"{{name}}"{{#unless @last}}, {{/unless}} {{~/each}} },
+@PolyMetadata(delegate = "{{delegate}}",
+paramNames = { {{~#each function.arguments}}"{{name}}"{{#unless @last}}, {{/unless}} {{~/each}} },
 paramTypes = { {{~#each function.arguments}}"{{{type.inCodeName}}}"{{#unless @last}}, {{/unless}} {{~/each}} })
 public interface {{className}} extends PolyCustomFunction {
 

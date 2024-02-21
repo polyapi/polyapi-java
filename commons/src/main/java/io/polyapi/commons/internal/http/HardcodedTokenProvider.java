@@ -4,8 +4,6 @@ import io.polyapi.commons.api.http.TokenProvider;
 
 /**
  * {@link TokenProvider} that always return the same set token.
- *
- * @deprecated This class should be replaced for one that obtains the token dynamically and refreshes it.
  */
 public class HardcodedTokenProvider implements TokenProvider {
 

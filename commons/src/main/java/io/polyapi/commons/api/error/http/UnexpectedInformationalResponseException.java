@@ -9,7 +9,7 @@ import static java.lang.String.format;
  */
 public class UnexpectedInformationalResponseException extends HttpResponseException {
 
-  public UnexpectedInformationalResponseException(Response response) {
-    super(format("An unexpected informational response was received. Status code: %s.", response.statusCode()), response);
-  }
+    public UnexpectedInformationalResponseException(Response response) {
+        super(format("An unexpected informational response was received. Status code: %s.", response.statusCode()), response);
+    }
 }

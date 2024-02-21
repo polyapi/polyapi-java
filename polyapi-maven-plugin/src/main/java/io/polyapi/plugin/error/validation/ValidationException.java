@@ -1,12 +1,14 @@
 package io.polyapi.plugin.error.validation;
 
 import io.polyapi.plugin.error.PolyApiMavenPluginException;
+import lombok.Getter;
 
 import static java.lang.String.format;
 
 /**
  * Parent class for exceptions thrown for validation purposes. Stores the name of the property being validated and injects it into the message.
  */
+@Getter
 public class ValidationException extends PolyApiMavenPluginException {
 
     private final String propertyName;
@@ -32,9 +34,5 @@ public class ValidationException extends PolyApiMavenPluginException {
     public ValidationException(String propertyName, String messageTemplate, Throwable cause) {
         super(format(messageTemplate, propertyName), cause);
         this.propertyName = propertyName;
-    }
-
-    public String getPropertyName() {
-        return propertyName;
     }
 }

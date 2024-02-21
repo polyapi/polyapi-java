@@ -1,5 +1,5 @@
 # Java Client Library (beta)
-### v0.2.7
+### v0.3.3
 
 ## Introduction
 Welcome my friends! This is the Poly API Java client GitHub page. If you are here, then it means you're familiar with what we do at Poly. If you aren't, you can always check [here](https://github.com/polyapi/poly-alpha).
@@ -53,7 +53,7 @@ Nice to have some customers looking around here! So, you'll need to run the foll
 2. **Update the project.** Add the following to your project's `pom.xml`:
 ```xml
 <properties>
-  <poly.version>0.2.7</poly.version>
+  <poly.version>0.3.3</poly.version>
 </properties>
 <dependencies>
   <dependency>
@@ -211,6 +211,23 @@ Here's the list of parameters:
 - **context:** Comma separated values that work as filter for the retrieved specifications. These filters will return any specification that starts with any of the the indicated values. (i.e. if you set `polyapi,google` as a value, it will only generate those that have either of those as a context). This parameter is case-insensitive. 
 - **overwrite:** Flag indicating that the generated files will overwrite any existing files. Default value is false.
 
+#### deploy-functions
+This MOJO requires a project to run and the commons library to be set as a dependency:
+```xml
+<dependency>
+    <groupId>io.polyapi</groupId>
+    <artifactId>commons</artifactId>
+    <version>${poly.version}</version>
+</dependency>
+```
+It scans the project for classes annotated with `@PolyFunction` and it will upload them. See the documentation of the class for documentation. If the class is also annotated with `@RequiredDependency` it will add the dependencies indicated in the annotation to the server function so they will provide their classes when the function executes.'
+
+##### Parameters
+Here's the list of parameters:
+- **host (required):** The host where the Poly API instance is hosted.
+- **port:** The port that the Poly API instance is listening to. Default value is 443.
+- **apiKey (required):** The API key required to authenticate to Poly.
+
 <a name="project-usage"></a>
 ## Usage
 
@@ -265,7 +282,7 @@ Vari.auth.clientId.onUpdate((event) -> {
 });
 ```
 
-### Custom Functions
+### Custom functions
 It is possible to create custom functions that can be used in Poly. To do so, you need to create a class with desired function. For example:
 ```java
 public class CustomFunction {
@@ -274,11 +291,16 @@ public class CustomFunction {
     }
 }
 ```
-Then to add it to Poly, you need to add run the following Maven goal:
+
+Then there are 2 approaches:
+
+#### Manual approach
+In this approach, you will use the `add-client-function` goals of the PolyAPI maven plugin.
+
+Just run:
 ```bash
-mvn library:addFunction -Dname=sayHello -Dfile="src/main/java/custom/CustomFunction.java" -Dcontext="test.client" -Dclient -Ddescription="This says hello to you"
+mvn polyapi:add-client-function -Dname=sayHello -Dfile="src/main/java/custom/CustomFunction.java" -Dcontext="test.client" -Dclient -Ddescription="This says hello to you"
 ```
-Note the use of `-Dclient` flag. This is used to specify that the function is a client function.
 This will add the function with specified name and context to Poly, so it can be used in code:
 
 ```java
@@ -286,12 +308,36 @@ var result = Poly.test.client.sayHello("John");
 System.out.println(result);
 ```
 
+#### Annotation approach
+This approach requires that you have a setup project. In this project, you need to have the PolyAPI commons library installed as a dependency.
+```xml
+<dependency>
+    <groupId>io.polyapi</groupId>
+    <artifactId>commons</artifactId>
+    <version>${poly.version}</version>
+</dependency>
+```
+Then annotate the function you want to upload with `@PolyFunction`. Have in mind that to mark this as a custom function (or client function) you need to set the property `type` in the annotation to `CLIENT`, leaving the annotation something like: 
+```java
+@PolyFunction(type = FunctionType.CLIENT) 
+```
+Then, just run:
+```bash
+mvn polyapi:deploy-functions
+```
 ### Server Functions
 Similar to Custom Functions, you can create Server Functions. To do so, you need to create a class with desired function same as with Custom Functions.
-Then to add it to Poly, you need to add run the following Maven goal:
+Then to add it to Poly, there are the same 2 approaches:
+
+#### Manual approach
+In here instead of using the `add-client-function` goal, you use the `add-server-function` one:
 ```bash
 mvn polyapi:add-server-function -Dname=sayHello -Dfile="src/main/java/custom/CustomFunction.java" -Dcontext="test.server" -Ddescription="This says hello to you from server"
 ```
+Otherwise it's the same as in the client functions.
+
+#### Annotation approach
+This is the same as the client functions, but you don't need to set the `type` property in the annotation. By default it will assume its a server function.
 
 ## Limitations
 Comparing to its Typescript counterpart, the Java library is still missing the following features:
@@ -301,10 +347,17 @@ Comparing to its Typescript counterpart, the Java library is still missing the f
 These features will be added in the future releases.
 
 ## Changelog
-### v0.2.7
+### v0.3.3
 - Fixed 'type' property for Server variables
-### v0.2.6
 - Added missing 'type' property to specs.json
+### v0.3.2
+- Fixed bug in deploy-functions where inner classes weren't taken into consideration.
+- Refactored deploy-functions to be reflection based instead of reading source code.
+### v0.3.1
+- Fixed bug in deploy-functions where generics weren't taken into consideration.
+### v0.3.0
+- Added deploy-functions MOJO.
+- Added functionality to add maven dependencies to executions.
 ### v0.2.5
 - Fixed bug where enums were generated as inner classes.
 - Fixed bug in generation of custom functions.

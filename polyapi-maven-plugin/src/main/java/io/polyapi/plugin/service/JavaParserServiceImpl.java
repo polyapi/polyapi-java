@@ -3,7 +3,6 @@ package io.polyapi.plugin.service;
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
@@ -15,13 +14,8 @@ import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.resolution.declarations.ResolvedParameterDeclaration;
 import com.github.javaparser.resolution.types.ResolvedType;
-import com.github.javaparser.resolution.types.ResolvedVoidType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.*;
 import io.polyapi.commons.api.json.JsonParser;
 import io.polyapi.plugin.error.PolyApiMavenPluginException;
 import io.polyapi.plugin.error.classloader.QualifiedNameNotFoundException;
@@ -34,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
@@ -45,9 +40,11 @@ public class JavaParserServiceImpl implements JavaParserService {
     private static final Logger logger = LoggerFactory.getLogger(JavaParserServiceImpl.class);
     private final JsonParser jsonParser;
     private final ClassLoader classLoader;
+    private final JavaParser javaParser;
 
     public JavaParserServiceImpl(ClassLoader classLoader, JsonParser jsonParser) {
         this.classLoader = classLoader;
+        this.javaParser = new JavaParser(new ParserConfiguration().setSymbolResolver(new JavaSymbolSolver(new ClassLoaderTypeSolver(classLoader))));
         this.jsonParser = jsonParser;
     }
 
@@ -83,8 +80,9 @@ public class JavaParserServiceImpl implements JavaParserService {
         }
     }
 
+    @Deprecated
     @Override
-    public PolyFunction parseFunction(List<File> sourceRoots, List<String> jarPaths, File file, String functionName, String description, String context) {
+    public PolyFunction parseFunction(List<File> sourceRoots, List<String> jarPaths, File file, Method method, String description, String context) {
         try {
             logger.debug("Setting up a combined type solvers.");
             var combinedTypeSolver = new CombinedTypeSolver();
@@ -118,7 +116,7 @@ public class JavaParserServiceImpl implements JavaParserService {
                     .map(TypeDeclaration::resolve)
                     .forEach(resolvedCompilationUnit -> {
                         resolvedCompilationUnit.getDeclaredMethods().stream()
-                                .filter(methodDeclaration -> methodDeclaration.getName().equals(functionName))
+                                .filter(methodDeclaration -> methodDeclaration.getName().equals(method.getName()))
                                 .peek(methodDeclaration -> logger.debug("Found matching method declaration: {}", methodDeclaration.getSignature()))
                                 .forEach(methodDeclaration -> {
                                     logger.debug("Creating PolyFunction from method declaration: {}", methodDeclaration.getName());
@@ -180,13 +178,12 @@ public class JavaParserServiceImpl implements JavaParserService {
                     });
 
             if (functions.isEmpty()) {
-                throw new PolyApiMavenPluginException("No function with name " + functionName + " found in file: " + file.getAbsolutePath());
+                throw new PolyApiMavenPluginException("No function with name " + method.getName() + " found in file: " + file.getAbsolutePath());
             } else if (functions.size() > 1) {
-                throw new PolyApiMavenPluginException("More than one function with name " + functionName + " found in file: " + file.getAbsolutePath());
+                throw new PolyApiMavenPluginException("More than one function with name " + method.getName() + " found in file: " + file.getAbsolutePath());
             }
             return functions.get(0);
-        } catch (
-                FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             throw new PolyApiMavenPluginException("Error parsing file", e);
         }
 
