@@ -18,7 +18,7 @@ This is the boring section that describes the structure of this project and its 
 4. [Usage:](#usage)
 In here you will find common usages of this client.
 5. [Changelog:](#changelog)
-This last (but not least) section shows the list of changes per version of this client. 
+This last (but not least) section shows the list of changes per version of this client.
 
 <a name="requirements"></a>
 ## Requirements
