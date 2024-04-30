@@ -1,5 +1,7 @@
 package io.polyapi.plugin.utils;
 
+import com.google.common.base.CaseFormat;
+
 import static java.util.function.Predicate.not;
 import static org.apache.commons.text.WordUtils.capitalize;
 import static org.apache.commons.text.WordUtils.uncapitalize;
@@ -13,9 +15,10 @@ public class StringUtils {
     }
 
     public static String toPascalCase(String input) {
+
         return Optional.ofNullable(input)
                 .filter(not(String::isBlank))
-                .map(value -> capitalize(input, DELIMITERS).replaceAll("[_\\-\\.\s]", ""))
+                .map(value -> capitalize(input, DELIMITERS).replaceAll("[\\-\\.\s]", ""))
                 .orElse(input);
     }
 

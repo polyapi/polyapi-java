@@ -38,8 +38,10 @@ public class JsonSchemaParserTest {
                 createArguments(11, "Schema that uses allof."),
                 createArguments(12, "Schema with enum with '-' in one of the options.", "Identifier", "TestResponse"),
                 createArguments(13, "Schema with different types that have the same enum.", "Identifier", DEFAULT_RESPONSE_NAME, "Data"),
-                createArguments(14, "Schema that is an Integer."));
+                createArguments(14, "Schema that is an Integer."),
+                createArguments(15, "Schema with multiple enums with the same name and properties.", DEFAULT_RESPONSE_NAME, "DashMinusstyle", "DashMinusstyle_", "Other"));
     }
+
     public static Stream<Arguments> getTypeSource() {
         return Stream.of(Arguments.of(1, "Simple recursive schema with no base type.", createClassName(DEFAULT_RESPONSE_NAME)),
                 Arguments.of(2, "Recursive schema with base type.", createClassName(DEFAULT_RESPONSE_NAME)),
@@ -80,6 +82,7 @@ public class JsonSchemaParserTest {
         assertThat(customTypes.size(), equalTo(expectedNames.size()));
         var customTypeNames = customTypes.stream().map(CustomType::getName).toList();
         expectedNames.forEach(expectedName -> assertTrue(customTypeNames.contains(expectedName), format("Result should contain object with name %s. Result contains %s.", expectedName, customTypeNames)));
+        customTypes.forEach(customType -> assertTrue(customType.getCode().contains(format("public class %s {", customType.getName())) || customType.getCode().contains(format("public enum %s {", customType.getName()))));
     }
 
     @ParameterizedTest(name = "Case {0}: {1}")

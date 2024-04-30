@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "dash-style": {
+      "type": "string",
+      "enum": [
+        "SOLID"
+      ]
+    },
+    "other": {
+      "type": "object",
+      "properties": {
+        "dash-style": {
+          "type": "string",
+          "enum": [
+            "SOLID"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "dashStyle"
+  ],
+  "title": "Response Type"
+}
