@@ -83,7 +83,10 @@ public class GenerateSourcesMojo extends PolyApiMojo {
                         .stream()
                         .flatMap(Arrays::stream)
                         .map(String::trim)
-                        .anyMatch(Optional.ofNullable(specification.getContext()).orElse("").toLowerCase()::startsWith))
+                        .anyMatch(contextFilter -> {
+                            String specContext = Optional.ofNullable(specification.getContext()).orElse("").toLowerCase();
+                            return specContext.equals(contextFilter) || specContext.startsWith(format("%s.", contextFilter));
+                        }))
                 .peek(specification -> log.trace("Generating context for specification {}.", specification.getName()))
                 .forEach(specification -> createContext(rootContext, Stream.of(specification.getContext().split("\\.")).filter(not(String::isEmpty)).toList(), specification));
         generate(rootContext);
