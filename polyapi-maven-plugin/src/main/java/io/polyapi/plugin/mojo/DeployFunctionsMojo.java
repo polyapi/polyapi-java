@@ -103,7 +103,11 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                             .filter(not(String::isEmpty))
                             .toList();
                     codeObject.setAvailableContexts(matches.isEmpty()? "-" : String.join(",", matches));
-                    log.error("Auto-detected contexts: {}", codeObject.getAvailableContexts());
+                    if (dryRun) {
+                        log.info("Auto-detected contexts: {}", codeObject.getAvailableContexts());
+                    } else {
+                        log.debug("Auto-detected contexts: {}", codeObject.getAvailableContexts());
+                    }
                 } else {
                     codeObject.setAvailableContexts(annotation.contextAwareness());
                 }
@@ -134,6 +138,7 @@ public class DeployFunctionsMojo extends PolyApiMojo {
             if (dryRun) {
                 log.info("{} function with content '{}' should be deployed.", type, polyFunction);
                 log.info("Skipping deployment because dry run mode is activated.");
+                log.info("Dry run complete for {} functions.", methods.size());
             } else {
                 try {
                     String id = polyFunctionService.deploy(type, polyFunction);
@@ -143,21 +148,21 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                     log.error("{} function '{}' deployment failed.", type, polyFunction.getName());
                     exceptions.put(polyFunction, e);
                 }
+                if (exceptions.isEmpty()) {
+                    log.info("Deployment of {} functions complete.", methods.size());
+                } else {
+                    log.error("{} Errors occurred while deploying a total of {} functions.", exceptions.size(), methods.size());
+                    exceptions.forEach((polyFunctionMetadata, exception) -> {
+                        try {
+                            log.error(IOUtils.toString(HttpResponseException.class.cast(exception).getResponse().body(), defaultCharset()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                    throw new DeploymentWrapperException(exceptions.values());
+                }
             }
         });
-        if (exceptions.isEmpty()) {
-            log.info("Deployment of {} functions complete.", methods.size());
-        } else {
-            log.error("{} Errors occurred while deploying a total of {} functions.", exceptions.size(), methods.size());
-            exceptions.forEach((polyFunctionMetadata, exception) -> {
-                try {
-                    log.error(IOUtils.toString(HttpResponseException.class.cast(exception).getResponse().body(), defaultCharset()));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            throw new DeploymentWrapperException(exceptions.values());
-        }
     }
 
     private String getPolyType(Type type) {
