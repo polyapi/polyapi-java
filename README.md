@@ -1,7 +1,7 @@
 # Java Client Library (beta)
 
 ### Latest released version v0.8.2
-### Latest snapshot version v0.8.3-SNAPSHOT
+### Latest snapshot version v0.9.0-SNAPSHOT
 
 ## Introduction
 Welcome my friends! This is the Poly API Java client GitHub page. If you are here, then it means you're familiar with what we do at Poly. If you aren't, you can always check [here](https://github.com/polyapi/poly-alpha).
@@ -315,6 +315,8 @@ Comparing to its Typescript counterpart, the Java library is still missing the f
 These features will be added in the future releases.
 
 ## Changelog
+### v0.9.0
+- Added context awareness for Poly functions.
 ### v0.8.2
 - Removed unused updateStrategy parameter from @PolyFunction annotation.
 ### v0.8.1
