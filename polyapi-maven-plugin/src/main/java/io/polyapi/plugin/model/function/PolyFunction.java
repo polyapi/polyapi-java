@@ -4,6 +4,7 @@ package io.polyapi.plugin.model.function;
 import io.polyapi.commons.api.model.Visibility;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,7 @@ import static java.util.stream.Collectors.joining;
 
 @Getter
 @Setter
+@ToString
 public class PolyFunction {
     private String id;
     private String name;

@@ -225,6 +225,7 @@ Here's the list of parameters:
 - **port:** The port that the Poly API instance is listening to. Default value is 443.
 - **apiKey (required):** The API key required to authenticate to Poly.
 - **functions:** Comma separated value containing the names of the functions to deploy. The functions must be annotated with the `@PolyFunction` annotation as it is described. This parameter triggers a filter by function name and/or context + function name in the `[context].[functionName]` format. Each comma separated value will be taken independently and deployed.
+- **dry-run:** Flag that when added makes the MOJO prepare everything for a deployment but not do it. This is for debugging purposes.
 
 <a name="project-usage"></a>
 ## Usage
@@ -317,10 +318,11 @@ These features will be added in the future releases.
 ## Changelog
 ### v0.9.0
 - Added context awareness for Poly functions.
+- Added dry-run mode to `deploy-functions` MOJO.
 ### v0.8.2
 - Removed unused updateStrategy parameter from @PolyFunction annotation.
 ### v0.8.1
-- Removed unused `unsued.strategy` parameter from `deploy-functions` mojo.
+- Removed unused `unsued.strategy` parameter from `deploy-functions` MOJO.
 ### v0.8.0
 - Added PolyCustom functionality.
 ### v0.7.2
@@ -332,9 +334,9 @@ These features will be added in the future releases.
 ### v0.7.0
 - Added ability to handle headers and params on webhook triggers.
 ### v0.6.0
-- Removed add-server-function MOJO. Now only deploy-functions is allowed.
-- Removed add-client-function MOJO. Now only deploy-functions is allowed.
-- Added functions parameter to deploy-functions.
+- Removed add-server-function MOJO. Now only `deploy-functions` is allowed.
+- Removed add-client-function MOJO. Now only `deploy-functions` is allowed.
+- Added functions parameter to `deploy-functions`.
 ### v0.5.0
 - Changed packages of generated classes to avoid classes with the same name and package but different attributes to override each other.
 - Changed names of schema generated classes to use the schema title. 
@@ -345,7 +347,7 @@ These features will be added in the future releases.
 ### v0.4.1
 - Added Function ID in the javadocs of functions.
 ### v0.4.0
-- Added single function filter to deploy-functions MOJO.
+- Added single function filter to `deploy-functions` MOJO.
 - Fixed Poly functions invocation in webhooks.
 - Made webhooks return a handle that allows for stopping it's operation.
 - Renamed isDeployable property to deployFunction in PolyFunction annotation.
@@ -360,12 +362,12 @@ These features will be added in the future releases.
 - Fixed 'polyType' property for Server variables
 - Added missing 'polyType' property to specs.json
 ### v0.3.2
-- Fixed bug in deploy-functions where inner classes weren't taken into consideration.
-- Refactored deploy-functions to be reflection based instead of reading source code.
+- Fixed bug in `deploy-functions` where inner classes weren't taken into consideration.
+- Refactored `deploy-functions` to be reflection based instead of reading source code.
 ### v0.3.1
-- Fixed bug in deploy-functions where generics weren't taken into consideration.
+- Fixed bug in `deploy-functions` where generics weren't taken into consideration.
 ### v0.3.0
-- Added deploy-functions MOJO.
+- Added `deploy-functions` MOJO.
 - Added functionality to add maven dependencies to executions.
 ### v0.2.5
 - Fixed bug where enums were generated as inner classes.

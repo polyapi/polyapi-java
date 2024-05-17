@@ -51,7 +51,7 @@ public class GenerateSourcesMojo extends PolyApiMojo {
         this.jsonSchemaParser = new JsonSchemaParser();
         this.polyObjectResolverService = new PolyObjectResolverService(jsonSchemaParser);
         this.specificationCodeGeneratorVisitor = new SpecificationCodeGeneratorVisitor(fileService, polyObjectResolverService, getJsonParser(), jsonSchemaParser);
-        var specifications = new SpecificationServiceImpl(host, port, getHttpClient(), getJsonParser()).getJsonSpecs();
+        var specifications = new SpecificationServiceImpl(host, port, getHttpClient(), getJsonParser()).getJsonSpecs(Optional.ofNullable(this.context).map(contextCsv -> contextCsv.split(",")).orElse(new String[]{""}));
         var context = new HashMap<String, Object>();
         // @FIXME: Are we sure we want to set this ID at this level?
         context.put("clientId", UUID.randomUUID().toString());
@@ -76,18 +76,7 @@ public class GenerateSourcesMojo extends PolyApiMojo {
         var rootContext = new Context(null, rootName);
         specifications.stream()
                 .filter(specification -> Arrays.stream(filter).anyMatch(clazz -> clazz.isInstance(specification)))
-                .filter(specification -> !(specification instanceof CustomFunctionSpecification && !CustomFunctionSpecification.class.cast(specification).isJava()))
-                .filter(specification -> Optional.ofNullable(context)
-                        .map(String::toLowerCase)
-                        .map(value -> value.split(","))
-                        .stream()
-                        .flatMap(Arrays::stream)
-                        .map(String::trim)
-                        .anyMatch(contextFilter -> {
-                            String specContext = Optional.ofNullable(specification.getContext()).orElse("").toLowerCase();
-                            return specContext.equals(contextFilter) || specContext.startsWith(format("%s.", contextFilter));
-                        }))
-                .peek(specification -> log.trace("Generating context for specification {}.", specification.getName()))
+                .filter(specification -> !(specification instanceof CustomFunctionSpecification customFunctionSpecification && !customFunctionSpecification.isJava()))
                 .forEach(specification -> createContext(rootContext, Stream.of(specification.getContext().split("\\.")).filter(not(String::isEmpty)).toList(), specification));
         generate(rootContext);
     }

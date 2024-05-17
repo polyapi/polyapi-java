@@ -49,10 +49,16 @@ public class DeployFunctionsMojo extends PolyApiMojo {
     @org.apache.maven.plugins.annotations.Parameter(property = "functions")
     private String functions;
 
+    @org.apache.maven.plugins.annotations.Parameter(property = "dry-run", defaultValue = "false")
+    private boolean dryRun;
+
     @Override
     protected void execute(String host, Integer port) {
         PolyFunctionService polyFunctionService = new PolyFunctionServiceImpl(host, port, getHttpClient(), getJsonParser());
         log.info("Initiating the deployment of functions.");
+        if (dryRun) {
+            log.warn("Dry run mode is set. This won't deploy to server.");
+        }
         Map<io.polyapi.plugin.model.function.PolyFunction, HttpResponseException> exceptions = new HashMap<>();
         Predicate<Method> filter;
         if (isBlank(functions)) {
@@ -85,7 +91,7 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                 String code = IOUtils.toString(fileInputStream, defaultCharset());
                 codeObject.setCode(code);
                 if (annotation.contextAwareness().equals(AUTO_DETECT_CONTEXT)) {
-                    codeObject.setAvailableContexts(Pattern.compile("(Vari|Poly)\\.[.a-zA-Z0-9_\\s]+[^.a-zA-Z0-9_\\s]")
+                    List<String> matches = Pattern.compile("(Vari|Poly)\\.[.a-zA-Z0-9_\\s]+[^.a-zA-Z0-9_\\s]")
                             .matcher(code)
                             .results()
                             .map(MatchResult::group)
@@ -95,7 +101,9 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                                         .map(i -> String.join(".", parts.subList(0, i)));
                             })
                             .filter(not(String::isEmpty))
-                            .collect(joining(",")));
+                            .toList();
+                    codeObject.setAvailableContexts(matches.isEmpty()? "-" : String.join(",", matches));
+                    log.error("Auto-detected contexts: {}", codeObject.getAvailableContexts());
                 } else {
                     codeObject.setAvailableContexts(annotation.contextAwareness());
                 }
@@ -123,13 +131,18 @@ public class DeployFunctionsMojo extends PolyApiMojo {
             polyFunction.setReturnType(getPolyType(method.getReturnType()));
             Optional.of(method.getGenericReturnType()).filter(not(isEqual(Void.TYPE))).map(getJsonParser()::toJsonSchema).map(schema -> getJsonParser().<Map<String, Object>>parseString(schema, defaultInstance().constructMapType(HashMap.class, String.class, Object.class))).ifPresent(polyFunction::setReturnTypeSchema);
             String type = annotation.type().name().toLowerCase();
-            try {
-                String id = polyFunctionService.deploy(type, polyFunction);
-                log.info("Deployed {} function '{}' on context '{}' with id '{}'", type, polyFunction.getName(), polyFunction.getContext(), id);
-                log.debug("Function can be accessed at {}:{}/functions/{}/{}", host, port, type, id);
-            } catch (HttpResponseException e) {
-                log.error("{} function '{}' deployment failed.", type, polyFunction.getName());
-                exceptions.put(polyFunction, e);
+            if (dryRun) {
+                log.info("{} function with content '{}' should be deployed.", type, polyFunction);
+                log.info("Skipping deployment because dry run mode is activated.");
+            } else {
+                try {
+                    String id = polyFunctionService.deploy(type, polyFunction);
+                    log.info("Deployed {} function '{}' on context '{}' with id '{}'", type, polyFunction.getName(), polyFunction.getContext(), id);
+                    log.debug("Function can be accessed at {}:{}/functions/{}/{}", host, port, type, id);
+                } catch (HttpResponseException e) {
+                    log.error("{} function '{}' deployment failed.", type, polyFunction.getName());
+                    exceptions.put(polyFunction, e);
+                }
             }
         });
         if (exceptions.isEmpty()) {
