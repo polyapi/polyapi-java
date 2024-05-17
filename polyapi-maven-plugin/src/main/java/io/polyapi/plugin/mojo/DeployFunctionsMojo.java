@@ -22,12 +22,17 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
+import static io.polyapi.commons.api.model.PolyFunction.AUTO_DETECT_CONTEXT;
 import static java.lang.String.format;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.function.Predicate.isEqual;
@@ -77,7 +82,23 @@ public class DeployFunctionsMojo extends PolyApiMojo {
             String sourceCodePath = format("src/main/java/%s/%s.java", declaringClass.getPackageName().replace(".", "/"), declaringClass.getSimpleName());
             log.debug("Obtaining source code from '{}'", sourceCodePath);
             try (FileInputStream fileInputStream = new FileInputStream(sourceCodePath)) {
-                codeObject.setCode(IOUtils.toString(fileInputStream, defaultCharset()));
+                String code = IOUtils.toString(fileInputStream, defaultCharset());
+                codeObject.setCode(code);
+                if (annotation.contextAwareness().equals(AUTO_DETECT_CONTEXT)) {
+                    codeObject.setAvailableContexts(Pattern.compile("(Vari|Poly)\\.[.a-zA-Z0-9_\\s]+[^.a-zA-Z0-9_\\s]")
+                            .matcher(code)
+                            .results()
+                            .map(MatchResult::group)
+                            .flatMap(result -> {
+                                List<String> parts = Arrays.stream(result.substring(5).replace("\n", "").split("\\.")).toList();
+                                return IntStream.range(0, parts.size()).boxed()
+                                        .map(i -> String.join(".", parts.subList(0, i)));
+                            })
+                            .filter(not(String::isEmpty))
+                            .collect(joining(",")));
+                } else {
+                    codeObject.setAvailableContexts(annotation.contextAwareness());
+                }
             } catch (IOException e) {
                 throw new PolyApiMavenPluginException(e); // FIXME: Throw the appropriate exception.
             }
