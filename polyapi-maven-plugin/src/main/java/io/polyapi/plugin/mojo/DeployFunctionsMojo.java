@@ -38,6 +38,7 @@ import static java.nio.charset.Charset.defaultCharset;
 import static java.util.function.Predicate.isEqual;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.concat;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
@@ -91,17 +92,19 @@ public class DeployFunctionsMojo extends PolyApiMojo {
                 String code = IOUtils.toString(fileInputStream, defaultCharset());
                 codeObject.setCode(code);
                 if (annotation.contextAwareness().equals(AUTO_DETECT_CONTEXT)) {
-                    List<String> matches = Pattern.compile("(Vari|Poly)\\.[.a-zA-Z0-9_\\s]+[^.a-zA-Z0-9_\\s]")
+                    Set<String> matches = Pattern.compile("(Vari|Poly)\\.[.a-zA-Z0-9_\\s]+[^.a-zA-Z0-9_\\s]")
                             .matcher(code)
                             .results()
                             .map(MatchResult::group)
                             .flatMap(result -> {
+                                log.debug("Processing match {}", result);
                                 List<String> parts = Arrays.stream(result.substring(5).replace("\n", "").split("\\.")).toList();
-                                return IntStream.range(0, parts.size()).boxed()
-                                        .map(i -> String.join(".", parts.subList(0, i)));
+                                List<String> usedParts = parts.size() > 1? parts.subList(0, parts.size() - 1) : List.of("");
+                                log.trace("Context parts: {}", usedParts);
+                                return IntStream.range(0, usedParts.size()).boxed()
+                                        .map(i -> String.join(".", usedParts.subList(0, i + 1)));
                             })
-                            .filter(not(String::isEmpty))
-                            .toList();
+                            .collect(toSet());
                     codeObject.setAvailableContexts(matches.isEmpty()? "-" : String.join(",", matches));
                     if (dryRun) {
                         log.info("Auto-detected contexts: {}", codeObject.getAvailableContexts());
