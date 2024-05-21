@@ -1,14 +1,14 @@
 # Java Client Library (beta)
 
-### Latest released version v0.9.0
-### Latest snapshot version v0.9.1-SNAPSHOT
+* Latest released version 0.9.1
+* Latest snapshot version 0.9.2-SNAPSHOT
 
 ## Introduction
 Welcome my friends! This is the Poly API Java client GitHub page. If you are here, then it means you're familiar with what we do at Poly. If you aren't, you can always check [here](https://github.com/polyapi/poly-alpha).
 In here you'll find instructions for both developers and customers to work with Poly through our Java clients and maven plugin.
 We hope that you find this documentation useful and easy to understand. If you don't please let us know.
 
-### Index
+## Index
 1. [Requirements:](#requirements)
 Here you'll find the minimum requirements of software that you'll need to work with this Java client.
 2. [Project setup:](#project-setup)
@@ -55,7 +55,7 @@ Nice to have some customers looking around here! So, you'll need to run the foll
 2. **Update the project.** Add the following to your project's `pom.xml`:
 ```xml
 <properties>
-  <poly.version>0.9.0</poly.version>
+  <poly.version>0.9.1</poly.version>
 </properties>
 <dependencies>
   <dependency>
@@ -316,93 +316,4 @@ Comparing to its Typescript counterpart, the Java library is still missing the f
 These features will be added in the future releases.
 
 ## Changelog
-### v0.9.1
-- Fixed bug where deployment of a single function blocked the deployment of the rest. 
-### v0.9.0
-- Added context awareness for Poly functions.
-- Added dry-run mode to `deploy-functions` MOJO.
-### v0.8.2
-- Removed unused updateStrategy parameter from @PolyFunction annotation.
-### v0.8.1
-- Removed unused `unsued.strategy` parameter from `deploy-functions` MOJO.
-### v0.8.0
-- Added PolyCustom functionality.
-### v0.7.2
-- Made JacksonJSonParser extend ObjectMapper instead of using it.
-- Made response from server on errors be displayed under debug log instead of info.
-### v0.7.1
-- Fixed bug about having duplicate schema types with the same name.
-- Improved minor code issues.
-### v0.7.0
-- Added ability to handle headers and params on webhook triggers.
-### v0.6.0
-- Removed add-server-function MOJO. Now only `deploy-functions` is allowed.
-- Removed add-client-function MOJO. Now only `deploy-functions` is allowed.
-- Added functions parameter to `deploy-functions`.
-### v0.5.0
-- Changed packages of generated classes to avoid classes with the same name and package but different attributes to override each other.
-- Changed names of schema generated classes to use the schema title. 
-- Updated logs to use lombok @Slf4j.
-### v0.4.2
-- Fixed code generation bug where enum constants had dashes in them '-'.
-- Fixed code generation bug where multiple classes within a package had the same enum declaration.
-### v0.4.1
-- Added Function ID in the javadocs of functions.
-### v0.4.0
-- Added single function filter to `deploy-functions` MOJO.
-- Fixed Poly functions invocation in webhooks.
-- Made webhooks return a handle that allows for stopping it's operation.
-- Renamed isDeployable property to deployFunction in PolyFunction annotation.
-- Added support for Poly functions within webhook callbacks.
-### v0.3.6
-- Fixed bug where generated custom functions where taken for deployment.
-### v0.3.5
-- Made specification duplicates validation case insensitive so that 'io.polyapi.FunctionName' would be a duplicate of 'io.polyapi.Functionname'.
-### v0.3.4
-- Added validation to avoid duplicate specifications based on context and name.
-### v0.3.3
-- Fixed 'polyType' property for Server variables
-- Added missing 'polyType' property to specs.json
-### v0.3.2
-- Fixed bug in `deploy-functions` where inner classes weren't taken into consideration.
-- Refactored `deploy-functions` to be reflection based instead of reading source code.
-### v0.3.1
-- Fixed bug in `deploy-functions` where generics weren't taken into consideration.
-### v0.3.0
-- Added `deploy-functions` MOJO.
-- Added functionality to add maven dependencies to executions.
-### v0.2.5
-- Fixed bug where enums were generated as inner classes.
-- Fixed bug in generation of custom functions.
-- Fixed bug where schema with +1 and -1 as names were parsed as the same string. Now the properties will named plus1 and minus1.
-- Fixed bug where Auth functions were not created appropriately.
-### v0.2.4
-- Fixed bug in server functions that didn't allow Poly invocations in server functions.
-### v0.2.3
-- Fixed bug in server functions that didn't allow complex object in server functions.
-### v0.2.2
-- Fixed variable injection in server functions.
-### v0.2.1
-- Fixed bug in add-server-function that uploaded arguments without keys.
-### v0.2.0
-- Improved polyType generation.
-- Unified the client usage.
-- Replaced approach to use proxies.
-- Split project into multiple modules.
-### v0.1.8
-- Fixed polyType generation for Java server functions
-### v0.1.7
-- Added support for Java server functions
-### v0.1.6
-- Added support for Java client functions
-### v0.1.5
-- Fixed issue with void return types
-### v0.1.4
-- Deployment setup update
-### v0.1.3
-- Storing Poly specs file into `target/.poly/specs.json`
-### v0.1.2
-- Using String as default class on `inject` secret variable function
-- Fixed Vari packaging causing variable classes overwriting each other 
-### v0.1.1
-- Added initial support for injecting Poly Variables to Poly Functions
+See the Changelog **[here](https://github.com/polyapi/polyapi-java/releases)**.
