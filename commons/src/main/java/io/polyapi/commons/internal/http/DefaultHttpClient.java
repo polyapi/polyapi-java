@@ -1,7 +1,13 @@
 package io.polyapi.commons.internal.http;
 
 import io.polyapi.commons.api.error.PolyApiException;
-import io.polyapi.commons.api.http.*;
+import io.polyapi.commons.api.http.HttpClient;
+import io.polyapi.commons.api.http.HttpMethod;
+import io.polyapi.commons.api.http.Request;
+import io.polyapi.commons.api.http.RequestRecord;
+import io.polyapi.commons.api.http.Response;
+import io.polyapi.commons.api.http.ResponseRecord;
+import io.polyapi.commons.api.http.TokenProvider;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
@@ -21,27 +27,24 @@ import static java.util.stream.Collectors.joining;
 public class DefaultHttpClient implements HttpClient {
 
     private final OkHttpClient client;
-    private final TokenProvider tokenProvider;
+    private final HttpClientConfiguration configuration;
 
     /**
      * Utility constructor that sets a default {@link OkHttpClient} and uses a {@link TokenProvider}.
      *
-     * @param tokenProvider        The provided token provider.
-     * @param connectTimeoutMillis The amount of milliseconds that the client will wait on connection before timing out.
-     * @param readTimeoutMillis    The amount of milliseconds that the client will wait on reading the response before timing out.
-     * @param writeTimeoutMillis   The amount of milliseconds that the client will wait on writing before timing out.
+     * @param configuration The configuration for the HTTP client.
      */
-    public DefaultHttpClient(TokenProvider tokenProvider, Long connectTimeoutMillis, Long readTimeoutMillis, Long writeTimeoutMillis) {
+    public DefaultHttpClient(HttpClientConfiguration configuration) {
         this(new OkHttpClient.Builder()
-                .connectTimeout(connectTimeoutMillis, MILLISECONDS)
-                .readTimeout(readTimeoutMillis, MILLISECONDS)
-                .writeTimeout(writeTimeoutMillis, MILLISECONDS)
-                .build(), tokenProvider);
+                .connectTimeout(configuration.getConnectTimeoutMillis(), MILLISECONDS)
+                .readTimeout(configuration.getReadTimeoutMillis(), MILLISECONDS)
+                .writeTimeout(configuration.getWriteTimeoutMillis(), MILLISECONDS)
+                .build(), configuration);
     }
 
-    public DefaultHttpClient(OkHttpClient client, TokenProvider tokenProvider) {
+    public DefaultHttpClient(OkHttpClient client, HttpClientConfiguration configuration) {
         this.client = client;
-        this.tokenProvider = tokenProvider;
+        this.configuration = configuration;
     }
 
     @Override
@@ -53,7 +56,7 @@ public class DefaultHttpClient implements HttpClient {
     @Override
     public HttpRequestBuilder prepareAuthenticatedRequest(String host, Integer port, HttpMethod method, String relativePath) {
         return prepareRequest(host, port, method, relativePath)
-                .withHeader("Authorization", tokenProvider.getTokenAsHeader());
+                .withHeader("Authorization", configuration.getTokenProvider().getTokenAsHeader());
     }
 
     @Override
@@ -97,7 +100,7 @@ public class DefaultHttpClient implements HttpClient {
                     );
                     result.body().reset();
                 }
-                return result;
+                return (response.code() < 200 || response.code() > 299) ? configuration.getErrorHandlingStrategy().apply(result) : result;
             } catch (IOException e) {
                 // FIXME: Throw the appropriate exception.
                 throw new RuntimeException(e);

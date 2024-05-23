@@ -12,9 +12,7 @@ import io.polyapi.client.error.generation.MissingDefaultConstructorException;
 import io.polyapi.client.error.invocation.delegate.DelegateExecutionException;
 import io.polyapi.client.error.invocation.delegate.InvalidMethodDeclarationException;
 import io.polyapi.commons.api.error.PolyApiException;
-import io.polyapi.commons.api.error.http.UnexpectedHttpResponseException;
 import io.polyapi.commons.api.http.HttpClient;
-import io.polyapi.commons.api.http.ResponseRecord;
 import io.polyapi.commons.api.json.JsonParser;
 import io.polyapi.commons.api.model.PolyFunction;
 import io.polyapi.commons.api.service.PolyApiService;
@@ -24,7 +22,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -41,7 +43,7 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
     private final VariableInjectionService variableInjectionService;
 
     public InvocationServiceImpl(String host, Integer port, String clientId, HttpClient client, JsonParser jsonParser,
-            WebSocketClient webSocketClient, VariableInjectionService variableInjectionService) {
+                                 WebSocketClient webSocketClient, VariableInjectionService variableInjectionService) {
         super(host, port, client, jsonParser);
         this.clientId = clientId;
         this.jsonParser = jsonParser;
@@ -51,30 +53,21 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
 
     @Override
     public <T> T invokeServerFunction(Class<?> invokingClass, String id, Map<String, Object> body,
-            Type expectedResponseType) {
+                                      Type expectedResponseType) {
         return invokeFunction("server", id, body, expectedResponseType);
     }
 
     @Override
     public <T> T invokeApiFunction(Class<?> invokingClass, String id, Map<String, Object> body,
-            Type expectedResponseType) {
-        ApiFunctionResponse<T> response = invokeFunction("API", id, body, defaultInstance().constructParametricType(
-                ApiFunctionResponse.class, defaultInstance().constructType(expectedResponseType)));
-        if (response.getStatus() < 200 || response.getStatus() >= 400) {
-            throw new UnexpectedHttpResponseException(new ResponseRecord(
-                    response.getHeaders().entrySet().stream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue()))),
-                    Optional.ofNullable(response.getData()).map(jsonParser::toJsonInputStream).orElse(null),
-                    response.getStatus()));
-        }
-
-        return response.getData();
+                                   Type expectedResponseType) {
+        return this.<ApiFunctionResponse<T>>invokeFunction("API", id, body, defaultInstance().constructParametricType(
+                ApiFunctionResponse.class, defaultInstance().constructType(expectedResponseType))).getData();
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T invokeCustomFunction(Class<?> invokingClass, String id, Map<String, Object> body,
-            Type expectedResponseType) {
+                                      Type expectedResponseType) {
         try {
             var delegateClass = Class.forName(format("%s.delegate.%s", invokingClass.getPackageName(),
                     Optional.ofNullable(invokingClass.getDeclaredAnnotation(PolyMetadata.class))
@@ -119,7 +112,7 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
 
     @Override
     public Void invokeAuthFunction(Class<?> invokingClass, String id, Map<String, Object> body,
-            Type expectedResponseType) {
+                                   Type expectedResponseType) {
         try {
             AuthTokenEventConsumer callback = AuthTokenEventConsumer.class.cast(body.remove("callback"));
             AuthTokenOptions options = AuthTokenOptions.class.cast(body.remove("options"));
@@ -203,7 +196,7 @@ public class InvocationServiceImpl extends PolyApiService implements InvocationS
 
     @Override
     public Void invokeSubresourceAuthFunction(Class<?> invokingClass, String id, Map<String, Object> body,
-            Type expectedResponseType) {
+                                              Type expectedResponseType) {
         body.put("clientID", clientId);
         post(format("auth-providers/%s/%s", id, invokingClass.getDeclaredAnnotation(PolyAuthSubresource.class).value()),
                 replace(body), expectedResponseType);

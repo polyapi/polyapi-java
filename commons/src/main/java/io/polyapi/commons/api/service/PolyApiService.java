@@ -67,16 +67,6 @@ public class PolyApiService {
     headers.forEach((key, value) -> allHeaders.put(key, value.stream().toList()));
 
     Response response = callApi(method, relativePath, allHeaders, queryParams, jsonParser.toJsonInputStream(body));
-    if (response.statusCode() < 200) {
-      throw new UnexpectedInformationalResponseException(response);
-    }
-    if (response.statusCode() >= 400) {
-      // TODO: Change this to more specific exceptions per code. As some may require actions rather than displaying an error (i.e. token refresh).
-      switch (response.statusCode()) {
-        default:
-          throw new UnexpectedHttpResponseException(response);
-      }
-    }
     log.debug("Response is successful. Status code is {}.", response.statusCode());
     log.debug("Parsing response.");
     O result = Optional.of(expectedResponseType)

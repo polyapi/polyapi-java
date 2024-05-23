@@ -1,6 +1,11 @@
 package io.polyapi.client.internal.model;
 
-import io.polyapi.client.api.model.function.*;
+import io.polyapi.client.api.model.function.AudienceTokenAuthFunction;
+import io.polyapi.client.api.model.function.PolyApiFunction;
+import io.polyapi.client.api.model.function.PolyCustomFunction;
+import io.polyapi.client.api.model.function.PolyServerFunction;
+import io.polyapi.client.api.model.function.SubresourceAuthFunction;
+import io.polyapi.client.api.model.function.TokenAuthFunction;
 import io.polyapi.client.api.model.variable.ServerVariableHandler;
 import io.polyapi.client.api.model.websocket.PolyTrigger;
 import io.polyapi.client.internal.proxy.PolyProxyFactory;
@@ -11,6 +16,7 @@ import io.polyapi.commons.api.http.HttpClient;
 import io.polyapi.commons.api.json.JsonParser;
 import io.polyapi.commons.internal.http.DefaultHttpClient;
 import io.polyapi.commons.internal.http.HardcodedTokenProvider;
+import io.polyapi.commons.internal.http.HttpClientConfiguration;
 import io.polyapi.commons.internal.json.JacksonJsonParser;
 import io.polyapi.commons.internal.websocket.SocketIOWebSocketClient;
 
@@ -35,7 +41,11 @@ public class PolyContext {
     }
 
     private PolyContext(PolyContextConfiguration config, JsonParser jsonParser) {
-        this(config.getHost(), config.getPort(), config.getClientId(), new DefaultHttpClient(new HardcodedTokenProvider(config.getApiKey()), config.getConnectionTimeoutMillis(), config.getReadTimeoutMillis(), config.getWriteTimeoutMillis()), new SocketIOWebSocketClient(config.getUrl(), config.getClientId(), new HardcodedTokenProvider(config.getApiKey()), jsonParser, config.getConnectionTimeoutMillis()), jsonParser);
+        this(config.getHost(), config.getPort(), config.getClientId(), new DefaultHttpClient(HttpClientConfiguration.builder(config.getApiKey())
+                .withConnectTimeoutMillis(config.getConnectionTimeoutMillis())
+                .withReadTimeoutMillis(config.getReadTimeoutMillis())
+                .withWriteTimeoutMillis(config.getWriteTimeoutMillis())
+                .build()), new SocketIOWebSocketClient(config.getUrl(), config.getClientId(), new HardcodedTokenProvider(config.getApiKey()), jsonParser, config.getConnectionTimeoutMillis()), jsonParser);
     }
 
     private PolyContext(String host, Integer port, String clientId, HttpClient httpClient, SocketIOWebSocketClient webSocketClient, JsonParser jsonParser) {

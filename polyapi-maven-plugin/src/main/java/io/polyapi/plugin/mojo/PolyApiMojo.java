@@ -6,12 +6,12 @@ import io.polyapi.commons.api.http.TokenProvider;
 import io.polyapi.commons.api.json.JsonParser;
 import io.polyapi.commons.internal.http.DefaultHttpClient;
 import io.polyapi.commons.internal.http.HardcodedTokenProvider;
+import io.polyapi.commons.internal.http.HttpClientConfiguration;
 import io.polyapi.commons.internal.json.JacksonJsonParser;
 import io.polyapi.plugin.error.PolyApiMavenPluginException;
 import io.polyapi.plugin.service.MavenService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -24,7 +24,6 @@ import java.io.IOException;
 import static io.polyapi.plugin.mojo.validation.Validator.validateNotEmpty;
 import static io.polyapi.plugin.mojo.validation.Validator.validatePortFormat;
 import static java.nio.charset.Charset.defaultCharset;
-import static java.util.concurrent.TimeUnit.MINUTES;
 
 @Setter
 @Slf4j
@@ -57,12 +56,7 @@ public abstract class PolyApiMojo extends AbstractMojo {
             mavenService.getPropertyFromPlugin("apiKey", apiKey, this::setApiKey);
             validateNotEmpty("apiKey", apiKey);
             tokenProvider = new HardcodedTokenProvider(apiKey);
-            httpClient = new DefaultHttpClient(new OkHttpClient.Builder()
-                    .connectTimeout(10, MINUTES)
-                    .readTimeout(10, MINUTES)
-                    .writeTimeout(10, MINUTES)
-                    .build(),
-                    tokenProvider);
+            httpClient = new DefaultHttpClient(HttpClientConfiguration.builder(tokenProvider).build());
             jsonParser = new JacksonJsonParser();
             execute(host, Integer.valueOf(port));
         } catch (PolyApiMavenPluginException e) {
