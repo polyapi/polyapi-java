@@ -27,7 +27,8 @@ import lombok.Setter;
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         property = "type",
-        visible = true
+        visible = true,
+        defaultImpl = IgnoredSpecification.class
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ApiFunctionSpecification.class, name = "apiFunction"),
@@ -35,7 +36,7 @@ import lombok.Setter;
         @JsonSubTypes.Type(value = ServerFunctionSpecification.class, name = "serverFunction"),
         @JsonSubTypes.Type(value = AuthFunctionSpecification.class, name = "authFunction"),
         @JsonSubTypes.Type(value = WebhookHandleSpecification.class, name = "webhookHandle"),
-        @JsonSubTypes.Type(value = ServerVariableSpecification.class, name = "serverVariable"),
+        @JsonSubTypes.Type(value = ServerVariableSpecification.class, name = "serverVariable")
 })
 public abstract class Specification {
     private String id;

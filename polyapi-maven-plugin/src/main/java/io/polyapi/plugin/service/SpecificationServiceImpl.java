@@ -3,6 +3,7 @@ package io.polyapi.plugin.service;
 import io.polyapi.commons.api.http.HttpClient;
 import io.polyapi.commons.api.json.JsonParser;
 import io.polyapi.commons.api.service.PolyApiService;
+import io.polyapi.plugin.model.specification.IgnoredSpecification;
 import io.polyapi.plugin.model.specification.Specification;
 import io.polyapi.plugin.model.specification.function.ServerFunctionSpecification;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import java.util.Map;
 
 import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
 import static java.lang.String.format;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 
 @Slf4j
@@ -34,6 +36,7 @@ public class SpecificationServiceImpl extends PolyApiService implements Specific
         log.debug("Validating for duplicate context/name pairs and filtering specification contexts.");
         Map<String, Specification> filteredMap = new HashMap<>();
         specifications.stream()
+                .filter(not(IgnoredSpecification.class::isInstance))
                 .filter(specification -> {
                     String context = specification.getContext().trim().toLowerCase();
                     return Arrays.stream(contextFilters)
