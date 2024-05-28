@@ -2,6 +2,8 @@ package io.polyapi.plugin.service;
 
 import org.jsonschema2pojo.DefaultGenerationConfig;
 
+import java.nio.charset.Charset;
+
 public class PolyGenerationConfig extends DefaultGenerationConfig {
 
     @Override
@@ -27,5 +29,10 @@ public class PolyGenerationConfig extends DefaultGenerationConfig {
     @Override
     public boolean isIncludeAdditionalProperties() {
         return false;
+    }
+
+    @Override
+    public String getOutputEncoding() {
+        return Charset.defaultCharset().name();
     }
 }

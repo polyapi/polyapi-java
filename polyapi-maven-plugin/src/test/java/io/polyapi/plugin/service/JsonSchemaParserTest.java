@@ -39,7 +39,8 @@ public class JsonSchemaParserTest {
                 createArguments(12, "Schema with enum with '-' in one of the options.", "Identifier", "TestResponse"),
                 createArguments(13, "Schema with different types that have the same enum.", "Identifier", DEFAULT_RESPONSE_NAME, "Data"),
                 createArguments(14, "Schema that is an Integer."),
-                createArguments(15, "Schema with multiple enums with the same name and properties.", DEFAULT_RESPONSE_NAME, "DashMinusstyle", "DashMinusstyle_", "Other"));
+                createArguments(15, "Schema with multiple enums with the same name and properties.", DEFAULT_RESPONSE_NAME, "DashMinusstyle", "DashMinusstyle_", "Other"),
+                createArguments(16, "Schema with json property yhat has a space in it.", "Data", DEFAULT_RESPONSE_NAME));
     }
 
     public static Stream<Arguments> getTypeSource() {

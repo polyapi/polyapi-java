@@ -15,7 +15,7 @@ public class PolyRuleFactory extends RuleFactory {
     private NameHelper overwrittingNameHelper;
 
     public PolyRuleFactory(GenerationConfig config) {
-        super(config, new Jackson2Annotator(config), new SchemaStore());
+        super(config, new Jackson2Annotator(config), new PolySchemaStore());
         this.overwrittingNameHelper = new JsonSchemaNameHelper(config);
     }
 
