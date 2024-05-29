@@ -22,7 +22,6 @@ public class PolyFragmentResolver extends FragmentResolver {
     }
 
     private JsonNode resolve(JsonNode tree, List<String> path) {
-
         if (path.isEmpty()) {
             return tree;
         } else {
@@ -35,7 +34,7 @@ public class PolyFragmentResolver extends FragmentResolver {
                     throw new IllegalArgumentException("Not a valid array index: " + part);
                 }
             }
-            String decodedPart = JsonPointerUtils.decodeReferenceToken(URLDecoder.decode(part, Charset.defaultCharset()));
+            String decodedPart = JsonPointerUtils.decodeReferenceToken(URLDecoder.decode(part.replace("+","%2B"), Charset.defaultCharset()));
             if (tree.has(decodedPart)) {
                 return resolve(tree.get(decodedPart), path);
             } else {
