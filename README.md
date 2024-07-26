@@ -1,7 +1,7 @@
 # Java Client Library (beta)
 
-* Latest released version 0.14.4
-* Latest snapshot version 0.14.5-SNAPSHOT
+* Latest released version 0.15.0
+* Latest snapshot version 0.15.1-SNAPSHOT
 
 ## Introduction
 Welcome my friends! This is the Poly API Java client GitHub page. If you are here, then it means you're familiar with what we do at Poly. If you aren't, you can always check [here](https://github.com/polyapi/poly-alpha).
@@ -55,7 +55,7 @@ Nice to have some customers looking around here! So, you'll need to run the foll
 2. **Update the project.** Add the following to your project's `pom.xml`:
 ```xml
 <properties>
-  <poly.version>0.14.4</poly.version>
+  <poly.version>0.15.0</poly.version>
 </properties>
 <dependencies>
   <dependency>

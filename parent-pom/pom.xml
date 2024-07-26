@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.polyapi</groupId>
     <artifactId>parent-pom</artifactId>
-    <version>0.14.4-SNAPSHOT</version>
+    <version>0.15.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Poly API Java parent POM</name>
     <url>https://polyapi.io</url>
