@@ -34,11 +34,12 @@ public class ResolvedFunctionSpecification extends ResolvedSpecification {
     }
 
     public String getReturnType() {
-        return Optional.ofNullable(returnType)
+        String result = Optional.ofNullable(returnType)
                 .map(String::trim)
                 .filter(not(String::isBlank))
                 .filter(not(isEqual(Void.class.getName())))
                 .orElse("void");
+        return result.equalsIgnoreCase(Object.class.getName()) ? "<T> T" : result;
     }
 
     public String getParamNames() {

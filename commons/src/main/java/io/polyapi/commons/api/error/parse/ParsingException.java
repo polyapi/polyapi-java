@@ -8,6 +8,13 @@ import io.polyapi.commons.api.error.PolyApiException;
 public class ParsingException extends PolyApiException {
 
   /**
+   * @see PolyApiException#PolyApiException(String)
+   */
+  public ParsingException(String message) {
+    super(message);
+  }
+
+  /**
    * @see PolyApiException#PolyApiException(String, Throwable)
    */
   public ParsingException(String message, Throwable cause) {

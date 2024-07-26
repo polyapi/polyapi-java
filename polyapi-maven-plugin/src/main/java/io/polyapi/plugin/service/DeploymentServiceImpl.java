@@ -140,7 +140,7 @@ public class DeploymentServiceImpl implements DeploymentService {
                              "java.lang.Short", "java.lang.Byte" -> "number";
                         case "java.lang.Boolean" -> "boolean";
                         case "java.lang.String", "java.lang.Character" -> "string";
-                        case "java.util.Object" -> "any";
+                        case "java.lang.Object" -> "any";
                         case "void" -> "void";
                         default -> "object";
                     });
