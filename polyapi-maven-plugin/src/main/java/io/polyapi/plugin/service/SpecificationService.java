@@ -12,8 +12,9 @@ public interface SpecificationService {
     /**
      * Retrieve all the JSON specifications in Poly.
      *
-     * @param context The contexts that should be used to filter the specifications.
+     * @param contexts The contexts that should be used to filter the specifications.
+     * @param functionIdFilters A list of function/specification IDs to filter by. Can be empty.
      * @return String A JSON containing the specifications.
      */
-    List<Specification> list(List<String> context);
+    List<Specification> list(List<String> contexts, List<String> functionIdFilters);
 }

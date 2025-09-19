@@ -8,6 +8,7 @@ import io.polyapi.plugin.model.function.PolyFunction;
 import io.polyapi.plugin.model.specification.Specification;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collections;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -32,7 +33,7 @@ public class PolyFunctionServiceImpl extends PolyApiService implements PolyFunct
     @Override
     public void delete(String context, String name) {
         log.info("Deleting function '{}' on context '{}'.", name, context);
-        List<Specification> specifications = specificationService.list(List.of())
+        List<Specification> specifications = specificationService.list(List.of(context), Collections.emptyList())
                 .stream()
                 .filter(spec -> spec.getName().equalsIgnoreCase(name) && spec.getContext().equalsIgnoreCase(context))
                 .toList();
@@ -54,7 +55,7 @@ public class PolyFunctionServiceImpl extends PolyApiService implements PolyFunct
 
     @Override
     public void delete(String id) {
-        specificationService.list(List.of()).stream()
+        specificationService.list(Collections.emptyList(), List.of(id)).stream()
                 .filter(specification -> specification.getId().equals(id))
                 .forEach(this::delete);
     }
