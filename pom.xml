@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.polyapi</groupId>
     <artifactId>polyapi-java</artifactId>
-    <version>0.15.6-SNAPSHOT</version>
+    <version>0.15.6</version>
     <packaging>pom</packaging>
     <modules>
         <module>parent-pom</module>
@@ -35,7 +35,7 @@
         <connection>scm:git:git@github.com:polyapi/polyapi-java.git</connection>
         <developerConnection>scm:git:git@github.com:polyapi/polyapi-java.git</developerConnection>
         <url>https://github.com/polyapi/polyapi-java</url>
-        <tag>HEAD</tag>
+        <tag>polyapi-java-0.15.6</tag>
     </scm>
     <build>
         <plugins>
