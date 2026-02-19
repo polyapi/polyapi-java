@@ -1,5 +1,6 @@
 package io.polyapi.plugin.model.function;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.polyapi.commons.api.model.LifecycleState;
 import io.polyapi.commons.api.model.Visibility;
 import io.polyapi.plugin.model.specification.SchemaRef;
@@ -15,6 +16,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Getter
 @Setter
 @ToString
