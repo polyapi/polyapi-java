@@ -311,7 +311,9 @@ Here's the list of parameters:
 - **host (required):** The host where the PolyAPI instance is hosted.
 - **port:** The port that the PolyAPI instance is listening to. Default value is 443.
 - **apiKey (required):** The API key required to authenticate to Poly.
-- **context:** Comma separated values that work as filter for the retrieved specifications. These filters will return any specification that starts with any of the indicated values. (i.e. if you set `polyapi,google` as a value, it will only generate those that have either of those as a context). This parameter is case-insensitive. 
+- **contexts:** Comma separated values that work as filter for the retrieved specifications. These filters will return any specification that starts with any of the indicated values. (i.e. if you set `polyapi,google` as a value, it will only generate those that have either of those as a context). This parameter is case-insensitive.
+- **context (legacy alias):** Backwards-compatible alias for `contexts`. If both are present, `contexts` takes precedence.
+- **functionIds:** Comma separated specification IDs to include during generation.
 - **overwrite:** Flag indicating that the generated files will overwrite any existing files. Default value is false.
 
 #### deploy-functions
