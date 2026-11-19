@@ -1,5 +1,7 @@
 # Java Client Library
 
+> **Deprecated.** Java is no longer supported by Poly, and this project is no longer maintained. The `io.polyapi` packages and the Maven plugin will not receive further updates. Existing versions stay on Maven Central but are unsupported. Use the TypeScript or Python client instead: https://docs.polyapi.io/
+
 * Latest released version 0.15.6
 * Latest snapshot version 0.15.7-SNAPSHOT
 
